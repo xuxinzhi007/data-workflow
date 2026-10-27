@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 910" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.07"/>
+    </filter>
+    <filter id="red-shadow" x="-4%" y="-4%" width="108%" height="108%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#e03131" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow-gray" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 1.5 L 7.5 4.5 L 0 7.5 Z" fill="#495057" />
+    </marker>
+    <marker id="arrow-red" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M 0 1.5 L 7.5 4.5 L 0 7.5 Z" fill="#e03131" />
+    </marker>
+    <style>
+      .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-weight: 800; fill: #1e1e1e; }
+      .subtitle { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 500; fill: #495057; }
+      .card-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 19px; }
+      .card-sub { font-family: "SF Mono", "Consolas", Menlo, monospace; font-size: 13px; fill: #868e96; }
+      .card-item { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 14.5px; fill: #2b2b2b; }
+      .tag-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 13px; font-weight: 600; fill: #495057; text-anchor: middle; }
+      .cfg-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 13px; font-weight: 700; fill: #c92a2a; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect width="100%" height="100%" fill="#ffffff" rx="16"/>
+
+  <g transform="translate(560, 50)" text-anchor="middle">
+    <text class="title" font-size="30" y="0">data-workflow · 一次需求到提交的完整流程</text>
+    <text class="subtitle" font-size="16" y="32">S 型串行主线 + 三道门禁 + 两条旁路</text>
+  </g>
+
+  <!-- 卡片 -->
+  
+    <g transform="translate(30, 100)" filter="url(#shadow)">
+      <rect width="1060" height="156" rx="14" fill="#f1f3f5" stroke="#343a40" stroke-width="2"/>
+      <text class="card-title" x="530" y="36" text-anchor="middle" fill="#212529">① 启动 · data-workflow:data-workflow</text>
+      <text class="card-sub" x="530" y="56" text-anchor="middle">一次会话只跑一次，结果向下传递</text>
+      <line x1="25" y1="72" x2="1035" y2="72" stroke="#ced4da" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• repo_snapshot.sh 记录仓库/分支/commit/dirty · knowledge_drift.sh 给每份文档标 FRESH 或 STALE</text>
+        <text y="28">• grep 查重（.cursor/plans/ + 排查卡片/）· 选型表定路线 · 顺序串行，不并行跳步</text>
+      </g>
+    </g>
+
+    <g transform="translate(30, 292)" filter="url(#shadow)">
+      <rect width="330" height="156" rx="14" fill="#ebfbee" stroke="#0ca678" stroke-width="2"/>
+      <text class="card-title" x="165" y="36" text-anchor="middle" fill="#0ca678">② 需求分析</text>
+      <text class="card-sub" x="165" y="56" text-anchor="middle">requirement-analysis</text>
+      <line x1="25" y1="72" x2="305" y2="72" stroke="#b2f2bb" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 拆需求、定验收口径</text>
+        <text y="28">• grilling 压测假设</text>
+      </g>
+    </g>
+
+    <g transform="translate(395, 292)" filter="url(#shadow)">
+      <rect width="330" height="156" rx="14" fill="#e7f5ff" stroke="#1971c2" stroke-width="2"/>
+      <text class="card-title" x="165" y="36" text-anchor="middle" fill="#1971c2">③ 技术方案</text>
+      <text class="card-sub" x="165" y="56" text-anchor="middle">tech-design</text>
+      <line x1="25" y1="72" x2="305" y2="72" stroke="#a5d8ff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 读 Obsidian 方案模板</text>
+        <text y="28">• 产出设计文档</text>
+      </g>
+    </g>
+
+    <g transform="translate(760, 292)" filter="url(#shadow)">
+      <rect width="330" height="156" rx="14" fill="#f3f0ff" stroke="#7048e8" stroke-width="2"/>
+      <text class="card-title" x="165" y="36" text-anchor="middle" fill="#7048e8">④ 实现</text>
+      <text class="card-sub" x="165" y="56" text-anchor="middle">implementation</text>
+      <line x1="25" y1="72" x2="305" y2="72" stroke="#d0bfff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• go-style R01–R18</text>
+        <text y="28">• reuse-gate 复用门禁</text>
+      </g>
+    </g>
+
+    <g transform="translate(760, 500)" filter="url(#shadow)">
+      <rect width="330" height="156" rx="14" fill="#fff4e6" stroke="#e8590c" stroke-width="2"/>
+      <text class="card-title" x="165" y="36" text-anchor="middle" fill="#e8590c">⑤ 改动审核</text>
+      <text class="card-sub" x="165" y="56" text-anchor="middle">change-review</text>
+      <line x1="25" y1="72" x2="305" y2="72" stroke="#ffc078" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 只审改动，不做需求</text>
+        <text y="28">• high / medium 风险即停</text>
+      </g>
+    </g>
+
+    <g transform="translate(395, 500)" filter="url(#shadow)">
+      <rect width="330" height="156" rx="14" fill="#fff5f5" stroke="#e03131" stroke-width="2"/>
+      <text class="card-title" x="165" y="36" text-anchor="middle" fill="#c92a2a">⑥ 质量门</text>
+      <text class="card-sub" x="165" y="56" text-anchor="middle">quality-gate</text>
+      <line x1="25" y1="72" x2="305" y2="72" stroke="#ffc9c9" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• make api-one PROTO=…</text>
+        <text y="28">• 聚焦测试 + 覆盖率</text>
+      </g>
+    </g>
+
+    <g transform="translate(30, 500)" filter="url(#shadow)">
+      <rect width="330" height="156" rx="14" fill="#f1f3f5" stroke="#343a40" stroke-width="2"/>
+      <text class="card-title" x="165" y="36" text-anchor="middle" fill="#212529">⑦ 提交 / MR</text>
+      <text class="card-sub" x="165" y="56" text-anchor="middle">git-commit</text>
+      <line x1="25" y1="72" x2="305" y2="72" stroke="#ced4da" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• Conventional Commits</text>
+        <text y="28">• MR 模板走 Obsidian</text>
+      </g>
+    </g>
+
+    <g transform="translate(570, 690)" filter="url(#shadow)">
+      <rect width="520" height="190" rx="14" fill="#e7f5ff" stroke="#1971c2" stroke-width="2"/>
+      <text class="card-title" x="260" y="36" text-anchor="middle" fill="#1971c2">旁路 · 不在主线上</text>
+      <text class="card-sub" x="260" y="56" text-anchor="middle">由选型表直接路由</text>
+      <line x1="25" y1="72" x2="495" y2="72" stroke="#a5d8ff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• oncall 线上排查：仓库只读，诊断不授权修改</text>
+        <text y="28">• excalidraw-diagram：spec JSON → 架构图 / 流程图</text>
+        <text y="56">• 知识回写：发现降级区文档失效时强制写卡</text>
+      </g>
+    </g>
+
+  <!-- 连线与标签 -->
+  
+    <g>
+      <path d="M 560 256 L 560 292" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+      <rect x="590" y="260" width="110" height="22" rx="4" fill="#f1f3f5" />
+      <text class="tag-text" x="645" y="274" text-anchor="middle">选型表路由</text>
+    </g>
+
+    <g>
+      <path d="M 360 370 L 395 370" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+    </g>
+
+    <g>
+      <path d="M 725 370 L 760 370" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+    </g>
+
+    <g>
+      <path d="M 925 448 L 925 500" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+      <rect x="955" y="460" width="90" height="22" rx="4" fill="#f1f3f5" />
+      <text class="tag-text" x="1000" y="474" text-anchor="middle">改动完成</text>
+    </g>
+
+    <g>
+      <path d="M 760 578 L 725 578" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+    </g>
+
+    <g>
+      <path d="M 395 578 L 360 578" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+    </g>
+
+  <!-- 配置驱动底框 -->
+  
+    <g transform="translate(30, 690)" filter="url(#red-shadow)">
+      <rect width="520" height="190" rx="16" fill="#fff5f5" stroke="#e03131" stroke-width="2.5"/>
+      <text class="card-title" x="260" y="36" text-anchor="middle" fill="#c92a2a" font-size="22">贯穿全程 · 三道门禁</text>
+      <text class="card-sub" x="260" y="58" text-anchor="middle" font-size="14">任一道命中即停，不带病前进</text>
+      <line x1="30" y1="74" x2="490" y2="74" stroke="#ffc9c9" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(35, 104)" font-size="15">
+        <text y="0">• <tspan font-weight="700">门禁一</tspan> 复用：先找同类实现，重复三次才抽象</text>
+        <text y="28">• <tspan font-weight="700">门禁二</tspan> 风险：high / medium 改动停下确认</text>
+        <text y="56">• <tspan font-weight="700">门禁三</tspan> 新鲜度：STALE 只当线索，回代码取值</text>
+      </g>
+    </g>
+</svg>
