@@ -21,6 +21,8 @@ L2 = 知识层。**永远向下指向 L3（代码、生成物、聚焦测试）*
 
 ## 工程约定源（F1）
 
+落点因 IDE 而异。下表是 data-service 当前 checkout 的实际落点；换仓库时按 `data-workflow:data-workflow` 的 `references/project-index.md`「工程约束落点」重解析（`.cursor/rules/` → `.qoder/rules/` → `AGENTS.md` → `CLAUDE.md`），都不存在就明说「本仓无成文工程约束」。
+
 | 源 | 内容 | 注意 |
 |---|---|---|
 | `.cursor/rules/data-service.mdc` | 分层规则、生成物清单、构建命令的**唯一副本** | Cursor `alwaysApply: true`；**Qoder 不自动加载 `.cursor/rules/`，需要时显式 Read** |

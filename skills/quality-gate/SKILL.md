@@ -7,6 +7,8 @@ description: data-service 质量门禁。改动审核通过后，用命令的真
 
 编码完成不等于可以提交。本技能用命令的真实输出证明改动质量。改动审核先判断会不会出事，本技能在审核通过之后跑。规范对照在 `data-workflow:change-review` 的 `references/standards-spec.md`。
 
+**分工**：本技能只管编译、单测、覆盖率、生成物一致性。接口契约（进程内契约测试、proto 破坏性 diff、场景回放）归 `data-workflow:interface-test`，四态裁决也只在那边出。本技能 G4 发现 Breaking 时**移交**给它，不自己下 PASS/FAIL。
+
 ## 何时执行
 
 - 改动审核结论为可继续之后
@@ -45,11 +47,11 @@ description: data-service 质量门禁。改动审核通过后，用命令的真
 1. 列出 G0 清单里改动的符号：函数、方法、结构体、proto 字段、配置项。
 2. 检索每个符号的调用方。**收敛规则：只对直接调用方所在包跑回归**（`./scripts/test-unit.sh -p <pkg>`）；二级传导（调用方的调用方）只列出、标注风险，不跑测试。调用方横跨 3 个以上包时，先用读代码判断哪些包行为真受影响，只跑行为受影响的包。
 3. 回归失败 = 影响真实发生，必须修复或回滚。不允许「这个失败与本次无关」式带过——除非能证明失败在改动前就存在（git stash 后复跑通过、恢复后再失败）。
-4. 签名、返回值、行为语义、proto 字段号发生变化 → 标记 Breaking Change，停下来向用户报告影响清单，拍板前不进入提交。
+4. 签名、返回值、行为语义、proto 字段号发生变化 → 标记 Breaking Change，移交 `data-workflow:interface-test` 跑契约门出裁决，同时停下来向用户报告影响清单，拍板前不进入提交。
 
 ### G5 生成文件一致性
 
-- proto 有改动：必须重新生成，命令与生成物清单见 `.cursor/rules/data-service.mdc` 的 `## Proto / 生成`（唯一正确副本，以 `Makefile` 目标为准）。git diff 中 `*.pb.go` 的改动只能来自生成。
+- proto 有改动：必须重新生成，命令与生成物清单以 `Makefile` 目标为唯一正确副本（`make api` / `make api-one PROTO=<路径>`；工程事实走知识层 `$KNOW`，不抄文档二手结论）。git diff 中 `*.pb.go` 的改动只能来自生成。
 - 发现手改 pb 的一律打回重做。
 
 ### G6 复用门禁
@@ -70,10 +72,12 @@ G6 复用门禁     ✓ / ✗ 结论
 结论：全部通过，允许提交 / 未通过，先修复 Gx
 ```
 
+报告落盘 `specs/<feature>/quality.md`（工件树见 `data-workflow:data-workflow` 的 `references/artifact-tree.md`）。**每条 ✓ 后面必须跟命令与其真实输出摘要**；没有输出的 ✓ 视为未跑，文档审计门会打回。
+
 ## 命令纪律（减少人工确认）
 
 - 检索、读文件、找调用方：优先用内建工具（Read/Grep/Glob），不用 Bash 的 cat/grep/管道——内建工具不触发权限确认。
-- 验证命令：只用项目现成命令（`go build`、`test-unit.sh -p`、`make test-coverage-func`、proto 生成命令见 `.cursor/rules/data-service.mdc`、`gofmt -l`）；不现场发明验证脚本。
+- 验证命令：只用项目现成命令（`go build`、`test-unit.sh -p`、`make test-coverage-func`、proto 生成命令以 `Makefile` 目标为准、`gofmt -l`）；不现场发明验证脚本。工程约束文件的落点按 `data-workflow:data-workflow` 的 `references/project-index.md` 解析（`.cursor/rules/` → `.qoder/rules/` → `AGENTS.md` → `CLAUDE.md`），不要把某一个 IDE 的目录名当成事实。
 - 禁止重定向、`tee`、管道拼接命令（`>`、`>>`、`|`）——这是触发权限确认的直接元凶；需要看输出就直接读终端输出。
 - 必须用自造命令时（项目命令覆盖不了），先用一句话向用户说明要跑什么、为什么，再执行。
 

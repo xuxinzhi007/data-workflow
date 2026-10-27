@@ -72,7 +72,7 @@ cmd/data-service/wire_gen.go
 
 **检查点：**
 - 变更列表中是否包含上述文件？如包含，是否通过命令生成？
-- 修改 `.proto` 后是否重新生成？命令见 `.cursor/rules/data-service.mdc` 的 `## Proto / 生成`（需要 `PROTO=` 参数，裸跑会静默空转）。
+- 修改 `.proto` 后是否重新生成？命令以 `$REPO/Makefile` 的目标为唯一正确副本（单文件生成需要 `PROTO=` 参数，裸跑会静默空转）；工程约束文件落点按 `data-workflow:data-workflow` 的 `references/project-index.md` 解析，不假设某个 IDE 的目录名。
 - 修改配置 proto 后是否执行了 `make config`？
 - 新增/调整依赖注入后是否执行了 `cd cmd/data-service && wire`？
 

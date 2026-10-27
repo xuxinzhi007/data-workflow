@@ -29,7 +29,7 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"   # → $KNOW / $CARDS / $TEMPLAT
 
 记下 branch、commit、是否有未提交改动、核实时间。**不要求工作区干净，但绝不覆盖无关改动。**
 
-工程约定源（不是业务事实源）：`CONTEXT.md`（术语）、`.cursor/rules/data-service.mdc`（分层/构建/生成物）、`.cursor/rules/data-service-go.mdc`（R01–R18）、`.cursor/rules/reuse-gate.mdc`（复用门禁）。**Qoder 不会自动加载 `.cursor/rules/`**，需要时显式 Read。仓库根目录没有 `CLAUDE.md`，不要去找。
+工程约定源（不是业务事实源）：仓库根的 `CONTEXT.md`（术语）与该仓库成文的工程约束文件。约束文件的落点因 IDE 而异，按 `data-workflow:data-workflow` 的 `references/project-index.md`「工程约束落点」解析（`.cursor/rules/` → `.qoder/rules/` → `AGENTS.md` → `CLAUDE.md`）；**大多数 agent 不会自动加载别的 IDE 的规则目录**，需要时显式 Read。解析不到就明说「本仓无成文工程约束」，不要凭记忆补一份。
 
 ## 先分类，再决定加载什么
 

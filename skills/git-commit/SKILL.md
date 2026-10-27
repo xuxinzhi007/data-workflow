@@ -1,6 +1,6 @@
 ---
 name: git-commit
-description: data-service 提交与 MR。创建分支、写 commit message、提 MR 之前执行：分支名规范、Conventional Commits、中文 title、MR 描述套公司模板。用户说提交、commit、建分支、提 MR 时使用。不用于：审核改动内容（用 data-workflow:change-review）、跑测试（用 data-workflow:quality-gate）、解决合并冲突。
+description: data-service 提交与 MR。创建分支、写 commit message、提 MR 之前执行：分支名规范、Conventional Commits、中文 title、提交前文档审计门（specs/README/CONTEXT 是否同步，不过门必须显式记账）、MR 描述套公司模板。用户说提交、commit、建分支、提 MR、文档审计时使用。不用于：审核改动内容（用 data-workflow:change-review）、跑测试（用 data-workflow:quality-gate）、解决合并冲突。
 ---
 
 # Git 分支、提交与 MR 规范
@@ -93,6 +93,33 @@ BREAKING CHANGE: /v1/users 接口已被删除。
 ## 署名
 
 提交信息中禁止出现任何 AI 署名、co-author 标签或 generated-by footer。
+
+## 文档审计门（commit 之前，必过）
+
+代码改完不等于交付完。提交前拿 `git diff` 逐项核对下面这张表，**每项只能填「已同步」或「不需要」+ 一句依据**；填不出依据就是「缺失」。
+
+| 检查项 | 判定 |
+|--------|------|
+| `specs/<feature>/spec.md` | 接口/字段/行为与最终代码一致？决定表里没有「拍了但没做」的项？ |
+| `specs/<feature>/plan.md` | 实际实现与方案的偏差已写进「偏差记录」？ |
+| `specs/<feature>/impact.md` | 影响面清单里标 UNVERIFIED 的项，事后补证了还是仍然悬空？ |
+| `specs/<feature>/interface-test.md` | 三级门裁决齐了？WAIVED 项写了为什么可以 waive？ |
+| `specs/<feature>/change-note.md` | 本次改动摘要、欠的债（在哪、怎么还、何时还）、接受的文档风险都记了？ |
+| `specs/<feature>/rollback.md` | 回滚步骤与真实 commit / 迁移号对得上？ |
+| 仓库 `README.md` | 新增能力、新增命令、新增配置项要不要露出？ |
+| 仓库 `CONTEXT.md` | 新增或改名的领域术语要不要登记？（改术语走全局技能 `domain-modeling`） |
+| `api/**` 生成物 | 改了 proto 是否已重新生成（`make api` / `make api-one PROTO=...`），生成物与 proto 同一次提交？ |
+
+不过门的处理，只有两条路，**没有第三条**：
+
+1. **补齐**：把缺的文档写完，再提交。
+2. **显式接受**：在 `specs/<feature>/change-note.md` 的「接受的文档风险」表里写清 *缺哪份、为什么现在不补、什么时候补、不补的后果*，并把这几行原文贴给用户确认。
+
+沉默提交 = 没过门。文档债务不留痕，三个月后没人知道那份 spec 是过期的还是错的。
+
+`change-note.md` 用 `$PLUGIN_ROOT/templates/change-note-template.md` 生成，落 `specs/<feature>/change-note.md`，**与代码同一次提交**（工件树见 `data-workflow:data-workflow` 的 `references/artifact-tree.md`）。
+
+审计结论写进 commit body 或 MR 描述的「测试情况 / 关联设计方案」字段，不要只留在会话里。
 
 ## 提交 MR（glab CLI）
 
