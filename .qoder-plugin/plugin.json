@@ -1,0 +1,15 @@
+{
+  "name": "data-workflow",
+  "displayName": "data-service 开发工作台",
+  "version": "0.1.0",
+  "description": "A self-contained requirement-to-commit workflow for the data-service Go/Kratos repository: analysis, tech design, implementation guardrails, change review, quality gate, commit/MR, on-call investigation and diagram generation. Business facts are loaded at runtime from an Obsidian vault, never embedded in the skills.",
+  "descriptionZh": "data-service 从需求到提交的完整工作流：需求分析、技术方案、编码实现、改动审核、质量门禁、提交与 MR、线上排查、架构图生成。技能只装流程，业务事实运行时从 Obsidian 知识库读取。",
+  "author": {
+    "name": "xuxinzhi"
+  },
+  "keywords": ["qoder-plugin", "skill", "workflow", "data-service", "go", "kratos"],
+  "category": "developer-tools",
+  "tags": ["workflow", "code-review", "oncall"],
+  "skills": "./skills/",
+  "defaultEnabled": true
+}
