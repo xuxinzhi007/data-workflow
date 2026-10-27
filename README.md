@@ -1,8 +1,8 @@
 # data-workflow
 
-data-service（Go / Kratos）从需求到提交的完整开发工作流，打包成一个**独立、可 git 管理**的 Qoder 插件。
+data-service（Go / Kratos）从需求到提交的完整开发工作流，打包成一个**独立、可 git 管理、IDE 无关**的 skill 项目。
 
-九个技能、十三份 references、三个脚本，全部自包含在本仓库内；业务事实**一个字节都不进技能**，运行时从 Obsidian 知识库按需加载。
+技能遵循 agentskills 开放约定（`SKILL.md` + `references/` + `scripts/`），同一份目录可被 Qoder / Claude Code / Cursor / Codex 等工具读取；安装只是往各工具的原生目录铺软链，不复制正文。业务事实**一个字节都不进技能**，运行时从配置指向的知识层按需加载。
 
 ## 分层架构
 
@@ -14,7 +14,7 @@ data-service（Go / Kratos）从需求到提交的完整开发工作流，打包
 |---|---|---|---|
 | L0 编排器 | `skills/data-workflow/` | 选型、顺序、门禁。零事实 | 入口触发 |
 | L1 步骤技能 | `skills/<stage>/` | 每个阶段的流程；细节进 `references/` | 选型表路由 |
-| L2 知识层 | Obsidian `xxz_obsidian/knowledge/**`、`开发规范化/**`；`.cursor/rules/*.mdc` | 业务事实 F2、工程事实 F1 | 点名才读，一次一个域文件 |
+| L2 知识层 | `$KNOW/**`、`$TEMPLATES/**`（由 `config.yaml` 指向，Obsidian / 仓库内 `docs/` / 任意目录都行）；`$REPO/.cursor/rules/*.mdc` 等仓库成文规范 | 业务事实 F2、工程事实 F1 | 点名才读，一次一个域文件 |
 | L3 权威 | 代码、生成物、聚焦测试 | 永不上抄 | 取值一律回这里核对 |
 
 仓库内 `docs/`、`docs/support/` 是**降级区**：已被证实在 MQTT 推送链路与 Episode 终态上说谎，只可当搜索线索，不可当结论。
@@ -49,29 +49,36 @@ data-service（Go / Kratos）从需求到提交的完整开发工作流，打包
 
 ```
 data-workflow/
-├── .qoder-plugin/plugin.json        插件清单（name / version / skills）
+├── .qoder-plugin/plugin.json        Qoder 插件清单
+├── .claude-plugin/                  Claude Code 插件清单 + marketplace
+├── AGENTS.md                        薄指路牌（Codex / 通用 agent 读这个）
+├── config.example.yaml              知识源与仓库路径的键位说明（进 git）
+├── config.yaml                      本机实际值（gitignore，每人不同）
 ├── README.md
 ├── assets/                          架构图、流程图（.svg 源 + .png 位图 + .excalidraw 可编辑）
-├── evals/evals.json                 8 条评测，逐条钉住已修好的缺陷
+├── evals/evals.json                 评测，逐条钉住已修好的缺陷
 ├── scripts/
+│   ├── resolve.sh                   解析单个配置键（env > config.yaml > ~/.config）
+│   ├── paths.sh                     一次性 eval 出 $KNOW $CARDS $TEMPLATES $REPO 等
+│   ├── install.sh                   往已存在的 .qoder/.claude/.cursor/.codex/.agents 铺软链
 │   ├── repo_snapshot.sh             记录被测仓库 branch / commit / dirty
-│   ├── knowledge_drift.sh           知识新鲜度门禁：FRESH / STALE / SKIP
+│   ├── knowledge_drift.sh           知识新鲜度门禁：FRESH / STALE / SKIP / DEGRADED
 │   └── svg_to_png.sh                headless Chrome 补 PNG（generator 依赖的 rsvg-convert 本机没装）
 └── skills/
-    ├── data-workflow/               L0 编排器（83 行）
+    ├── data-workflow/               L0 编排器
     │   └── references/              project-index.md · feature-archive.md
-    ├── requirement-analysis/        84 行
-    ├── tech-design/                 29 行
-    ├── implementation/              69 行 + go-style.md · reuse-gate.md
-    ├── change-review/               130 行 + standards-spec.md
-    ├── quality-gate/                85 行
-    ├── git-commit/                  145 行
-    ├── oncall/                      57 行 + 7 份 references（routing / state-protocol / trace /
+    ├── requirement-analysis/
+    ├── tech-design/
+    ├── implementation/              + go-style.md · reuse-gate.md
+    ├── change-review/               + standards-spec.md
+    ├── quality-gate/
+    ├── git-commit/
+    ├── oncall/                      + 7 份 references（routing / state-protocol / trace /
     │                                evidence / answer / capture / knowledge-sources）
-    └── excalidraw-diagram/          135 行 + excalidraw-spec.md + scripts/diagram_generator.js
+    └── excalidraw-diagram/          + excalidraw-spec.md + scripts/diagram_generator.js
 ```
 
-9 个 SKILL.md 合计 **817 行**，13 份 references 合计 **984 行**。渐进披露三级加载：名称+描述常驻 → SKILL.md 触发时才读 → references 点名才读。
+渐进披露三级加载：名称+描述常驻 → SKILL.md 触发时才读 → references 点名才读。
 
 ## 技能清单
 
@@ -79,7 +86,7 @@ data-workflow/
 |---|---|---|
 | `data-workflow:data-workflow` | 入口：环境探测 → 查重 → 选型 → 串联 → 门禁 | 直接干活，它只路由 |
 | `data-workflow:requirement-analysis` | 需求拆解、验收口径；拍板走全局技能 `grilling` | 已明确的需求 |
-| `data-workflow:tech-design` | 套 Obsidian 公司模板写技术方案 | 小改动的随手设计 |
+| `data-workflow:tech-design` | 套公司模板写技术方案 | 小改动的随手设计 |
 | `data-workflow:implementation` | 编码实现 + Go 规范（R01–R18）+ 复用门禁 | 审核已有改动 |
 | `data-workflow:change-review` | 改动风险审核 + 规范与需求符合性 | 需求分析、全仓审计 |
 | `data-workflow:quality-gate` | 用命令输出证明可提交 | 代码风格讨论 |
@@ -93,40 +100,73 @@ data-workflow/
 
 | 脚本 | 作用 |
 |---|---|
+| `scripts/resolve.sh <key>` | 解析单个配置键，值走 stdout、来源走 stderr；未配置返回空而不是猜 |
+| `scripts/paths.sh` | 一次 `eval` 出 `$KNOW $CARDS $TEMPLATES $REPO $TECH_DESIGN_TEMPLATE $MR_TEMPLATE $PERSONAL_AGENTS_MD` |
+| `scripts/install.sh` | 往**已存在**的工具目录铺软链（`--global` 用 `$HOME`，`--unlink` 只删指向本仓的链），幂等 |
 | `scripts/repo_snapshot.sh` | 记录被测仓库的 branch / commit / dirty 状态 |
-| `scripts/knowledge_drift.sh` | 读 frontmatter 的 `verified_commit` 与 `watches`，比对 data-service HEAD，输出 `FRESH` / `STALE` / `SKIP` |
+| `scripts/knowledge_drift.sh` | 读 frontmatter 的 `verified_commit` 与 `watches`，比对被测仓库 HEAD，输出 `FRESH` / `STALE` / `SKIP` |
 | `scripts/svg_to_png.sh` | headless Chrome 把 SVG 转 PNG（2x），补上 generator 缺失的那一步 |
 
 门禁**只标注、不阻塞**：恒 exit 0，exit 2 仅表示文档无法解析。缺 frontmatter 按 STALE 处理 —— 让未纳管的文档自我暴露，而不是靠制度。
 
-被测仓库优先级：`$DS_REPO` > 当前目录所在仓库 > `~/Documents/gowork/data-service`。
+被测仓库优先级：`$DS_REPO` > `config.yaml` 的 `repo` > 当前目录所在仓库。知识源优先级：`DATA_WORKFLOW_<KEY>` 环境变量 > `./config.yaml` > `<插件根>/config.yaml` > `~/.config/data-workflow/config.yaml` > 空（知识源为空时 drift 打印 `DEGRADED` 并回退 `<repo>/docs`）。
 
 ## 知识落点
 
 | 落点 | 归属 |
 |---|---|
-| Obsidian `knowledge/<域>/` | 已稳定的领域知识，按业务域拆分 |
-| Obsidian `knowledge/排查卡片/` | oncall 调查结论，`symptoms:` 字段就是 grep 检索面 |
-| Obsidian `开发规范化/` | 公司模板（研发技术方案、MR） |
-| 仓库 `.cursor/plans/` | 决策前的工作记忆，临时 |
+| `$KNOW/<域>/` | 已稳定的领域知识，按业务域拆分 |
+| `$KNOW/排查卡片/` | oncall 调查结论，`symptoms:` 字段就是 grep 检索面 |
+| `$TEMPLATES/` | 公司模板（研发技术方案、MR） |
+| `$REPO/.cursor/plans/`（或该 IDE 对应的临时目录） | 决策前的工作记忆，临时，不进知识层 |
 
 每张卡带 `verified_commit` 与 `watches`，`knowledge_drift.sh` 读同一组字段，卡片免费获得可门禁性。
+
+## 知识源配置
+
+技能正文里没有任何绝对路径。所有外部落点通过 `config.yaml` 解析：
+
+```bash
+cp config.example.yaml config.yaml   # config.yaml 已 gitignore，每人一份
+$EDITOR config.yaml
+bash scripts/paths.sh                # 验证解析结果
+```
+
+| 键 | 含义 | 留空时的行为 |
+|---|---|---|
+| `knowledge_root` | 知识层根（Obsidian vault 子目录、仓库内 `docs/`、任意目录都行） | drift 打印 `DEGRADED`，回退 `<repo>/docs` |
+| `cards_dir` | 排查卡片目录 | 回退 `<knowledge_root>/排查卡片`，不存在则报 MISSING |
+| `templates_root` | 公司模板根 | 需要模板时问用户，不自创章节 |
+| `repo` | 被测代码仓库 | 回退当前目录所在 git 仓库 |
+| `tech_design_template` / `mr_template` | 两个具体模板文件 | 问用户；MR 用技能内兜底模板并注明 |
+| `personal_agents_md` | 个人工程规范文件 | 只用仓库内规范与本仓 R 系列条目 |
+
+也可以完全不建 `config.yaml`，改用环境变量：`DATA_WORKFLOW_KNOWLEDGE_ROOT=/path/to/knowledge`。
 
 ## 安装与更新
 
 ```bash
-qoder plugins install ~/skills/data-workflow --scope user
+git clone <本仓库> ~/skills/data-workflow
+cd <你的项目>                       # 或加 --global 铺到 $HOME
+bash ~/skills/data-workflow/scripts/install.sh
 ```
 
-安装会把目录**复制**进 `~/.qoder/plugins/cache/`。想要改完即生效，把缓存目录换成指向本仓库的软链：
+`install.sh` 只对**已存在**的 `.qoder` `.claude` `.cursor` `.codex` `.agents` 目录动手，在其中建 `skills/<name>` 软链指向本仓库，绝不创建你没有的工具目录：
 
 ```bash
-ln -sfn ~/skills/data-workflow ~/.qoder/plugins/cache/local/data-workflow/0.1.0
+bash scripts/install.sh             # 铺到当前项目
+bash scripts/install.sh --global    # 铺到 $HOME（用户级）
+bash scripts/install.sh --unlink    # 只删指向本仓库的软链
 ```
 
-（代价：`qoder plugins update` 会把软链覆盖回复制版。）
+软链而非复制 —— 改完即生效，同一 inode，结构上不可能分叉。跑两次结果一致；`--unlink` 后目录回到干净状态。
 
-Cursor 侧通过 `.cursor/skills/<name>` 软链到本仓库 `skills/`，同一 inode，结构上不可能分叉。
+Qoder 也可以走插件通道（会**复制**进缓存，改完需要更新）：
+
+```bash
+qoder plugins install ~/skills/data-workflow --scope user
+ln -sfn ~/skills/data-workflow ~/.qoder/plugins/cache/local/data-workflow/0.2.0   # 想要改完即生效
+```
 
 ## 验证
 
@@ -139,7 +179,7 @@ Cursor 侧通过 `.cursor/skills/<name>` 软链到本仓库 `skills/`，同一 i
 5. 卡片回写端到端：写卡 → 更新索引 → 按症状词 grep 命中
 6. 一句话状态问题的 token 预算 ≤ 200 行
 7. `make api-one` 必须带 `PROTO=`，裸跑即失败
-8. tech-design 必须打开真实存在的 Obsidian 模板
+8. tech-design 必须打开 `` 指向的真实模板文件
 
 ## 图怎么重新生成
 

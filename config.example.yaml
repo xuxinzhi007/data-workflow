@@ -1,0 +1,31 @@
+# data-workflow 配置示例。
+# 用法：复制为 config.yaml（已 gitignore）后按本机修改。
+#
+# 解析优先级：环境变量 DATA_WORKFLOW_<键名大写> > ./config.yaml > <本仓根>/config.yaml
+#             > ~/.config/data-workflow/config.yaml > 空。
+# 统一入口：bash scripts/resolve.sh <键名>（stdout 只输出值，来源说明走 stderr）；
+#           bash scripts/paths.sh 一次性 eval 出全部变量。
+#
+# 知识源因人而异：Obsidian 用户填 vault 路径；不用 Obsidian 的填仓库内 docs/ 或任何目录。
+# 所有键留空 = 未配置。技能与脚本遇到未配置会**显式声明降级**（改用仓库内 docs/ 或询问用户），绝不猜绝对路径。
+
+# 知识源根目录：存放按业务域拆分的 md 与 排查卡片/ 的目录。knowledge_drift.sh 扫这里。
+knowledge_root: ""
+
+# 模板目录：技术方案、MR 描述等模板所在目录。
+templates_root: ""
+
+# 调查卡片目录；留空 = <knowledge_root>/排查卡片
+cards_dir: ""
+
+# 被测仓库根；留空 = 当前目录所在仓库（或 $DS_REPO）。
+repo: ""
+
+# 技术方案模板文件；留空时 tech-design 会询问用户，不得猜路径。
+tech_design_template: ""
+
+# MR 描述模板文件；留空时 git-commit 用内置结构。
+mr_template: ""
+
+# 个人规范文件（可选）；change-review 的 standards-spec 会读它补充个人偏好，留空则跳过。
+personal_agents_md: ""

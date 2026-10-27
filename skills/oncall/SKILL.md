@@ -9,8 +9,15 @@ description: data-service 业务值班专家，用当前代码证明每个结论
 
 默认只读。诊断请求不授权改代码。
 
-`$PLUGIN_ROOT` = 本 SKILL.md 往上两级的目录（`scripts/` 与 `skills/` 同级）。
-`$VAULT` = `/Users/xuxinzhi/Documents/Obsidian Vault/xxz_obsidian`（含空格，命令必须引号包裹）。
+`$PLUGIN_ROOT` = 本 SKILL.md 往上两级的目录（`scripts/` 与 `skills/` 同级；软链安装时先 `readlink -f`）。
+
+知识源路径运行时解析，不写死：
+
+```bash
+eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"   # → $KNOW / $CARDS / $TEMPLATES / $REPO
+```
+
+路径可能含空格，命令必须引号包裹。`$KNOW` 为空 → 声明「知识源未配置，只用代码与仓库内 docs（降级区）」，不许猜绝对路径。
 
 ## 环境快照
 
@@ -35,7 +42,7 @@ description: data-service 业务值班专家，用当前代码证明每个结论
 | Incident | 线上症状，需要代码事实 + 运行时证据 | [trace.md](references/trace.md) + [evidence.md](references/evidence.md) |
 | Change | 用户明确要求的实现工作 | 交给 `data-workflow:implementation`，本技能不做 |
 
-**所有分类都先走 [routing.md](references/routing.md)**：step 0 grep 已有卡片 → step 1 只加载一个 Obsidian 域文件 → step 2 按快速定位规则选代码入口。
+**所有分类都先走 [routing.md](references/routing.md)**：step 0 grep 已有卡片 → step 1 只加载一个 知识层域文件 → step 2 按快速定位规则选代码入口。
 
 非平凡回答前加载 [answer.md](references/answer.md)。要沉淀知识、或发现降级区文档失效时加载 [capture.md](references/capture.md)。
 

@@ -1,6 +1,6 @@
 # Feature Archive（功能归档）
 
-把「刚完成的功能」蒸馏进 Obsidian 知识图谱。单一产出纪律：**归档**。
+把「刚完成的功能」蒸馏进知识图谱。单一产出纪律：**归档**。
 
 - 写：稳定知识——接口契约、字段名、**事实源文件路径**、配置项落点。
 - 不写：状态/枚举的具体取值、SQL 谓词、行数。这些一个 commit 就能让它们变假，且假了没有声音。只写「取值看 `internal/biz/status.go`」。
@@ -9,8 +9,8 @@
 
 ## 位置与上游
 
-- 代码仓库：`/Users/xuxinzhi/Documents/gowork/data-service`
-- 知识图谱（Obsidian vault）：`/Users/xuxinzhi/Documents/Obsidian Vault/xxz_obsidian`（本身是 git 仓库，归档**不自动 commit**，除非用户明确要求）
+- 代码仓库：`$REPO`
+- 知识图谱根：`$KNOW` 的上一级（`paths.sh` 解析；本身可能是 git 仓库，归档**不自动 commit**，除非用户明确要求）
 - 技术方案源：`docs/architecture/<日期>-<主题>-技术方案.md`、`docs/API/*.md`
 - 需求分析结论：对话中已闭环的结论；若未落盘，以技术方案「30 秒版 + 决策表」为准，用「本质一句话」重构定位段
 - 现状核实：当前 checkout 代码（proto 字段/RPC、状态常量、配置取值、文件与符号名）——技术方案可能已过期，以代码为准

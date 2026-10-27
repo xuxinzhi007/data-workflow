@@ -1,6 +1,6 @@
 # data-service 代码审核规范
 
-> 本 skill 是 `~/Documents/Obsidian Vault/AGENTS.md` 的可执行审核清单。每次开发或审核时必须逐条对照。
+> 本 skill 是个人工程规范文件（`$PERSONAL_AGENTS_MD`，由 `$PLUGIN_ROOT/scripts/paths.sh` 解析；仓库级规范则看 `$REPO/AGENTS.md`、`$REPO/CLAUDE.md`、`$REPO/.cursor/rules/*.mdc`）的可执行审核清单。每次开发或审核时必须逐条对照。两处都为空 → 只用本文件下面的 R 系列条目，不要臆造规范。
 
 ## 审核流程
 

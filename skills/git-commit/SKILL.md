@@ -103,7 +103,7 @@ glab mr create --title "<type>(<scope>): <描述>" --description-file <描述文
 glab mr update <mr-id> --description-file <描述文件>
 ```
 
-生成 MR 说明时，先读 `~/Obsidian Vault/xxz_obsidian/开发规范化/MR模板.md`，按该文件的章节和字段名填写。读不到文件时用下面这份，字段名保持不变。
+生成 MR 说明时，先读 `$MR_TEMPLATE`（由 `paths.sh` 解析，见 `data-workflow:data-workflow`），按该文件的章节和字段名填写。`$MR_TEMPLATE` 为空或文件读不到时用下面这份兜底，字段名保持不变，并在 MR 说明里注明「未使用公司模板」。
 
 ```markdown
 ## 变更背景

@@ -5,7 +5,7 @@
 ## step 0 记忆检索（必做，在碰任何代码之前）
 
 ```bash
-grep -rl "<症状词>|<状态值>|<RPC名>|<表名>" $VAULT/knowledge/排查卡片/
+grep -rl "<症状词>|<状态值>|<RPC名>|<表名>" $CARDS/
 ```
 
 命中就打开卡片，读 `verified_commit` / `watches` / `status`。然后跑新鲜度门禁：
@@ -19,7 +19,7 @@ grep -rl "<症状词>|<状态值>|<RPC名>|<表名>" $VAULT/knowledge/排查卡�
 - 无 frontmatter → 按 `STALE` 处理。
 - 卡片 `status: superseded` → 跳过，看它指向的替代卡。
 
-索引表在 `$VAULT/knowledge/排查卡片/README.md`（每卡约 1 行，比逐卡打开便宜）。
+索引表在 `$CARDS/README.md`（每卡约 1 行，比逐卡打开便宜）。
 
 ## step 1 域路由：只加载一个知识库文件
 
@@ -44,7 +44,7 @@ grep -rl "<症状词>|<状态值>|<RPC名>|<表名>" $VAULT/knowledge/排查卡�
 | 任务配置 | `knowledge/任务配置/README.md` |
 | 飞书通知 | `knowledge/飞书配置/README.md` |
 
-根路径：`/Users/xuxinzhi/Documents/Obsidian Vault/xxz_obsidian/knowledge/`（**含空格，命令里必须引号包裹**）。
+根路径：`$KNOW`（`paths.sh` 解析，**可能含空格，命令里必须引号包裹**）。上表的 `knowledge/...` 都相对它。`$KNOW` 为空 → 只用代码与仓库内 `docs/`（降级区），并在结论里声明知识源缺失。
 
 各域 `README.md` 是入口，需要细节时再顺着它进同目录的具体文件（如 `质检管理/人工质检.md`）。仍然一次一个文件。
 

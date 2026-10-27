@@ -1,10 +1,12 @@
 {
-  "$comment": "每题都在 data-service 仓库里跑。通过条件写的是可判定的证据，不是主观好坏。",
+  "$comment": "每题都在被测仓库（$REPO）里跑。$KNOW/$CARDS/$TEMPLATES/$TECH_DESIGN_TEMPLATE 由 scripts/paths.sh 从 config.yaml 解析，未配置时该题按「显式声明降级」判定。通过条件写的是可判定的证据，不是主观好坏。",
   "evals": [
     {
       "id": 1,
       "skill": "data-workflow:oncall",
-      "targets": ["Phase 0 MQTT 假话"],
+      "targets": [
+        "Phase 0 MQTT 假话"
+      ],
       "prompt": "分发之后设备没收到通知，data-service 到底有没有主动推送链路？",
       "pass": [
         "点名 MQTTTopicJobDispatchNotification 与 internal/biz/job_dispatch_notification.go",
@@ -19,30 +21,43 @@
     {
       "id": 2,
       "skill": "data-workflow:oncall",
-      "targets": ["状态族隔离规则"],
+      "targets": [
+        "状态族隔离规则"
+      ],
       "prompt": "数据库里 status=20，是不是失败了？",
       "pass": [
         "反问是哪张表/哪一族，或按族分别给限定名回答",
         "出现形如 EpisodeStatus=20 (UPLOADED) 的限定写法"
       ],
-      "fail": ["给出单一无限定解读", "用数值大小推断生命周期"]
+      "fail": [
+        "给出单一无限定解读",
+        "用数值大小推断生命周期"
+      ]
     },
     {
       "id": 3,
       "skill": "data-workflow:oncall",
-      "targets": ["staleness"],
+      "targets": [
+        "staleness"
+      ],
       "prompt": "episode 的终态有哪些？",
       "pass": [
         "读 internal/biz/status.go",
         "同时报出 90/91 与 92/93",
         "用 IsForsaken() 这类谓词解释终态判定"
       ],
-      "fail": ["停在 90/91", "用 >= 90 推理", "照抄 docs/support/state-machines.md"]
+      "fail": [
+        "停在 90/91",
+        "用 >= 90 推理",
+        "照抄 docs/support/state-machines.md"
+      ]
     },
     {
       "id": 4,
       "skill": "data-workflow:change-review",
-      "targets": ["虚构 API"],
+      "targets": [
+        "虚构 API"
+      ],
       "prompt": "审一下这个 data 层改动（给一段含时间格式化与租户过滤的 diff）",
       "pass": [
         "引用真实的 helper.UnixSecondsString 或 apply*Scope",
@@ -57,47 +72,69 @@
     {
       "id": 5,
       "skill": "data-workflow:oncall",
-      "targets": ["记忆回写端到端"],
+      "targets": [
+        "记忆回写端到端"
+      ],
       "prompt": "第 3 题的提示 + 「沉淀成卡片」",
       "pass": [
-        "卡片出现在 $VAULT/knowledge/排查卡片/",
+        "卡片出现在 $CARDS/（paths.sh 解析出的卡片目录）",
         "verified_commit 等于当前 HEAD",
         "source_paths 非空、有 invalidates_when、有 symptoms",
-        "排查卡片/README.md 索引已更新",
-        "之后 grep -rl '<症状词>' $VAULT/knowledge/排查卡片/ 能命中",
+        "卡片目录 README.md 索引已更新",
+        "之后 grep -rl '<症状词>' \"$CARDS/\" 能命中",
         "scripts/knowledge_drift.sh 对该卡报 FRESH"
       ],
-      "fail": ["写入仓库 docs/support/cards/", "卡片含 token 或未脱敏数据"]
+      "fail": [
+        "写入仓库 docs/support/cards/",
+        "卡片含 token 或未脱敏数据"
+      ]
     },
     {
       "id": 6,
       "skill": "data-workflow:data-workflow",
-      "targets": ["痛点② token"],
+      "targets": [
+        "痛点② token"
+      ],
       "prompt": "35 是什么状态？",
       "pass": [
         "SKILL.md 与本次实际加载的 references 合计 ≤ 200 行",
         "没有任何 references/* 被无条件加载"
       ],
-      "fail": ["把 15 个状态族全拉进上下文", "无条件加载 domain-map 与 state-machines"]
+      "fail": [
+        "把 15 个状态族全拉进上下文",
+        "无条件加载 domain-map 与 state-machines"
+      ]
     },
     {
       "id": 7,
       "skill": "data-workflow:quality-gate",
-      "targets": ["静默空跑的命令"],
+      "targets": [
+        "静默空跑的命令"
+      ],
       "prompt": "proto 改了，怎么重新生成？",
-      "pass": ["给出带 PROTO= 的 make api-one，或指向 .cursor/rules/data-service.mdc 的 Proto / 生成 小节"],
-      "fail": ["给出裸 make api-one", "给出 make api-one $(proto_file)"]
+      "pass": [
+        "给出带 PROTO= 的 make api-one，或指向 .cursor/rules/data-service.mdc 的 Proto / 生成 小节"
+      ],
+      "fail": [
+        "给出裸 make api-one",
+        "给出 make api-one $(proto_file)"
+      ]
     },
     {
       "id": 8,
       "skill": "data-workflow:tech-design",
-      "targets": ["死技能复活"],
+      "targets": [
+        "死技能复活"
+      ],
       "prompt": "把这份一页方案写成技术方案",
       "pass": [
-        "打开 $VAULT/开发规范化/研发技术方案-模板.md",
+        "打开 $TECH_DESIGN_TEMPLATE 指向的真实文件",
         "一页方案没覆盖的章节写「无」而不是自己编"
       ],
-      "fail": ["说找不到模板", "重新做一遍需求分析"]
+      "fail": [
+        "模板未配置时自己发明章节结构而不是问用户",
+        "重新做一遍需求分析"
+      ]
     }
   ]
 }

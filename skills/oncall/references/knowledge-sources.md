@@ -4,7 +4,7 @@ L2 = 知识层。**永远向下指向 L3（代码、生成物、聚焦测试）*
 
 ## 主源（按域拆分，一次只加载一个）
 
-根路径 `/Users/xuxinzhi/Documents/Obsidian Vault/xxz_obsidian/knowledge/`（含空格，命令必须引号包裹）。
+根路径 `$KNOW`（由 `$PLUGIN_ROOT/scripts/paths.sh` 解析；可能含空格，命令必须引号包裹）。下表里的 `knowledge/...` 都相对它。
 
 | 源 | 内容类别 | 信任级别 |
 |---|---|---|
@@ -17,7 +17,7 @@ L2 = 知识层。**永远向下指向 L3（代码、生成物、聚焦测试）*
 | `knowledge/待优化.md`、`归档/**`、`未命名.md` | 工作记忆 / 历史 | **低**。只作背景，不作证据 |
 | `开发规范化/**`（同 vault） | F1 组织模板：`研发技术方案-模板.md`、`MR模板.md`、`代码规范.md`、`开发提测文档-模板.md`、`研发流程.md` | 高（模板本身）。模板是事实，技能里只放指针 |
 
-**已知缺口**：整个 Obsidian 知识库没有 baseline commit 与核实日期，所以它自己无法被 `knowledge_drift.sh` 门禁。读它时按「口径可信、取值待核」处理。
+**已知缺口**：整个 知识层没有 baseline commit 与核实日期，所以它自己无法被 `knowledge_drift.sh` 门禁。读它时按「口径可信、取值待核」处理。
 
 ## 工程约定源（F1）
 
@@ -30,7 +30,7 @@ L2 = 知识层。**永远向下指向 L3（代码、生成物、聚焦测试）*
 
 ## 调查卡片（F2，个人，不进 git）
 
-`$VAULT/knowledge/排查卡片/` —— 检索方式与索引见该目录 `README.md`，流程见 [capture.md](./capture.md)。这是**唯一由本技能写入**的知识源。
+`$CARDS/` —— 检索方式与索引见该目录 `README.md`，流程见 [capture.md](./capture.md)。这是**唯一由本技能写入**的知识源。
 
 ## 降级区：只作搜索线索，不可当结论
 
@@ -38,8 +38,8 @@ L2 = 知识层。**永远向下指向 L3（代码、生成物、聚焦测试）*
 
 | 文件 | 已证实的假话 | 记录卡片 |
 |---|---|---|
-| `docs/README.md`、`docs/architecture/**`（含 `README.md`、`architecture.md`、`worker-data-collection.md`、`task-mode-design.md`、`dc-phase2-architecture.md`、`dc-phase2-api-reference.md`） | 断言「服务内无 MQTT / 主链路只有 HTTP」。实际 `internal/data/mqtt.go`、`internal/biz/mqtt_client.go`、`internal/biz/thing_client.go` 存在，`cmd/data-service/wire_gen.go` 已注入，`internal/biz/job_dispatch_notification.go` 真实发送且有单测 | `$VAULT/knowledge/排查卡片/2026-10-27-mqtt-推送链路-docs-失效.md` |
-| `docs/support/state-machines.md` | ① 基线钉在 `main@145829cf`（2026-08-16），HEAD 已领先近千 commit；② EpisodeStatus 缺 92/93；③ 断言 Episode 终态只有 90/91；④ **把上面的假话洗成「不要信其他文档」的规则** —— 引用它时会连带采信它的偏见 | `$VAULT/knowledge/排查卡片/2026-10-27-episode-终态-92-93.md` |
+| `docs/README.md`、`docs/architecture/**`（含 `README.md`、`architecture.md`、`worker-data-collection.md`、`task-mode-design.md`、`dc-phase2-architecture.md`、`dc-phase2-api-reference.md`） | 断言「服务内无 MQTT / 主链路只有 HTTP」。实际 `internal/data/mqtt.go`、`internal/biz/mqtt_client.go`、`internal/biz/thing_client.go` 存在，`cmd/data-service/wire_gen.go` 已注入，`internal/biz/job_dispatch_notification.go` 真实发送且有单测 | `$CARDS/2026-10-27-mqtt-推送链路-docs-失效.md` |
+| `docs/support/state-machines.md` | ① 基线钉在 `main@145829cf`（2026-08-16），HEAD 已领先近千 commit；② EpisodeStatus 缺 92/93；③ 断言 Episode 终态只有 90/91；④ **把上面的假话洗成「不要信其他文档」的规则** —— 引用它时会连带采信它的偏见 | `$CARDS/2026-10-27-episode-终态-92-93.md` |
 | `docs/support/domain-map.md` | 基线同上。域路由表可当**搜索起点**，不可当当前链路结论。其中「快速定位规则」是流程（P），已迁入 [routing.md](./routing.md) step 2 | 同上两张卡 |
 | `docs/adr/**`、`docs/API/**` | 未逐条核验，按「设计意图可信、当前行为待核」处理 | — |
 

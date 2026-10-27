@@ -3,9 +3,10 @@
 #
 # 用法:
 #   knowledge_drift.sh <doc.md> [...]     # 检查指定文档
-#   knowledge_drift.sh                    # 扫 Obsidian knowledge/（含 排查卡片/）+ CONTEXT.md
+#   knowledge_drift.sh                    # 扫 config.yaml 的 knowledge_root（含 排查卡片/）+ CONTEXT.md
 #
-# 从 YAML frontmatter 读 verified_commit 与 watches，在 data-service 仓库内比对 HEAD：
+# 知识源路径由 scripts/resolve.sh 解析；未配置时回退 <repo>/docs 并打印 DEGRADED。
+# 从 YAML frontmatter 读 verified_commit 与 watches，在被测仓库内比对 HEAD：
 #   1. git rev-list --count <commit>..HEAD          → 落后多少 commit
 #   2. git diff --name-only <commit>..HEAD -- <watches> → 被盯文件是否动过
 #   3. 逐文件 git diff --shortstat                  → 变动量级
@@ -14,27 +15,35 @@
 # 门禁永不阻塞：正常恒 exit 0。exit 2 仅用于「文件读不了 / frontmatter 未闭合」这类无法解析的情况。
 # 缺 frontmatter 或缺 verified_commit 按 STALE 处理 —— 这让未纳管的文档自我暴露，而不是靠制度。
 #
-# 注意: Obsidian vault 路径含空格，所有路径必须引号包裹。
+# 注意: 知识源路径可能含空格，所有路径必须引号包裹。
 
 set -uo pipefail
 
-VAULT_KNOWLEDGE="/Users/xuxinzhi/Documents/Obsidian Vault/xxz_obsidian/knowledge"
-DEFAULT_REPO="$HOME/Documents/gowork/data-service"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# 本脚本现在住在独立插件仓库里，不再靠自身位置推断被测仓库。
-# 优先级: $DS_REPO > 当前目录所在仓库 > 默认 data-service 路径。
-is_ds_repo() { [ -n "${1:-}" ] && [ -d "$1/internal/biz" ]; }
+# 配置解析：env DATA_WORKFLOW_* > ./config.yaml > ~/.config/data-workflow/config.yaml > 空
+cfg() { bash "$script_dir/resolve.sh" "$1" 2>/dev/null; }
+
+# 本脚本住在独立插件仓库里，不靠自身位置推断被测仓库。
+# 优先级: $DS_REPO > config.yaml 的 repo > 当前目录所在仓库。
+is_repo() { [ -n "${1:-}" ] && git -C "$1" rev-parse --show-toplevel >/dev/null 2>&1; }
 repo_dir="${DS_REPO:-}"
-if ! is_ds_repo "$repo_dir"; then
+if ! is_repo "$repo_dir"; then repo_dir="$(cfg repo)"; fi
+if ! is_repo "$repo_dir"; then
   repo_dir="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || true)"
 fi
-if ! is_ds_repo "$repo_dir"; then
-  repo_dir="$(git -C "$DEFAULT_REPO" rev-parse --show-toplevel 2>/dev/null || true)"
-fi
 
-if ! is_ds_repo "$repo_dir"; then
-  printf 'UNPARSEABLE 找不到 data-service 仓库（试过 $DS_REPO、当前目录、%s）\n' "$DEFAULT_REPO"
+if ! is_repo "$repo_dir"; then
+  printf 'UNPARSEABLE 找不到被测仓库（试过 $DS_REPO、config.yaml 的 repo、当前目录）\n'
   exit 2
+fi
+repo_dir="$(git -C "$repo_dir" rev-parse --show-toplevel)"
+
+# 知识源：未配置时回退仓库内 docs/ 并显式标注降级，绝不猜个人绝对路径。
+VAULT_KNOWLEDGE="$(cfg knowledge_root)"
+if [ -z "$VAULT_KNOWLEDGE" ]; then
+  VAULT_KNOWLEDGE="$repo_dir/docs"
+  printf 'DEGRADED 知识源未配置（config.yaml: knowledge_root），回退 %s\n' "$VAULT_KNOWLEDGE"
 fi
 
 # --- frontmatter 解析 -------------------------------------------------------
@@ -165,7 +174,7 @@ else
 fi
 
 if [ "${#targets[@]}" -eq 0 ]; then
-  printf 'MISSING 没有可检查的文档（vault 路径: %s）\n' "$VAULT_KNOWLEDGE"
+  printf 'MISSING 没有可检查的文档（知识源路径: %s）\n' "$VAULT_KNOWLEDGE"
   exit 0
 fi
 

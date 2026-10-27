@@ -5,12 +5,21 @@ description: data-service 开发工作台，需求到提交的唯一入口。用
 
 # data-service 开发工作台
 
-本文件只负责**选型、顺序、门禁**。具体步骤在被点名的技能里；业务事实一律运行时从 Obsidian 知识库读，本文件不保存任何取值、状态名、字段名。
+本文件只负责**选型、顺序、门禁**。具体步骤在被点名的技能里；业务事实一律运行时从知识层读，本文件不保存任何取值、状态名、字段名。
 
 项目索引（去哪读什么）在 `references/project-index.md`，进入具体工作后再读。
 
-`$PLUGIN_ROOT` = 本 SKILL.md 往上两级的目录（`scripts/` 与 `skills/` 同级）。
-`$VAULT` = `/Users/xuxinzhi/Documents/Obsidian Vault/xxz_obsidian`（含空格，命令必须引号包裹）。
+`$PLUGIN_ROOT` = 本 SKILL.md 往上两级的目录（`scripts/` 与 `skills/` 同级；软链安装时先用 `readlink -f` 解析）。
+
+外部路径不写死在技能里，会话开头解析一次（步骤 0 之前）：
+
+```bash
+eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"
+# → $KNOW 知识根 / $CARDS 排查卡片目录 / $TEMPLATES 公司模板根
+#   $REPO 被测代码仓库 / $TECH_DESIGN_TEMPLATE / $MR_TEMPLATE / $PERSONAL_AGENTS_MD
+```
+
+路径可能含空格，命令里必须引号包裹。解析出空值的键**不许猜绝对路径**：要么问用户，要么显式声明降级后继续。
 
 ## 启动
 
@@ -27,7 +36,7 @@ description: data-service 开发工作台，需求到提交的唯一入口。用
 
 ### 步骤 1 查重（进入任何一步之前）
 
-- 是否已有覆盖此事的产出？`grep -rl "<主题词>" .cursor/plans/ "$VAULT/knowledge/排查卡片/"`
+- 是否已有覆盖此事的产出？`grep -rl "<主题词>" .cursor/plans/ "$CARDS/"`
 - 是否与已钉住的决策冲突？看 `.cursor/plans/` 里最近那份的决定表。
 - 用户这句话是否已点明选型表中的某一行？
 
@@ -40,17 +49,17 @@ description: data-service 开发工作台，需求到提交的唯一入口。用
 
 ## 选型表
 
-`$VAULT/knowledge/**` 按业务域拆分，**一次只加载一个域文件**；`$VAULT/开发规范化/**` 放公司模板。清单与信任级别见 `data-workflow:oncall` 的 `references/knowledge-sources.md`。
+`$KNOW/**` 按业务域拆分，**一次只加载一个域文件**；`$TEMPLATES/**` 放公司模板。清单与信任级别见 `data-workflow:oncall` 的 `references/knowledge-sources.md`。
 
 | 选择 | 执行 |
 |------|------|
-| 需求分析 | `data-workflow:requirement-analysis`。拍板用全局技能 `grilling`（要它读文档时把文档路径一起给它）。访谈前先从 `$VAULT/knowledge/<相关域>/` 取一个域文件建立口径，不要凭记忆问用户已写过的东西。决定闭环后写一页方案，再按全局技能 `to-spec` 写 spec，不再访谈 |
-| 技术方案 | `data-workflow:tech-design`（模板 `$VAULT/开发规范化/研发技术方案-模板.md`）。需要架构图时用 `data-workflow:excalidraw-diagram`。一页方案未确认时回到 `grilling` |
+| 需求分析 | `data-workflow:requirement-analysis`。拍板用全局技能 `grilling`（要它读文档时把文档路径一起给它）。访谈前先从 `$KNOW/<相关域>/` 取一个域文件建立口径，不要凭记忆问用户已写过的东西。决定闭环后写一页方案，再按全局技能 `to-spec` 写 spec，不再访谈 |
+| 技术方案 | `data-workflow:tech-design`（模板 `$TEMPLATES/研发技术方案-模板.md`）。需要架构图时用 `data-workflow:excalidraw-diagram`。一页方案未确认时回到 `grilling` |
 | 编码实现 | `data-workflow:implementation`。写 Go 前读它的 `references/go-style.md`，改完 Go 后读 `references/reuse-gate.md` |
 | 改动审核 | `data-workflow:change-review`；同一份 diff 再按它的 `references/standards-spec.md` 做规范与需求符合性审核，结论合并成一份 |
 | 质量检查 | `data-workflow:quality-gate`，以命令输出为准 |
 | 排查确认 | `data-workflow:oncall`，保持只读。业务知识走它的 `references/routing.md` 域路由，**不要读仓库 `docs/support/`——那是降级区**。根因是偶发故障或性能回退时再读全局技能 `diagnosing-bugs`；不存在就停在 oncall 结论 |
-| 提交 | `data-workflow:git-commit`（MR 模板 `$VAULT/开发规范化/MR模板.md`） |
+| 提交 | `data-workflow:git-commit`（MR 模板 `$TEMPLATES/MR模板.md`） |
 
 点名才读，不进菜单：`ponytail-review`（删过度设计）、`security-best-practices`、`security-threat-model`、`gh-fix-ci`、`gh-address-comments`、`domain-modeling`（改 `CONTEXT.md` 或术语时）。这些是全局技能，按名字调用。
 

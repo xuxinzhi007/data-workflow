@@ -9,7 +9,13 @@ description: data-service 技术方案。把已拍板的一页方案填进公司
 
 评审阅读一页方案。模板是归档格式。
 
-`$VAULT` = `/Users/xuxinzhi/Documents/Obsidian Vault/xxz_obsidian`（含空格，命令必须引号包裹）。
+`$PLUGIN_ROOT` = 本 SKILL.md 往上两级的目录（软链安装时先 `readlink -f`）。模板路径运行时解析，不写死：
+
+```bash
+eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"   # → $KNOW / $TEMPLATES / $TECH_DESIGN_TEMPLATE
+```
+
+路径可能含空格，命令必须引号包裹。`$TECH_DESIGN_TEMPLATE` 为空 → 问用户要模板，不许猜绝对路径、也不许自己发明章节结构。
 
 ## 输入要求
 
@@ -19,11 +25,11 @@ description: data-service 技术方案。把已拍板的一页方案填进公司
 
 ## 回填
 
-1. 打开《研发技术方案》模板：`"/Users/xuxinzhi/Documents/Obsidian Vault/xxz_obsidian/开发规范化/研发技术方案-模板.md"`（路径含空格，命令必须引号包裹）。
+1. 打开《研发技术方案》模板：`"$TECH_DESIGN_TEMPLATE"`（路径可能含空格，命令必须引号包裹）。为空或文件不存在 → 问用户要模板路径，不要自己发明章节。
 2. 用一页方案填对应章节。接口、数据、风险、发布与回滚写进模板。
 3. 一页方案没写到的章节填「无」。
 4. 模板开头注明评审正文是一页方案。
 
 ## 落点
 
-模板成稿与一页方案放在同一知识库目录（`$VAULT/knowledge/<相关域>/`），文件名 `<主题>-技术方案.md`。
+模板成稿与一页方案放在同一知识库目录（`$KNOW/<相关域>/`），文件名 `<主题>-技术方案.md`。
