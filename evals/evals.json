@@ -60,13 +60,17 @@
       ],
       "prompt": "审一下这个 data 层改动（给一段含时间格式化与租户过滤的 diff）",
       "pass": [
-        "引用真实的 helper.UnixSecondsString 或 apply*Scope",
-        "对 diff 里点名的每个符号做过 grep 验证"
+        "点名的每个 helper / scope 函数都先 grep 验证过真实存在（例如仓库里真实的时间格式化函数与 apply*Scope 系列）",
+        "大 diff（>5 文件或 >200 行）拆成 spec 合规 / 代码质量 / 接口影响三轴并行，三轴共读同一份 specs/<feature>/diff.patch",
+        "报告头带 review 指纹（base sha + head sha + 文件数 + 行数）",
+        "审完之后工作树又变了 → 明说结论 STALE 需要重跑"
       ],
       "fail": [
         "提到 helper.TimeToUnixString",
         "提到 TenantScope(tenantID)",
-        "提到 repo_helpers 或 scopes.go"
+        "提到 repo_helpers 或 scopes.go",
+        "让子 agent 直接下 breaking 判定或直接改代码",
+        "把修复循环拆成并行子 agent"
       ]
     },
     {
@@ -113,7 +117,8 @@
       ],
       "prompt": "proto 改了，怎么重新生成？",
       "pass": [
-        "给出带 PROTO= 的 make api-one，或指向 .cursor/rules/data-service.mdc 的 Proto / 生成 小节"
+        "给出带 PROTO= 的 make api-one，或指向 $REPO/Makefile 里真实的生成目标",
+        "不假设某个 IDE 的规则目录存在（落点按 data-workflow:data-workflow 的 references/project-index.md 解析）"
       ],
       "fail": [
         "给出裸 make api-one",
@@ -134,6 +139,92 @@
       "fail": [
         "模板未配置时自己发明章节结构而不是问用户",
         "重新做一遍需求分析"
+      ]
+    },
+    {
+      "id": 9,
+      "skill": "data-workflow:impact-assessment",
+      "targets": [
+        "痛点④ 影响面与维护性没评估",
+        "UNVERIFIED 不等于没影响"
+      ],
+      "prompt": "给任务列表加一个「按质检结果过滤」的筛选条件，会影响什么？",
+      "pass": [
+        "产出 $REPO/specs/<feature>/impact.md，四轴（调用方 / 状态机 / 租户权限 / 回滚）齐全",
+        "每个调用方结论都能指到 文件:符号 或一条真实 grep 命令与输出",
+        "查不到证据的项写 UNVERIFIED，而不是含糊带过",
+        "维护性三查有结论：是否新增第 N 份副本、模块深浅、腐化点",
+        "新增枚举值时列出全库消费点（switch / allowlist / SQL 过滤 / 前端映射）或明确写「无新增枚举」"
+      ],
+      "fail": [
+        "整轴空白却下了「影响可控」的结论",
+        "把 UNVERIFIED 的项在方案里当已知条件用",
+        "只列文件名不给符号，或给不出可复现的检索命令",
+        "凭记忆写不存在的 scope 函数 / helper"
+      ]
+    },
+    {
+      "id": 10,
+      "skill": "data-workflow:interface-test",
+      "targets": [
+        "痛点⑤ 缺接口测试",
+        "四态裁决与 WAIVED 的诚实性"
+      ],
+      "prompt": "这个改动动了 proto，接口层面怎么验证？",
+      "pass": [
+        "① 跑 go test ./api/... 并贴真实输出（进程内契约测试，零外部依赖）",
+        "② 跑 scripts/contract_diff.sh <base> 并给出 removed rpc / 端点变更 / 删字段 / 字段号复用 / 删枚举 / 枚举号复用 / 删 proto 文件 的结论",
+        "③ 场景回放先探活 TEST_BASE_URL（默认 http://localhost:8000），探活失败就裁 WAIVED 并写补跑条件",
+        "最终裁决是 PASS / CONCERNS / FAIL / WAIVED 四态之一，且每一态都有对应证据",
+        "结论落 $REPO/specs/<feature>/interface-test.md"
+      ],
+      "fail": [
+        "contract_diff.sh 报了 breaking 却直接判 PASS",
+        "跑不了场景回放就谎报 PASS 或干脆不提第三级门",
+        "为了过门把测试指向线上库或真实环境",
+        "输出里带未脱敏的 x-xr-auth-* 头、token 或客户数据"
+      ]
+    },
+    {
+      "id": 11,
+      "skill": "data-workflow:git-commit",
+      "targets": [
+        "痛点③ 缺文档产出与提交前审计"
+      ],
+      "prompt": "改动写完了，帮我提交",
+      "pass": [
+        "提交前逐项过文档审计门：specs/<feature>/{spec,plan,impact,interface-test,change-note,rollback}.md、README、CONTEXT.md、api 生成物",
+        "每项填「已同步」或「不需要」+ 一句依据，填不出依据的判「缺失」",
+        "有缺失时二选一：补齐，或在 change-note.md 的「接受的文档风险」表里写清缺哪份 / 为什么不补 / 何时补 / 后果，并把这几行贴给用户确认",
+        "change-note.md 用 $PLUGIN_ROOT/templates/change-note-template.md 生成，与代码同一次提交"
+      ],
+      "fail": [
+        "跳过审计直接 git commit",
+        "文档没同步也不记账，沉默提交",
+        "自己发明 change-note 结构而不用模板",
+        "commit message 里出现 AI 署名 / co-author / generated-by"
+      ]
+    },
+    {
+      "id": 12,
+      "skill": "scripts/install.sh + scripts/resolve.sh",
+      "targets": [
+        "痛点① 分发绑定单一 IDE 与个人绝对路径"
+      ],
+      "prompt": "在 Cursor / Claude Code / Codex / Qoder 里都要能用这套技能，怎么装？知识源不是 Obsidian 的人怎么办？",
+      "pass": [
+        "bash scripts/install.sh 探测 cwd（或 --global 时 ~）下的 .claude .cursor .qoder .codex .agents，只对存在的目录建软链，链到本仓 skills/*",
+        "连跑两次结果一致（幂等，不重复建链、不报错）",
+        "bash scripts/install.sh --unlink 只删指向本仓的软链，用户自己的文件不动",
+        "bash scripts/resolve.sh <key> 按 DATA_WORKFLOW_<KEY> env > ./config.yaml > <plugin root>/config.yaml > ~/.config/data-workflow/config.yaml > 空 的顺序解析",
+        "config.yaml 未配置或键为空时，知识源回退 $REPO/docs 并打印 DEGRADED，绝不猜绝对路径",
+        "对 skills/ scripts/ templates/ workflows/ README.md AGENTS.md 跑「个人主目录绝对路径」grep 无命中（个人路径只允许出现在被 gitignore 的 config.yaml；evals 自身不在此列，避免自指）"
+      ],
+      "fail": [
+        "把技能复制进各 IDE 目录而不是软链（改一处就分叉）",
+        "--unlink 误删非本仓文件",
+        "技能正文里出现任何个人绝对路径或 Obsidian 专属路径",
+        "未配置知识源时静默使用某个硬编码目录"
       ]
     }
   ]

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 1190" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 1540" width="100%" height="100%">
   <defs>
     <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%" filterUnits="userSpaceOnUse">
       <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.07"/>
@@ -27,175 +27,237 @@
   <rect width="100%" height="100%" fill="#ffffff" rx="16"/>
 
   <g transform="translate(560, 50)" text-anchor="middle">
-    <text class="title" font-size="30" y="0">data-workflow · 分层架构</text>
-    <text class="subtitle" font-size="16" y="32">技能只装流程，业务事实运行时从知识库按需加载</text>
+    <text class="title" font-size="30" y="0">data-workflow · 分层架构 v0.2</text>
+    <text class="subtitle" font-size="16" y="32">技能只装流程；业务事实由 config.yaml 指向的知识源运行时加载，绝不内嵌</text>
   </g>
 
   <!-- 卡片 -->
   
-    <g transform="translate(30, 108)" filter="url(#shadow)">
-      <rect width="1060" height="156" rx="14" fill="#f1f3f5" stroke="#343a40" stroke-width="2"/>
-      <text class="card-title" x="530" y="36" text-anchor="middle" fill="#212529">L0 编排器 · data-workflow:data-workflow</text>
-      <text class="card-sub" x="530" y="56" text-anchor="middle">skills/data-workflow/SKILL.md · 83 行 · 零业务事实</text>
+    <g transform="translate(30, 100)" filter="url(#shadow)">
+      <rect width="1060" height="170" rx="14" fill="#f1f3f5" stroke="#343a40" stroke-width="2"/>
+      <text class="card-title" x="530" y="36" text-anchor="middle" fill="#212529">L0 薄编排器 · data-workflow:data-workflow</text>
+      <text class="card-sub" x="530" y="56" text-anchor="middle">skills/data-workflow/SKILL.md · 零业务事实</text>
       <line x1="25" y1="72" x2="1035" y2="72" stroke="#ced4da" stroke-width="1.5" stroke-dasharray="4,4"/>
       <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• 启动：环境探测 repo_snapshot.sh + knowledge_drift.sh（一次会话只跑一次，结果向下传递）</text>
-        <text y="28">• 选型表 · 串联顺序 · 三道门禁 · 查重防冲突 · 只用命名空间名引用其他技能</text>
+        <text y="0">• 启动：paths.sh 解析外部路径 → repo_snapshot.sh 记 branch/commit/dirty → knowledge_drift.sh 标 FRESH/STALE（一次会话只跑一次）</text>
+        <text y="28">• 只做四件事：查重 · 选型 · 选工作流 · 守六道门。判断留在主 agent，取证才外包给子 agent</text>
       </g>
     </g>
 
-    <g transform="translate(30, 300)" filter="url(#shadow)">
-      <rect width="340" height="156" rx="14" fill="#ebfbee" stroke="#0ca678" stroke-width="2"/>
+    <g transform="translate(30, 306)" filter="url(#shadow)">
+      <rect width="520" height="160" rx="14" fill="#e7f5ff" stroke="#1971c2" stroke-width="2"/>
+      <text class="card-title" x="260" y="36" text-anchor="middle" fill="#1971c2">工作流状态机 · workflows/*.json</text>
+      <text class="card-sub" x="260" y="56" text-anchor="middle">feature · bugfix · hotfix · review-only</text>
+      <line x1="25" y1="72" x2="495" y2="72" stroke="#a5d8ff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 阶段序列 + 每阶段技能 + 门禁 + 能否派子 agent</text>
+        <text y="28">• 新业务场景 = 写新模板（重排现有技能），不是加新技能</text>
+      </g>
+    </g>
+
+    <g transform="translate(570, 306)" filter="url(#shadow)">
+      <rect width="520" height="160" rx="14" fill="#ebfbee" stroke="#0ca678" stroke-width="2"/>
+      <text class="card-title" x="260" y="36" text-anchor="middle" fill="#0ca678">工件模板 · templates/*.md</text>
+      <text class="card-sub" x="260" y="56" text-anchor="middle">spec · plan · impact · change-note · rollback</text>
+      <line x1="25" y1="72" x2="495" y2="72" stroke="#b2f2bb" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 模板内嵌 GATE 声明，没内容写「无」，不许删段落</text>
+        <text y="28">• 产物落 $REPO/specs/&lt;feature&gt;/ —— 对话会被压缩，工件不会</text>
+      </g>
+    </g>
+
+    <g transform="translate(30, 502)" filter="url(#shadow)">
+      <rect width="340" height="150" rx="14" fill="#ebfbee" stroke="#0ca678" stroke-width="2"/>
       <text class="card-title" x="170" y="36" text-anchor="middle" fill="#0ca678">需求分析</text>
-      <text class="card-sub" x="170" y="56" text-anchor="middle">requirement-analysis · 84 行</text>
+      <text class="card-sub" x="170" y="56" text-anchor="middle">requirement-analysis · + debt-gate.md</text>
       <line x1="25" y1="72" x2="315" y2="72" stroke="#b2f2bb" stroke-width="1.5" stroke-dasharray="4,4"/>
       <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• 拆需求、定验收口径</text>
-        <text y="28">• 调用 grilling 压测假设</text>
+        <text y="0">• 九项负债评估先于选方案</text>
+        <text y="28">• 方案 ≥2 且必含最小改动</text>
       </g>
     </g>
 
-    <g transform="translate(390, 300)" filter="url(#shadow)">
-      <rect width="340" height="156" rx="14" fill="#e7f5ff" stroke="#1971c2" stroke-width="2"/>
-      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#1971c2">技术方案</text>
-      <text class="card-sub" x="170" y="56" text-anchor="middle">tech-design · 29 行</text>
-      <line x1="25" y1="72" x2="315" y2="72" stroke="#a5d8ff" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• 读 Obsidian 方案模板</text>
-        <text y="28">• 只写流程不抄业务</text>
-      </g>
-    </g>
-
-    <g transform="translate(750, 300)" filter="url(#shadow)">
-      <rect width="340" height="156" rx="14" fill="#f3f0ff" stroke="#7048e8" stroke-width="2"/>
-      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#7048e8">实现</text>
-      <text class="card-sub" x="170" y="56" text-anchor="middle">implementation · 69 行 + 2 refs</text>
-      <line x1="25" y1="72" x2="315" y2="72" stroke="#d0bfff" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• go-style.md R01–R18</text>
-        <text y="28">• reuse-gate.md 复用门禁</text>
-      </g>
-    </g>
-
-    <g transform="translate(30, 472)" filter="url(#shadow)">
-      <rect width="340" height="156" rx="14" fill="#fff4e6" stroke="#e8590c" stroke-width="2"/>
-      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#e8590c">改动审核</text>
-      <text class="card-sub" x="170" y="56" text-anchor="middle">change-review · 130 行 + 1 ref</text>
+    <g transform="translate(390, 502)" filter="url(#shadow)">
+      <rect width="340" height="150" rx="14" fill="#fff4e6" stroke="#e8590c" stroke-width="2"/>
+      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#e8590c">影响面评估</text>
+      <text class="card-sub" x="170" y="56" text-anchor="middle">impact-assessment · + blast-radius.md</text>
       <line x1="25" y1="72" x2="315" y2="72" stroke="#ffc078" stroke-width="1.5" stroke-dasharray="4,4"/>
       <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• high/medium 风险即停</text>
-        <text y="28">• 点名 API 必须 grep 验证</text>
+        <text y="0">• 四轴：调用方/状态机/权限/回滚</text>
+        <text y="28">• 每项带证据或 UNVERIFIED</text>
       </g>
     </g>
 
-    <g transform="translate(390, 472)" filter="url(#shadow)">
-      <rect width="340" height="156" rx="14" fill="#fff5f5" stroke="#e03131" stroke-width="2"/>
-      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#c92a2a">质量门</text>
-      <text class="card-sub" x="170" y="56" text-anchor="middle">quality-gate · 85 行</text>
-      <line x1="25" y1="72" x2="315" y2="72" stroke="#ffc9c9" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• make api-one PROTO=…</text>
-        <text y="28">• 聚焦测试 + 覆盖率</text>
-      </g>
-    </g>
-
-    <g transform="translate(750, 472)" filter="url(#shadow)">
-      <rect width="340" height="156" rx="14" fill="#f1f3f5" stroke="#343a40" stroke-width="2"/>
-      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#212529">提交 / MR</text>
-      <text class="card-sub" x="170" y="56" text-anchor="middle">git-commit · 145 行</text>
-      <line x1="25" y1="72" x2="315" y2="72" stroke="#ced4da" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• Conventional Commits</text>
-        <text y="28">• MR 模板走 Obsidian 指针</text>
-      </g>
-    </g>
-
-    <g transform="translate(30, 644)" filter="url(#shadow)">
-      <rect width="340" height="156" rx="14" fill="#e7f5ff" stroke="#1971c2" stroke-width="2"/>
-      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#1971c2">线上排查</text>
-      <text class="card-sub" x="170" y="56" text-anchor="middle">oncall · 57 行 + 7 refs</text>
+    <g transform="translate(750, 502)" filter="url(#shadow)">
+      <rect width="340" height="150" rx="14" fill="#e7f5ff" stroke="#1971c2" stroke-width="2"/>
+      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#1971c2">技术方案</text>
+      <text class="card-sub" x="170" y="56" text-anchor="middle">tech-design</text>
       <line x1="25" y1="72" x2="315" y2="72" stroke="#a5d8ff" stroke-width="1.5" stroke-dasharray="4,4"/>
       <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• 状态族隔离 5 条</text>
-        <text y="28">• 证据阶梯 6 层 + 降级区</text>
+        <text y="0">• 套 $TECH_DESIGN_TEMPLATE</text>
+        <text y="28">• 同时落 plan.md + rollback.md</text>
       </g>
     </g>
 
-    <g transform="translate(390, 644)" filter="url(#shadow)">
-      <rect width="340" height="156" rx="14" fill="#ebfbee" stroke="#0ca678" stroke-width="2"/>
-      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#0ca678">画图</text>
-      <text class="card-sub" x="170" y="56" text-anchor="middle">excalidraw-diagram · 135 行</text>
+    <g transform="translate(30, 668)" filter="url(#shadow)">
+      <rect width="340" height="150" rx="14" fill="#f3f0ff" stroke="#7048e8" stroke-width="2"/>
+      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#7048e8">实现</text>
+      <text class="card-sub" x="170" y="56" text-anchor="middle">implementation · + go-style · reuse-gate</text>
+      <line x1="25" y1="72" x2="315" y2="72" stroke="#d0bfff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 先搜再写，重复三次才抽象</text>
+        <text y="28">• 禁止实现类子 agent 并行</text>
+      </g>
+    </g>
+
+    <g transform="translate(390, 668)" filter="url(#shadow)">
+      <rect width="340" height="150" rx="14" fill="#fff4e6" stroke="#e8590c" stroke-width="2"/>
+      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#e8590c">改动审核（三轴）</text>
+      <text class="card-sub" x="170" y="56" text-anchor="middle">change-review · + standards-spec.md</text>
+      <line x1="25" y1="72" x2="315" y2="72" stroke="#ffc078" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 共读同一份 diff.patch</text>
+        <text y="28">• review 指纹一变即 STALE</text>
+      </g>
+    </g>
+
+    <g transform="translate(750, 668)" filter="url(#shadow)">
+      <rect width="340" height="150" rx="14" fill="#fff5f5" stroke="#e03131" stroke-width="2"/>
+      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#c92a2a">质量门</text>
+      <text class="card-sub" x="170" y="56" text-anchor="middle">quality-gate</text>
+      <line x1="25" y1="72" x2="315" y2="72" stroke="#ffc9c9" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 构建 + 聚焦单测 + 覆盖率</text>
+        <text y="28">• 每个 ✓ 后面必须跟真实输出</text>
+      </g>
+    </g>
+
+    <g transform="translate(30, 834)" filter="url(#shadow)">
+      <rect width="340" height="150" rx="14" fill="#fff5f5" stroke="#e03131" stroke-width="2"/>
+      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#c92a2a">接口门（三级）</text>
+      <text class="card-sub" x="170" y="56" text-anchor="middle">interface-test · + contract-gates.md</text>
+      <line x1="25" y1="72" x2="315" y2="72" stroke="#ffc9c9" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 契约测试 → proto 破坏性 diff → 回放</text>
+        <text y="28">• 四态 PASS/CONCERNS/FAIL/WAIVED</text>
+      </g>
+    </g>
+
+    <g transform="translate(390, 834)" filter="url(#shadow)">
+      <rect width="340" height="150" rx="14" fill="#f1f3f5" stroke="#343a40" stroke-width="2"/>
+      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#212529">文档审计 + 提交 / MR</text>
+      <text class="card-sub" x="170" y="56" text-anchor="middle">git-commit</text>
+      <line x1="25" y1="72" x2="315" y2="72" stroke="#ced4da" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 提交前核对 specs/README/CONTEXT</text>
+        <text y="28">• 不同步必须记账，不许沉默提交</text>
+      </g>
+    </g>
+
+    <g transform="translate(750, 834)" filter="url(#shadow)">
+      <rect width="340" height="150" rx="14" fill="#e7f5ff" stroke="#1971c2" stroke-width="2"/>
+      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#1971c2">线上排查（旁路）</text>
+      <text class="card-sub" x="170" y="56" text-anchor="middle">oncall · + 7 refs</text>
+      <line x1="25" y1="72" x2="315" y2="72" stroke="#a5d8ff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• 状态族隔离 · 证据阶梯 6 层</text>
+        <text y="28">• 仓库只读，诊断不授权修改</text>
+      </g>
+    </g>
+
+    <g transform="translate(30, 1000)" filter="url(#shadow)">
+      <rect width="340" height="150" rx="14" fill="#ebfbee" stroke="#0ca678" stroke-width="2"/>
+      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#0ca678">画图（旁路）</text>
+      <text class="card-sub" x="170" y="56" text-anchor="middle">excalidraw-diagram</text>
       <line x1="25" y1="72" x2="315" y2="72" stroke="#b2f2bb" stroke-width="1.5" stroke-dasharray="4,4"/>
       <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• spec JSON → svg/excalidraw</text>
+        <text y="0">• spec JSON → svg/excalidraw/png</text>
         <text y="28">• README 两张图即产出</text>
       </g>
     </g>
 
-    <g transform="translate(750, 644)" filter="url(#shadow)">
-      <rect width="340" height="156" rx="14" fill="#fff5f5" stroke="#e03131" stroke-width="2"/>
+    <g transform="translate(390, 1000)" filter="url(#shadow)">
+      <rect width="340" height="150" rx="14" fill="#f3f0ff" stroke="#7048e8" stroke-width="2"/>
+      <text class="card-title" x="170" y="36" text-anchor="middle" fill="#7048e8">多 agent 协议</text>
+      <text class="card-sub" x="170" y="56" text-anchor="middle">references/subagent-protocol.md</text>
+      <line x1="25" y1="72" x2="315" y2="72" stroke="#d0bfff" stroke-width="1.5" stroke-dasharray="4,4"/>
+      <g class="card-item" transform="translate(24, 102)">
+        <text y="0">• brief/report/ledger 落盘抗压缩</text>
+        <text y="28">• 取证可并行，裁决不可并行</text>
+      </g>
+    </g>
+
+    <g transform="translate(750, 1000)" filter="url(#shadow)">
+      <rect width="340" height="150" rx="14" fill="#fff5f5" stroke="#e03131" stroke-width="2"/>
       <text class="card-title" x="170" y="36" text-anchor="middle" fill="#c92a2a">渐进披露</text>
       <text class="card-sub" x="170" y="56" text-anchor="middle">3 级加载 · 硬性约束</text>
       <line x1="25" y1="72" x2="315" y2="72" stroke="#ffc9c9" stroke-width="1.5" stroke-dasharray="4,4"/>
       <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• SKILL.md 触发时才读</text>
-        <text y="28">• references 点名才读</text>
+        <text y="0">• 名称+描述常驻 → SKILL.md 触发才读</text>
+        <text y="28">• references 点名才读，一次一个域文件</text>
       </g>
     </g>
 
-    <g transform="translate(30, 836)" filter="url(#shadow)">
-      <rect width="520" height="156" rx="14" fill="#fff4e6" stroke="#e8590c" stroke-width="2"/>
-      <text class="card-title" x="260" y="36" text-anchor="middle" fill="#e8590c">L2 业务事实 F2</text>
-      <text class="card-sub" x="260" y="56" text-anchor="middle">Obsidian xxz_obsidian/knowledge/</text>
+    <g transform="translate(30, 1186)" filter="url(#shadow)">
+      <rect width="520" height="150" rx="14" fill="#fff4e6" stroke="#e8590c" stroke-width="2"/>
+      <text class="card-title" x="260" y="36" text-anchor="middle" fill="#e8590c">L2 业务事实 F2 · $KNOW / $CARDS</text>
+      <text class="card-sub" x="260" y="56" text-anchor="middle">路径来自 config.yaml，Obsidian / 仓库 docs / 任意目录都行</text>
       <line x1="25" y1="72" x2="495" y2="72" stroke="#ffc078" stroke-width="1.5" stroke-dasharray="4,4"/>
       <g class="card-item" transform="translate(24, 102)">
         <text y="0">• 按业务域拆分，一次只读一个文件</text>
-        <text y="28">• 排查卡片/ 带 verified_commit + watches</text>
+        <text y="28">• 卡片带 verified_commit + watches，可被门禁判过期</text>
       </g>
     </g>
 
-    <g transform="translate(570, 836)" filter="url(#shadow)">
-      <rect width="520" height="156" rx="14" fill="#f3f0ff" stroke="#7048e8" stroke-width="2"/>
-      <text class="card-title" x="260" y="36" text-anchor="middle" fill="#7048e8">L2 工程事实 F1</text>
-      <text class="card-sub" x="260" y="56" text-anchor="middle">.cursor/rules/*.mdc</text>
+    <g transform="translate(570, 1186)" filter="url(#shadow)">
+      <rect width="520" height="150" rx="14" fill="#f3f0ff" stroke="#7048e8" stroke-width="2"/>
+      <text class="card-title" x="260" y="36" text-anchor="middle" fill="#7048e8">L2 工程事实 F1 · 仓库成文规范</text>
+      <text class="card-sub" x="260" y="56" text-anchor="middle">落点按 project-index 解析，不假设 IDE 目录</text>
       <line x1="25" y1="72" x2="495" y2="72" stroke="#d0bfff" stroke-width="1.5" stroke-dasharray="4,4"/>
       <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• 分层 / 生成物 / 构建命令唯一副本</text>
-        <text y="28">• Qoder 不自动加载，需显式 Read</text>
+        <text y="0">• 分层 / 生成物 / 构建命令</text>
+        <text y="28">• 多数 agent 不自动加载别家 IDE 的目录，需显式 Read</text>
       </g>
     </g>
 
-    <g transform="translate(30, 1028)" filter="url(#shadow)">
+    <g transform="translate(30, 1372)" filter="url(#shadow)">
       <rect width="1060" height="128" rx="14" fill="#f1f3f5" stroke="#343a40" stroke-width="2"/>
       <text class="card-title" x="530" y="36" text-anchor="middle" fill="#212529">L3 权威 · 代码 / 生成物 / 聚焦测试</text>
       <text class="card-sub" x="530" y="56" text-anchor="middle">永不上抄 —— 技能与知识层只放指针</text>
       <line x1="25" y1="72" x2="1035" y2="72" stroke="#ced4da" stroke-width="1.5" stroke-dasharray="4,4"/>
       <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• 任何结论都必须能在当前 checkout 里指认；一次提交就能证伪的取值一律不进技能</text>
+        <text y="0">• 易变性测试：一次提交就能证伪的句子 = 事实，进知识层；不会 = 流程，进技能。指针是流程，取值是事实</text>
       </g>
     </g>
 
   <!-- 连线与标签 -->
   
     <g>
-      <path d="M 560 264 L 560 300" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      <path d="M 560 270 L 560 306" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
       
-      <rect x="590" y="268" width="110" height="22" rx="4" fill="#f1f3f5" />
-      <text class="tag-text" x="645" y="282" text-anchor="middle">选型表路由</text>
+      <rect x="570" y="274" width="150" height="22" rx="4" fill="#f1f3f5" />
+      <text class="tag-text" x="645" y="288" text-anchor="middle">选场景 → 选模板</text>
     </g>
 
     <g>
-      <path d="M 560 800 L 560 836" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      <path d="M 560 466 L 560 502" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
       
-      <rect x="585" y="804" width="210" height="22" rx="4" fill="#f1f3f5" />
-      <text class="tag-text" x="690" y="818" text-anchor="middle">点名才读 · 一次一个域文件</text>
+      <rect x="575" y="470" width="150" height="22" rx="4" fill="#f1f3f5" />
+      <text class="tag-text" x="650" y="484" text-anchor="middle">按阶段路由技能</text>
     </g>
 
     <g>
-      <path d="M 560 992 L 560 1028" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      <path d="M 560 1150 L 560 1186" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
       
-      <rect x="584.5" y="996" width="175" height="22" rx="4" fill="#f1f3f5" />
-      <text class="tag-text" x="672" y="1010" text-anchor="middle">取值一律回代码核对</text>
+      <rect x="585" y="1154" width="210" height="22" rx="4" fill="#f1f3f5" />
+      <text class="tag-text" x="690" y="1168" text-anchor="middle">点名才读 · 一次一个域文件</text>
+    </g>
+
+    <g>
+      <path d="M 560 1336 L 560 1372" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
+      
+      <rect x="584.5" y="1340" width="175" height="22" rx="4" fill="#f1f3f5" />
+      <text class="tag-text" x="672" y="1354" text-anchor="middle">取值一律回代码核对</text>
     </g>
 
   <!-- 配置驱动底框 -->
