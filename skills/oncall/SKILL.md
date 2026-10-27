@@ -9,12 +9,15 @@ description: data-service 业务值班专家，用当前代码证明每个结论
 
 默认只读。诊断请求不授权改代码。
 
+`$PLUGIN_ROOT` = 本 SKILL.md 往上两级的目录（`scripts/` 与 `skills/` 同级）。
+`$VAULT` = `/Users/xuxinzhi/Documents/Obsidian Vault/xxz_obsidian`（含空格，命令必须引号包裹）。
+
 ## 环境快照
 
-若本次会话已由工作台 `data-skill` 探测过环境，直接复用其结果，不要重复跑。否则执行一次：
+若本次会话已由工作台 `data-workflow:data-workflow` 探测过环境，直接复用其结果，不要重复跑。否则执行一次：
 
 ```bash
-本插件 `scripts/repo_snapshot.sh`
+"$PLUGIN_ROOT/scripts/repo_snapshot.sh"
 ```
 
 记下 branch、commit、是否有未提交改动、核实时间。**不要求工作区干净，但绝不覆盖无关改动。**
@@ -30,7 +33,7 @@ description: data-service 业务值班专家，用当前代码证明每个结论
 | State | 状态数字/名称、迁移、卡住、进度不符、UI 状态 | [state-protocol.md](references/state-protocol.md) + [trace.md](references/trace.md) |
 | Visibility | JWT/RBAC、tenant/group scope、候选数据范围、绕过 | [trace.md](references/trace.md) |
 | Incident | 线上症状，需要代码事实 + 运行时证据 | [trace.md](references/trace.md) + [evidence.md](references/evidence.md) |
-| Change | 用户明确要求的实现工作 | 交给 `data-skill` 工作台，本技能不做 |
+| Change | 用户明确要求的实现工作 | 交给 `data-workflow:implementation`，本技能不做 |
 
 **所有分类都先走 [routing.md](references/routing.md)**：step 0 grep 已有卡片 → step 1 只加载一个 Obsidian 域文件 → step 2 按快速定位规则选代码入口。
 

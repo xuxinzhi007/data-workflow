@@ -49,7 +49,7 @@ description: data-service 质量门禁。改动审核通过后，用命令的真
 
 ### G5 生成文件一致性
 
-- proto 有改动：必须 `make api-one` 重新生成，git diff 中 *.pb.go 的改动只能来自生成。
+- proto 有改动：必须重新生成，命令与生成物清单见 `.cursor/rules/data-service.mdc` 的 `## Proto / 生成`（唯一正确副本，以 `Makefile` 目标为准）。git diff 中 `*.pb.go` 的改动只能来自生成。
 - 发现手改 pb 的一律打回重做。
 
 ### G6 复用门禁
@@ -73,7 +73,7 @@ G6 复用门禁     ✓ / ✗ 结论
 ## 命令纪律（减少人工确认）
 
 - 检索、读文件、找调用方：优先用内建工具（Read/Grep/Glob），不用 Bash 的 cat/grep/管道——内建工具不触发权限确认。
-- 验证命令：只用项目现成命令（`go build`、`test-unit.sh -p`、`make test-coverage-func`、`make api-one`、`gofmt -l`）；不现场发明验证脚本。
+- 验证命令：只用项目现成命令（`go build`、`test-unit.sh -p`、`make test-coverage-func`、proto 生成命令见 `.cursor/rules/data-service.mdc`、`gofmt -l`）；不现场发明验证脚本。
 - 禁止重定向、`tee`、管道拼接命令（`>`、`>>`、`|`）——这是触发权限确认的直接元凶；需要看输出就直接读终端输出。
 - 必须用自造命令时（项目命令覆盖不了），先用一句话向用户说明要跑什么、为什么，再执行。
 

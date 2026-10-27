@@ -5,13 +5,13 @@
 ## step 0 记忆检索（必做，在碰任何代码之前）
 
 ```bash
-grep -rl "<症状词>|<状态值>|<RPC名>|<表名>" Obsidian `xxz_obsidian/knowledge/排查卡片/`
+grep -rl "<症状词>|<状态值>|<RPC名>|<表名>" $VAULT/knowledge/排查卡片/
 ```
 
 命中就打开卡片，读 `verified_commit` / `watches` / `status`。然后跑新鲜度门禁：
 
 ```bash
-本插件 `scripts/knowledge_drift.sh` <卡片路径>
+"$PLUGIN_ROOT/scripts/knowledge_drift.sh" <卡片路径>
 ```
 
 - `FRESH` → 可作为第 3 层证据直接引用。
@@ -19,7 +19,7 @@ grep -rl "<症状词>|<状态值>|<RPC名>|<表名>" Obsidian `xxz_obsidian/know
 - 无 frontmatter → 按 `STALE` 处理。
 - 卡片 `status: superseded` → 跳过，看它指向的替代卡。
 
-索引表在 `Obsidian `xxz_obsidian/knowledge/排查卡片/README.md``（每卡约 1 行，比逐卡打开便宜）。
+索引表在 `$VAULT/knowledge/排查卡片/README.md`（每卡约 1 行，比逐卡打开便宜）。
 
 ## step 1 域路由：只加载一个知识库文件
 

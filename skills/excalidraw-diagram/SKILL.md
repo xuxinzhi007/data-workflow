@@ -43,6 +43,8 @@ GitHub 文本区域通常限制在 **850px ~ 1012px** 宽度内。为了避免�
 
 ## 使用方式
 
+**本机未安装 `rsvg-convert`，PNG 不会真的产出**——脚本仍会打印 `test.png`，别照抄这句话，只报实际存在的 `.excalidraw` 与 `.svg`。
+
 脚本路径以本 skill 的加载目录为基准（Qoder 加载 skill 时会给出 `Base directory for this skill`）。下文用 `$SKILL_DIR` 指代该目录，即 `scripts/diagram_generator.js` 的父级的父级。
 
 ### 方式 1：快速编写 Node 脚本（推荐）

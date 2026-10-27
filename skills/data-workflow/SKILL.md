@@ -10,6 +10,7 @@ description: data-service 开发工作台，需求到提交的唯一入口。用
 项目索引（去哪读什么）在 `references/project-index.md`，进入具体工作后再读。
 
 `$PLUGIN_ROOT` = 本 SKILL.md 往上两级的目录（`scripts/` 与 `skills/` 同级）。
+`$VAULT` = `/Users/xuxinzhi/Documents/Obsidian Vault/xxz_obsidian`（含空格，命令必须引号包裹）。
 
 ## 启动
 
@@ -39,11 +40,11 @@ description: data-service 开发工作台，需求到提交的唯一入口。用
 
 ## 选型表
 
-`VAULT` = `/Users/xuxinzhi/Documents/Obsidian Vault/xxz_obsidian`（含空格，命令必须引号包裹）。`knowledge/**` 按业务域拆分，**一次只加载一个域文件**；`开发规范化/**` 放公司模板。清单与信任级别见 `data-workflow:oncall` 的 `references/knowledge-sources.md`。
+`$VAULT/knowledge/**` 按业务域拆分，**一次只加载一个域文件**；`$VAULT/开发规范化/**` 放公司模板。清单与信任级别见 `data-workflow:oncall` 的 `references/knowledge-sources.md`。
 
 | 选择 | 执行 |
 |------|------|
-| 需求分析 | `data-workflow:requirement-analysis`。拍板用全局技能 `grilling`（要带文档就 `grill-with-docs`）。访谈前先从 `$VAULT/knowledge/<相关域>/` 取一个域文件建立口径，不要凭记忆问用户已写过的东西。决定闭环后写一页方案，再按全局技能 `to-spec` 写 spec，不再访谈 |
+| 需求分析 | `data-workflow:requirement-analysis`。拍板用全局技能 `grilling`（要它读文档时把文档路径一起给它）。访谈前先从 `$VAULT/knowledge/<相关域>/` 取一个域文件建立口径，不要凭记忆问用户已写过的东西。决定闭环后写一页方案，再按全局技能 `to-spec` 写 spec，不再访谈 |
 | 技术方案 | `data-workflow:tech-design`（模板 `$VAULT/开发规范化/研发技术方案-模板.md`）。需要架构图时用 `data-workflow:excalidraw-diagram`。一页方案未确认时回到 `grilling` |
 | 编码实现 | `data-workflow:implementation`。写 Go 前读它的 `references/go-style.md`，改完 Go 后读 `references/reuse-gate.md` |
 | 改动审核 | `data-workflow:change-review`；同一份 diff 再按它的 `references/standards-spec.md` 做规范与需求符合性审核，结论合并成一份 |

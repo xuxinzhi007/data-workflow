@@ -6,7 +6,7 @@
 
 **提议（默认不写）**：任何需要追踪 3 个以上文件的回答之后，只输出一行——
 
-> 这条结论可以沉淀成 `Obsidian `xxz_obsidian/knowledge/排查卡片/`YYYY-MM-DD-<主题>.md`，要写吗？
+> 这条结论可以沉淀成 `$VAULT/knowledge/排查卡片/YYYY-MM-DD-<主题>.md`，要写吗？
 
 不加解释、不重复提议。用户说不写就不写。这样既保持只读纪律，又让回写这件事**可被发现**（历史上零张卡的原因就是触发条件只有「用户主动要求」，而用户从不主动要求）。
 
@@ -18,16 +18,16 @@
 
 | 落点 | 类别 | 归属 |
 |---|---|---|
-| `Obsidian `xxz_obsidian/knowledge/排查卡片/`` | F2 持久、按症状索引 | **本技能唯一写入位置**，拥有 oncall 结论 |
+| `$VAULT/knowledge/排查卡片/` | F2 持久、按症状索引 | **本技能唯一写入位置**，拥有 oncall 结论 |
 | Obsidian `knowledge/**` | F2 持久、按业务域组织 | 拥有已稳定的领域知识。卡片中被反复引用的结论，后续可人工提升进对应域文件（不由本技能自动写） |
 | `.cursor/plans/` | 决策前工作记忆 | 保持原样，临时/个人，不写调查结论 |
 | `.qoder/repowiki/knowledge/` | 机器生成缓存 | 永不写入、永不引用为权威 |
 
-`docs/support/cards/` 是仓库内的团队位置，**不由本技能写**（个人调查不污染仓库）。将来某张卡需要共享时，用 `git mv` 从 `Obsidian `xxz_obsidian/knowledge/排查卡片/`` 提升过去。
+`docs/support/cards/` 是仓库内的团队位置，**不由本技能写**（个人调查不污染仓库）。将来某张卡需要共享时，人工复制到那里并走正常评审。
 
 ## 卡片格式
 
-沿用 `docs/support/knowledge-card-template.md` 的结构，frontmatter 关键字段：
+frontmatter 关键字段（本文件即模板；仓库内 `docs/support/knowledge-card-template.md` 把 `repo:` 硬编码成了别人机器的路径，不要沿用那一行）：
 
 ```yaml
 ---
@@ -53,7 +53,7 @@ invalidates_when:
 
 **正文锚定函数名 / const 块名，不锚行号**（行号随 commit 漂移；函数名漂移得慢，且漂移时会响亮地 grep 不到，而不是安静地骗人）。
 
-**写完必须更新 `Obsidian `xxz_obsidian/knowledge/排查卡片/README.md`` 索引表**（每卡约 1 行）。索引就是检索层。
+**写完必须更新 `$VAULT/knowledge/排查卡片/README.md` 索引表**（每卡约 1 行）。索引就是检索层。
 
 优先更新已有卡片，不要造重复卡。
 

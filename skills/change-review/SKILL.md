@@ -38,7 +38,7 @@ description: data-service 改动风险审核。只审本次改动的文件及其
 ```
 | 能力 | 入口 | 受影响原因 |
 | 采集单质检结果展示 | GET /v1/... | 直接改了 collector_qc.go 的过滤逻辑 |
-| 任务分发 | scheduler dispatch_worker | 共用了被改的 helper.ResolveXxx |
+| 任务分发 | `internal/server/scheduler/review_urge_scan.go` | 共用了被改的 helper.ResolveXxx |
 ```
 
 追不到调用方的新增符号 = 死代码，进 A7。
@@ -55,7 +55,9 @@ nil 指针解引用（可选 proto 字段、`*time.Time`、map 取值后直接�
 
 ### A3 数据正确性
 
-租户隔离是否走 `TenantScope(tenantID)` 而不是手写 `tenant_id = ?`；时间戳是否走 `helper.TimeToUnixString`；分页 count 与 list 是否共享 `baseQuery`；落库枚举是否从 1 开始（0 = 未设置）；多步写是否有事务、事务内有没有 RPC/MQTT/慢 IO；重试与重复投递是否幂等；并发读改写同一资源有没有锁。
+租户/组可见性是否复用了同口径已有的 `apply*Scope`（不存在单一 `TenantScope`，细则见 `.cursor/rules/data-service-go.mdc` R03）；时间格式化是否走 `internal/pkg/helper/time.go` 里的真实函数而不是自己判零；分页 count 与 list 是否共享 `baseQuery`；落库枚举是否从 1 开始（0 = 未设置）；多步写是否有事务、事务内有没有 RPC/MQTT/慢 IO；重试与重复投递是否幂等；并发读改写同一资源有没有锁。
+
+**点名即验证**：规则或改动里点名的每个 API、helper、文件名，先 `grep -rn "<symbol>" --include='*.go'` 确认真实存在再下结论。历史上本清单曾同时写错 5 个不存在的符号，凭记忆审核会幻觉出「合规」。
 
 ### A4 兼容性与历史数据
 

@@ -72,7 +72,7 @@ cmd/data-service/wire_gen.go
 
 **检查点：**
 - 变更列表中是否包含上述文件？如包含，是否通过命令生成？
-- 修改 `.proto` 后是否执行了 `make api-one $(proto_file)`？
+- 修改 `.proto` 后是否重新生成？命令见 `.cursor/rules/data-service.mdc` 的 `## Proto / 生成`（需要 `PROTO=` 参数，裸跑会静默空转）。
 - 修改配置 proto 后是否执行了 `make config`？
 - 新增/调整依赖注入后是否执行了 `cd cmd/data-service && wire`？
 
