@@ -2,7 +2,7 @@
 
 data-service（Go / Kratos）从需求到提交的完整开发工作流，打包成一个**独立、可 git 管理、IDE 无关**的 skill 项目。
 
-技能遵循 agentskills 开放约定（`SKILL.md` + `references/` + `scripts/`），同一份目录可被 Qoder / Claude Code / Cursor / Codex 等工具读取；安装只是往各工具的原生目录铺软链，不复制正文。业务事实**一个字节都不进技能**，运行时从配置指向的知识层按需加载。
+技能遵循 agentskills 开放约定（`SKILL.md` + `references/` + `scripts/`），同一份目录可被 Qoder / Claude Code / Cursor / Codex 等工具读取。安装是把 `skills/data-workflow/` 复制进工具目录，副本自包含，不软链回本仓库。业务事实**一个字节都不进技能**，运行时从项目自己的 `config.yaml` 指向的知识层按需加载。
 
 ## 分层架构
 
@@ -64,25 +64,19 @@ data-workflow/
 ├── .claude-plugin/                  Claude Code 插件清单 + marketplace
 ├── AGENTS.md                        薄指路牌（Codex / 通用 agent 读这个）
 ├── config.example.yaml              知识源与仓库路径的键位说明（进 git）
-├── config.yaml                      本机实际值（gitignore，每人不同）
+├── config.yaml                      只在本仓库自己被当作项目时读（gitignore）
 ├── README.md
 ├── assets/                          架构图、流程图（.svg 源 + .png 位图 + .excalidraw 可编辑）
 ├── evals/evals.json                 12 条评测，逐条钉住已修好的缺陷
-├── templates/                       5 个工件模板，内嵌 GATE 声明
-│   └── spec · plan · impact · change-note · rollback
-├── workflows/                       4 个状态机：feature · bugfix · hotfix · review-only
 ├── scripts/
-│   ├── resolve.sh                   解析单个配置键（env > config.yaml > ~/.config）
-│   ├── paths.sh                     一次性 eval 出 $KNOW $CARDS $TEMPLATES $REPO 等
-│   ├── install.sh                   往已存在的 .qoder/.claude/.cursor/.codex/.agents 铺软链
-│   ├── repo_snapshot.sh             记录被测仓库 branch / commit / dirty
-│   ├── knowledge_drift.sh           知识新鲜度门禁：FRESH / STALE / SKIP / DEGRADED
-│   ├── contract_diff.sh             proto 契约破坏性 diff（七类 breaking）
-│   ├── proto_contract.py            把 proto 归一成可 diff 的事实行
-│   └── svg_to_png.sh                headless Chrome 补 PNG（generator 依赖的 rsvg-convert 本机没装）
+│   └── install.sh                   把技能复制进已存在的工具目录
 └── skills/
-    └── data-workflow/               唯一安装的技能
+    └── data-workflow/               唯一安装的技能，复制后自包含
         ├── SKILL.md                 入口：选型、顺序、门禁
+        ├── config.yaml              只出现在项目副本里，不进本仓库
+        ├── scripts/                 paths · resolve · drift · contract_diff
+        ├── workflows/               feature · bugfix · hotfix · review-only
+        ├── templates/               spec · plan · impact · change-note · rollback
         ├── references/              project-index · feature-archive ·
         │                            subagent-protocol · artifact-tree
         └── stages/                  阶段文件，不单独安装
@@ -124,9 +118,9 @@ data-workflow/
 
 | 脚本 | 作用 |
 |---|---|
-| `scripts/resolve.sh <key>` | 解析单个配置键，值走 stdout、来源走 stderr；未配置返回空而不是猜 |
-| `scripts/paths.sh` | 一次 `eval` 出 `$KNOW $CARDS $TEMPLATES $REPO $TECH_DESIGN_TEMPLATE $MR_TEMPLATE $PERSONAL_AGENTS_MD` |
-| `scripts/install.sh` | 往**已存在**的工具目录铺软链（`--global` 用 `$HOME`，`--unlink` 只删指向本仓的链），幂等 |
+| `skills/data-workflow/scripts/resolve.sh <key>` | 解析单个配置键，值走 stdout、来源走 stderr；未配置返回空而不是猜 |
+| `skills/data-workflow/scripts/paths.sh` | 一次 `eval` 出 `$KNOW $CARDS $TEMPLATES $REPO $TECH_DESIGN_TEMPLATE $MR_TEMPLATE $PERSONAL_AGENTS_MD` |
+| `scripts/install.sh` | 把技能复制进已存在的工具目录（`--global` 用 `$HOME`，`--unlink` 卸掉副本并留下 config.yaml），再跑不覆盖 config.yaml |
 | `scripts/repo_snapshot.sh` | 记录被测仓库的 branch / commit / dirty 状态 |
 | `scripts/knowledge_drift.sh` | 读 frontmatter 的 `verified_commit` 与 `watches`，比对被测仓库 HEAD，输出 `FRESH` / `STALE` / `SKIP` |
 | `scripts/contract_diff.sh <base>` | 以 merge-base 的 proto 为基线、工作区为对比侧，输出七类 breaking（删 rpc / 端点变更 / 删字段 / 字段号复用 / 删枚举 / 枚举号复用 / 删文件）；恒 exit 0，裁决归技能 |
@@ -135,7 +129,7 @@ data-workflow/
 
 新鲜度脚本只标注：恒 exit 0，exit 2 仅表示文档无法解析。缺 frontmatter 按 STALE 处理，让未纳管的文档自我暴露。STALE 不停工；产出引用了过期取值却没回代码，才算新鲜度门未过（入口技能步骤 0）。
 
-被测仓库优先级：`$DS_REPO` > `config.yaml` 的 `repo` > 当前目录所在仓库。知识源优先级：`DATA_WORKFLOW_<KEY>` 环境变量 > `./config.yaml` > `<插件根>/config.yaml` > `~/.config/data-workflow/config.yaml` > 空（知识源为空时 drift 打印 `DEGRADED` 并回退 `<repo>/docs`）。
+被测仓库优先级：`$DS_REPO` > 项目配置里的 `repo` > 当前目录所在仓库。知识源优先级：`DATA_WORKFLOW_<KEY>` 环境变量 > `<项目>/<工具>/skills/data-workflow/config.yaml` > `<项目根>/config.yaml` > `~/.config/data-workflow/config.yaml` > 空。不读技能仓库里的 `config.yaml`。知识源为空时 drift 打印 `DEGRADED` 并回退 `<repo>/docs`。
 
 ## 知识落点
 
@@ -152,12 +146,12 @@ data-workflow/
 
 ## 知识源配置
 
-技能正文里没有任何绝对路径。所有外部落点通过 `config.yaml` 解析：
+技能正文里没有任何绝对路径。外部落点写在引用仓库的 `.<工具>/skills/data-workflow/config.yaml`，和技能在同一个目录，不写在技能仓库里。`install.sh` 会放一份示例；已经有文件就不覆盖。
 
 ```bash
-cp config.example.yaml config.yaml   # config.yaml 已 gitignore，每人一份
-$EDITOR config.yaml
-bash scripts/paths.sh                # 验证解析结果
+# 在被引用的仓库里，和 data-workflow 技能放在一起
+ls .cursor/skills/data-workflow/config.yaml
+$EDITOR .cursor/skills/data-workflow/config.yaml
 ```
 
 | 键 | 含义 | 留空时的行为 |
@@ -180,7 +174,7 @@ cd <data-service 仓库根>
 bash ~/skills/data-workflow/scripts/install.sh
 ```
 
-装完后在那个仓库里说「开始开发」或 `@data-workflow`。入口负责选型、选工作流、按门禁往下串。知识源和被测仓库读本仓库的 `config.yaml`（见「知识源配置」），不写进目标项目。
+装完后在那个仓库里说「开始开发」或 `@data-workflow`。入口负责选型、选工作流、按门禁往下串。知识源和模板读 `.<工具>/skills/data-workflow/config.yaml`，就在技能目录里面。`repo` 留空就是当前检出。
 
 一次会话读一个闭集，不把 `stages/` 扫一遍，也不把阶段文件装成别的技能：
 
@@ -189,7 +183,7 @@ bash ~/skills/data-workflow/scripts/install.sh
 3. 选型表或工作流点名后，只读那一个 `stages/<name>/SKILL.md`。阶段自己的细则点名才读。
 4. 下一阶段读上一阶段落盘的产物，不重读上一个阶段文件。
 
-软链对工具是透明的：读 `.cursor/skills/data-workflow/SKILL.md` 就是在读本仓库里的那一个文件。阶段文件在这条链的里面。
+装进项目的是一份完整副本，读 `.cursor/skills/data-workflow/` 不会回到技能仓库。
 
 ## 安装与更新
 
@@ -199,15 +193,15 @@ cd <data-service 仓库根>          # 或加 --global 铺到 $HOME
 bash ~/skills/data-workflow/scripts/install.sh
 ```
 
-`install.sh` 只对**已存在**的 `.qoder` `.claude` `.cursor` `.codex` `.agents` 目录动手，在其中建一条 `skills/data-workflow` 软链指向本仓库的 `skills/data-workflow/`，绝不创建你没有的工具目录。以前按阶段拆开的软链，再跑一次安装会被卸掉：
+`install.sh` 只对**已存在**的 `.qoder` `.claude` `.cursor` `.codex` `.agents` 目录动手，把 `skills/data-workflow/` **复制**成一份独立技能，绝不创建你没有的工具目录。副本里自带 `scripts/`、`workflows/`、`templates/`。再跑一次会更新正文，已有的 `config.yaml` 不覆盖。
 
 ```bash
-bash scripts/install.sh             # 铺到当前项目
-bash scripts/install.sh --global    # 铺到 $HOME（用户级）
-bash scripts/install.sh --unlink    # 只删指向本仓库的软链
+bash scripts/install.sh             # 复制到当前项目
+bash scripts/install.sh --global    # 复制到 $HOME（用户级）
+bash scripts/install.sh --unlink    # 卸掉副本，留下 config.yaml
 ```
 
-软链而非复制 —— 改完即生效，同一 inode，结构上不可能分叉。跑两次结果一致；`--unlink` 后目录回到干净状态。
+和旁边的 `grilling`、`domain-modeling` 一样，是目录里的一份技能，不是指回技能仓库的软链。技能仓库改了，项目里的副本不会跟着变，要更新就再跑一次安装。
 
 Qoder 也可以走插件通道（会**复制**进缓存，改完需要更新）：
 

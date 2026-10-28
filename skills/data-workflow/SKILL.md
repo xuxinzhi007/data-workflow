@@ -9,7 +9,7 @@ description: data-service 开发工作台，需求到提交的唯一入口。用
 
 项目索引（去哪读什么）在 `references/project-index.md`，进入具体工作后再读。
 
-`$PLUGIN_ROOT` = 本 SKILL.md 往上两级的目录（`scripts/` 与 `skills/` 同级；软链安装时先用 `readlink -f` 解析）。`stages/` 里的阶段文件说的 `$PLUGIN_ROOT` 是同一个仓库根：从该文件向上找到含 `scripts/paths.sh` 的目录，不是向上两级。反引号里的 `stages/...` 与技能根的 `references/...` 都相对本文件所在目录。
+`$PLUGIN_ROOT` = 本 SKILL.md 所在目录。这里有 `scripts/`、`workflows/`、`templates/`、`stages/`，以及项目自己的 `config.yaml`。装进别的仓库后这是一份独立副本，不回到技能仓库找文件。反引号里的 `stages/...` 与 `references/...` 都相对这个目录。
 
 外部路径不写死在技能里，会话开头解析一次（步骤 0 之前）：
 

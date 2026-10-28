@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# install.sh —— 只把 skills/data-workflow 铺进各 agent 工具的原生技能目录（软链，改完即生效）。
+# install.sh —— 把 skills/data-workflow 复制进各 agent 工具的原生技能目录。
 #
-# 阶段文件在 data-workflow/stages/ 里，不是独立技能。再跑一次会卸掉以前按阶段拆开的软链。
+# 复制，不是软链。装完后项目里的技能和技能仓库互不依赖，和旁边那些单独的技能一样。
+# 再跑一次会更新副本，但不覆盖已经写过的 config.yaml。
+# 多个工具目录的技能正文各有一份；config.yaml 只留一份实体，其余指过去。
 #
 # 用法:
 #   install.sh                 # 铺到当前目录（目标项目根）下已存在的 .claude/.cursor/.qoder/.codex/.agents
@@ -53,19 +55,58 @@ for sd in "${dirs[@]}"; do
         ;;
     esac
   done
-  link="$sd/data-workflow"
+  dest="$sd/data-workflow"
   if [ "$unlink" = 1 ]; then
-    if [ -L "$link" ] && [ "$(readlink "$link")" = "$src" ]; then
-      rm "$link"
-      printf 'UNLINK %s\n' "$link"
+    if [ -L "$dest" ] && [ "$(readlink "$dest")" = "$src" ]; then
+      rm "$dest"
+      printf 'UNLINK %s\n' "$dest"
+    elif [ -d "$dest" ] && [ ! -L "$dest" ]; then
+      find "$dest" -mindepth 1 -maxdepth 1 ! -name config.yaml -exec rm -rf {} +
+      rmdir "$dest" 2>/dev/null || true
+      printf 'UNLINK %s\n' "$dest"
     fi
     continue
   fi
-  ln -sfn "$src" "$link"
-  printf 'LINK   %s -> skills/data-workflow\n' "$link"
+  if [ -L "$dest" ]; then
+    rm "$dest"
+  fi
+  mkdir -p "$dest"
+  rsync -a --delete --exclude config.yaml "$src/" "$dest/"
+  printf 'COPY   %s\n' "$dest"
 done
 
 if [ "$unlink" = 0 ]; then
-  printf '\nDONE 铺到 %s 个工具目录。每个目录里只有 data-workflow；阶段在它的 stages/ 里。\n' "${#dirs[@]}"
-  printf '     知识源配置见本仓 config.yaml（不存在时复制 config.example.yaml）。\n'
+  legacy="$base/.data-workflow/config.yaml"
+  primary=""
+  for sd in "${dirs[@]}"; do
+    dest="$sd/data-workflow"
+    [ -d "$dest" ] && [ ! -L "$dest" ] || continue
+    if [ -z "$primary" ]; then
+      primary="$dest/config.yaml"
+      if [ -L "$primary" ]; then
+        rm "$primary"
+      fi
+      if [ ! -f "$primary" ]; then
+        if [ -f "$legacy" ]; then
+          mv "$legacy" "$primary"
+          rmdir "$base/.data-workflow" 2>/dev/null || true
+          printf 'CONFIG %s\n' "$primary"
+        else
+          cp "$repo_root/config.example.yaml" "$primary"
+          printf 'CONFIG %s\n' "$primary"
+        fi
+      else
+        printf 'CONFIG %s 已存在，不覆盖\n' "$primary"
+      fi
+    elif [ ! -e "$dest/config.yaml" ] || [ -L "$dest/config.yaml" ]; then
+      ln -sfn "$primary" "$dest/config.yaml"
+      printf 'CONFIG %s\n' "$dest/config.yaml"
+    fi
+  done
+  if [ -n "$primary" ] && [ -f "$legacy" ]; then
+    rm -f "$legacy"
+    rmdir "$base/.data-workflow" 2>/dev/null || true
+  fi
+  printf '\nDONE 复制到 %s 个工具目录。项目里的副本不依赖技能仓库。\n' "${#dirs[@]}"
+  printf '     配置在 %s。要更新技能正文，再跑一次本脚本，config.yaml 不会被盖掉。\n' "$primary"
 fi

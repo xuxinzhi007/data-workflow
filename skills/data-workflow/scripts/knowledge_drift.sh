@@ -21,7 +21,7 @@ set -uo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# 配置解析：env DATA_WORKFLOW_* > ./config.yaml > ~/.config/data-workflow/config.yaml > 空
+# 配置解析：env > <项目>/<工具>/skills/data-workflow/config.yaml > <项目>/config.yaml > ~/.config > 空
 cfg() { bash "$script_dir/resolve.sh" "$1" 2>/dev/null; }
 
 # 本脚本住在独立插件仓库里，不靠自身位置推断被测仓库。

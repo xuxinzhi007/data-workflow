@@ -213,15 +213,15 @@
       ],
       "prompt": "在 Cursor / Claude Code / Codex / Qoder 里都要能用这套技能，怎么装？知识源不是 Obsidian 的人怎么办？",
       "pass": [
-        "bash scripts/install.sh 探测 cwd（或 --global 时 ~）下的 .claude .cursor .qoder .codex .agents，只对存在的目录建软链，链到本仓 skills/*",
-        "连跑两次结果一致（幂等，不重复建链、不报错）",
-        "bash scripts/install.sh --unlink 只删指向本仓的软链，用户自己的文件不动",
-        "bash scripts/resolve.sh <key> 按 DATA_WORKFLOW_<KEY> env > ./config.yaml > <plugin root>/config.yaml > ~/.config/data-workflow/config.yaml > 空 的顺序解析",
+        "bash scripts/install.sh 探测 cwd（或 --global 时 ~）下的 .claude .cursor .qoder .codex .agents，只对存在的目录复制一份自包含的 skills/data-workflow，不软链回技能仓库",
+        "连跑两次结果一致（幂等，不重复报错），已有 config.yaml 不被覆盖",
+        "bash scripts/install.sh --unlink 卸掉这份副本，留下 config.yaml，不动其他技能",
+        "bash scripts/resolve.sh <key> 按 DATA_WORKFLOW_<KEY> env > <项目>/<工具>/skills/data-workflow/config.yaml > <项目根>/config.yaml > ~/.config/data-workflow/config.yaml > 空 的顺序解析，不读技能仓库的 config.yaml",
         "config.yaml 未配置或键为空时，知识源回退 $REPO/docs 并打印 DEGRADED，绝不猜绝对路径",
         "对 skills/ scripts/ templates/ workflows/ README.md AGENTS.md 跑「个人主目录绝对路径」grep 无命中（个人路径只允许出现在被 gitignore 的 config.yaml；evals 自身不在此列，避免自指）"
       ],
       "fail": [
-        "把技能复制进各 IDE 目录而不是软链（改一处就分叉）",
+        "把项目里的技能软链回技能仓库（用的时候还要依赖本仓库）",
         "--unlink 误删非本仓文件",
         "技能正文里出现任何个人绝对路径或 Obsidian 专属路径",
         "未配置知识源时静默使用某个硬编码目录"

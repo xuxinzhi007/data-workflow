@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # resolve.sh <key> —— 解析配置键。stdout 只输出值（可能为空），来源说明走 stderr。
 #
-# 优先级: DATA_WORKFLOW_<KEY 大写> 环境变量 > ./config.yaml > <插件根>/config.yaml
+# 优先级: DATA_WORKFLOW_<KEY 大写> 环境变量
+#         > <项目>/.cursor|qoder|agents|claude|codex/skills/data-workflow/config.yaml
+#         > <当前 git 根>/config.yaml
 #         > ~/.config/data-workflow/config.yaml > 空（不猜）。
+# config.yaml 和技能装在同一个目录里，不读技能仓库里的那份。
 # 为什么要有这个脚本：v1 把知识源硬编码成某台机器的 Obsidian 绝对路径（14 处），
 # 换机器/换知识源就要改技能正文。配置化之后技能正文只写「resolve.sh <key>」。
 #
@@ -33,8 +36,16 @@ yaml_get() { # yaml_get <file> <key> —— 扁平 key: value，去掉引号与�
     }' "$1"
 }
 
-plugin_cfg="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/config.yaml"
-for cfg in "$PWD/config.yaml" "$plugin_cfg" "$HOME/.config/data-workflow/config.yaml"; do
+project_root="$PWD"
+if git_root="$(git -C "$PWD" rev-parse --show-toplevel 2>/dev/null)"; then
+  project_root="$git_root"
+fi
+configs=()
+for tool in .cursor .qoder .agents .claude .codex; do
+  configs+=("$project_root/$tool/skills/data-workflow/config.yaml")
+done
+configs+=("$project_root/config.yaml" "$HOME/.config/data-workflow/config.yaml")
+for cfg in "${configs[@]}"; do
   val="$(yaml_get "$cfg" "$key")"
   if [ -n "$val" ]; then
     printf '%s\n' "$val"
@@ -43,5 +54,5 @@ for cfg in "$PWD/config.yaml" "$plugin_cfg" "$HOME/.config/data-workflow/config.
   fi
 done
 
-printf 'resolve: %s 未配置（env / ./config.yaml / <插件根>/config.yaml / ~/.config/data-workflow/config.yaml 均无）\n' "$key" >&2
+printf 'resolve: %s 未配置（env / <项目>/<工具>/skills/data-workflow/config.yaml / <项目>/config.yaml / ~/.config/data-workflow/config.yaml 均无）\n' "$key" >&2
 exit 0

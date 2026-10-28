@@ -1,8 +1,12 @@
 # data-workflow 配置示例。
-# 用法：复制为 config.yaml（已 gitignore）后按本机修改。
+# install.sh 会把它复制到目标仓库的 .<工具>/skills/data-workflow/config.yaml，
+# 和技能目录放在一起。已存在则不覆盖。多个工具目录共用这一份。
 #
-# 解析优先级：环境变量 DATA_WORKFLOW_<键名大写> > ./config.yaml > <本仓根>/config.yaml
+# 解析优先级：环境变量 DATA_WORKFLOW_<键名大写>
+#             > <项目>/.cursor|qoder|agents|claude|codex/skills/data-workflow/config.yaml
+#             > <当前 git 根>/config.yaml
 #             > ~/.config/data-workflow/config.yaml > 空。
+# 不读技能仓库里的 config.yaml。
 # 统一入口：bash scripts/resolve.sh <键名>（stdout 只输出值，来源说明走 stderr）；
 #           bash scripts/paths.sh 一次性 eval 出全部变量。
 #

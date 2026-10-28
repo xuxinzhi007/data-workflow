@@ -4,7 +4,7 @@
 
 评审阅读一页方案。模板是归档格式。
 
-`$PLUGIN_ROOT` 是含 `scripts/paths.sh` 的仓库根。会话已由入口解析过就直接用。单独打开本文件时，从本文件向上找到该目录（本文件在 `stages/` 下，不是向上两级）。模板路径运行时解析，不写死：
+`$PLUGIN_ROOT` 是入口 SKILL.md 所在目录（含 `scripts/paths.sh`）。会话已解析过就直接用。单独打开本文件时，从本文件向上找到该目录。模板路径运行时解析，不写死：
 
 ```bash
 eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"   # → $KNOW / $TEMPLATES / $TECH_DESIGN_TEMPLATE

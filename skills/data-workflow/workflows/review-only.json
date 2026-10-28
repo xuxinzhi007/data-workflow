@@ -24,7 +24,7 @@
       "reads": [
         "<artifacts_root>/diff.patch",
         "<artifacts_root>/spec.md（若有）",
-        "$PLUGIN_ROOT/skills/data-workflow/stages/change-review/references/standards-spec.md"
+        "$PLUGIN_ROOT/stages/change-review/references/standards-spec.md"
       ],
       "artifacts": [
         "<artifacts_root>/review/spec-compliance.md",

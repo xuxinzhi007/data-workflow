@@ -76,7 +76,7 @@
       "name": "编码实现",
       "reads": [
         "specs/<feature>/plan.md",
-        "$PLUGIN_ROOT/skills/data-workflow/stages/implementation/references/go-style.md",
+        "$PLUGIN_ROOT/stages/implementation/references/go-style.md",
         "reuse-gate.md"
       ],
       "artifacts": [
