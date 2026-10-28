@@ -1,6 +1,6 @@
 ---
 name: data-workflow
-description: data-service 开发工作台。Cursor 项目安装后会话开始即绑定，写入 api/、proto、pb.go、internal/biz/status.go 或其它 Go 文件时，没有 specs/passes.log 放行记录会被 hook 拒绝。用户说 @data-workflow、开始开发、需求分析、影响面、技术方案、编码实现、改动审核、审一下、质量检查、接口测试、排查、状态含义、提交、提 MR、画架构图时读取本文件，再只读 stages/ 里对应的那一个阶段文件。不用于：纯 git 操作、解决合并冲突、与 data-service 无关的任务。
+description: data-service 开发工作台，也带一条任意仓库都能跑的 change 工作流。Cursor 项目安装后会话开始即绑定；有未完成的 specs/*/run.json 时先跑 scripts/workflow_next.py next，只做它打印的下一步。写入受保护路径或 Go 文件时，没有 specs/passes.log 放行记录会被 hook 拒绝。用户说 @data-workflow、开始开发、需求分析、影响面、技术方案、编码实现、改动审核、审一下、质量检查、接口测试、排查、状态含义、提交、提 MR、画架构图时读取本文件，再只读点名的那一个阶段文件。不用于：纯 git 操作、解决合并冲突。与 data-service 无关的改动走 workflows/change.json，不套九项负债。
 ---
 
 # data-service 开发工作台
@@ -23,7 +23,23 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"
 
 ## 绑定
 
-Cursor 项目安装后，会话开始的 hook 注入本文件和 `references/edit-gate.md`。写代码不依赖「开始开发」这几个词。`api/`、`*.proto`、`*.pb.go`、`internal/biz/status.go` 以及其它 `*.go`，没有 `specs/passes.log` 里覆盖该路径的记录，hook 拒绝写入。记录格式只维护在 `references/edit-gate.md`。
+Cursor 项目安装后，会话开始的 hook 注入本文件和 `references/edit-gate.md`。写代码不依赖「开始开发」这几个词。没有 `specs/passes.log` 里覆盖该路径的记录，hook 拒绝写入。哪些路径要 `design`、哪些要 `waiver`，只维护在 `references/edit-gate.md`。项目可以在 `config.yaml` 里用 `protected_paths` 和 `waiver_globs` 换掉默认路径；两个键都没写时，默认仍是 `api/`、proto、pb.go、`internal/biz/status.go` 和其它 `*.go`。
+
+## 继续一次运行
+
+未完成的运行在当前 git 根的 `specs/<feature>/run.json`。换一个会话也在这个文件里，不在上一场聊天里，也不在 `config.yaml` 的 `repo`。全部做完时，`next` 仍打印最近一次，标记是 `LAST`。Cursor 项目安装后，会话开始的 hook 会先把这段原文注入进来。只做那一件。没有注入就自己跑：
+
+```bash
+python3 "$PLUGIN_ROOT/scripts/workflow_next.py" next
+```
+
+- `READ` / `NEED`：只读打印出来的那一个阶段文件，把缺的文件写出来。
+- `OPEN` 或还要问一句才能往下：`wait <feature> "<问题>" "<对方能原样粘贴的一句>"`，然后停止。不要用「根据项目规则进行调整」收尾。
+- `WAIT`：把 `REPLY` 那一句交给对方。对方原样回了，再 `answer`。`answer` 会在仍写着「待拍板」的产物末尾追加一行「已拍板：」。
+- `DO`：做完这一阶段再 `done <feature>`。
+- `DONE`：这次运行结束。
+
+`start feature|bugfix|hotfix|review-only|change <feature>` 新开一次。`config.yaml` 写了 `default_workflow` 时，`next` 在没有运行记录时会打印该用哪条。没有 data-service 的九项负债时用 `change`，不套 feature 的阶段表。
 
 ## 启动
 
@@ -48,7 +64,7 @@ Cursor 项目安装后，会话开始的 hook 注入本文件和 `references/edi
 - 是否与已钉住的决策冲突？看 `specs/` 里最近那份的决定表，以及该 IDE 的临时目录（`.cursor/plans/`、`.qoder/plans/` 等等价物）。
 - 用户这句话是否已点明选型表中的某一行？
 
-命中已有产出就接着它做，不要重开一份。
+命中已有产出就接着它做，不要重开一份。`specs/<feature>/run.json` 的 status 不是 done 时，先跑 `scripts/workflow_next.py next`，只做它打印的那一步。
 
 ### 步骤 2 选型
 
@@ -65,6 +81,7 @@ Cursor 项目安装后，会话开始的 hook 注入本文件和 `references/edi
 | 已知错误行为要修 | `workflows/bugfix.json` |
 | 线上正在出事，最短路径止血 | `workflows/hotfix.json` |
 | 只审不改（评 MR、上线前把关） | `workflows/review-only.json` |
+| 没有 data-service 门禁的一次改动 | `workflows/change.json` |
 
 **新业务场景 = 写新工作流模板（重排 `stages/` 里已有的阶段文件），不是再装一个技能。** 工作流里没有的阶段就不做，做了也要在 change-note 记账。
 

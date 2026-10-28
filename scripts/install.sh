@@ -28,6 +28,16 @@ base="$target"
 [ -z "$base" ] && base="$(pwd)"
 [ "$global" = 1 ] && base="$HOME"
 
+dogfood=0
+if [ "$global" != 1 ]; then
+  base_real="$(cd "$base" && pwd -P)"
+  repo_real="$(cd "$repo_root" && pwd -P)"
+  if [ "$base_real" = "$repo_real" ]; then
+    dogfood=1
+    mkdir -p "$base/.cursor"
+  fi
+fi
+
 dirs=()
 for d in .claude .cursor .qoder .codex .agents; do
   [ -d "$base/$d" ] && dirs+=("$base/$d/skills")
@@ -45,14 +55,19 @@ src="$repo_root/skills/data-workflow"
 merge_cursor_hooks() {
   local mode="$1"
   local hooks_file="$base/.cursor/hooks.json"
+  local session_cmd gate_cmd
   [ "$global" = 1 ] && return 0
   [ -d "$base/.cursor" ] || return 0
-  python3 - "$hooks_file" "$mode" << 'PY'
+  if [ "$dogfood" = 1 ]; then
+    session_cmd="skills/data-workflow/hooks/session-start"
+    gate_cmd="skills/data-workflow/hooks/gate-edit"
+  else
+    session_cmd=".cursor/skills/data-workflow/hooks/session-start"
+    gate_cmd=".cursor/skills/data-workflow/hooks/gate-edit"
+  fi
+  python3 - "$hooks_file" "$mode" "$session_cmd" "$gate_cmd" << 'PY'
 import json, os, sys
-path, mode = sys.argv[1], sys.argv[2]
-session = ".cursor/skills/data-workflow/hooks/session-start"
-gate = ".cursor/skills/data-workflow/hooks/gate-edit"
-ours = {session, gate}
+path, mode, session, gate = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 
 def load():
     if not os.path.isfile(path):
@@ -77,7 +92,8 @@ def entries(event):
     return [e for e in raw if isinstance(e, dict)] if isinstance(raw, list) else []
 
 def is_ours(entry):
-    return entry.get("command") in ours
+    cmd = entry.get("command") or ""
+    return cmd.endswith("data-workflow/hooks/session-start") or cmd.endswith("data-workflow/hooks/gate-edit")
 
 if mode == "remove":
     for event in list(hooks):
@@ -92,14 +108,12 @@ if mode == "remove":
         print("HOOKS removed %s" % path)
         raise SystemExit(0)
 else:
-    session_hooks = entries("sessionStart")
-    if not any(e.get("command") == session for e in session_hooks):
-        session_hooks.append({"command": session})
+    session_hooks = [e for e in entries("sessionStart") if not is_ours(e)]
+    session_hooks.append({"command": session})
     hooks["sessionStart"] = session_hooks
     for event in ("preToolUse", "beforeShellExecution"):
-        event_hooks = entries(event)
-        if not any(e.get("command") == gate for e in event_hooks):
-            event_hooks.append({"command": gate, "failClosed": True})
+        event_hooks = [e for e in entries(event) if not is_ours(e)]
+        event_hooks.append({"command": gate, "failClosed": True})
         hooks[event] = event_hooks
 
 os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -115,6 +129,10 @@ if [ "$unlink" = 1 ]; then
 fi
 
 for sd in "${dirs[@]}"; do
+  if [ "$dogfood" = 1 ] && [ "$unlink" != 1 ]; then
+    printf 'SOURCE %s\n' "$src"
+    continue
+  fi
   mkdir -p "$sd"
   for link in "$sd"/*; do
     [ -L "$link" ] || continue
@@ -185,6 +203,11 @@ if [ "$unlink" = 0 ]; then
   else
     merge_cursor_hooks add
   fi
-  printf '\nDONE 复制到 %s 个工具目录。项目里的副本不依赖技能仓库。\n' "${#dirs[@]}"
-  printf '     配置在 %s。要更新技能正文，再跑一次本脚本，config.yaml 不会被盖掉。\n' "$primary"
+  if [ "$dogfood" = 1 ]; then
+    printf '\nDONE 本仓库不另拷技能。会话钩子指向 %s/hooks/。\n' "$src"
+    printf '     运行记录在仓库根的 specs/。配置仍是仓库根的 config.yaml。\n'
+  else
+    printf '\nDONE 复制到 %s 个工具目录。项目里的副本不依赖技能仓库。\n' "${#dirs[@]}"
+    printf '     配置在 %s。要更新技能正文，再跑一次本脚本，config.yaml 不会被盖掉。\n' "$primary"
+  fi
 fi

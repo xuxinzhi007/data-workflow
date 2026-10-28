@@ -18,9 +18,39 @@ escape_for_json() {
   printf '%s' "$s"
 }
 
-text="data-workflow 已绑定这个仓库。先读 ${SKILL_ROOT}/SKILL.md，再读 ${SKILL_ROOT}/references/edit-gate.md。
-写 api/、*.proto、*.pb.go、internal/biz/status.go 之前，specs/passes.log 要有覆盖该路径的 design 行，并且 specs/<feature>/plan.md 与 specs/<feature>/gate（首行 plan pass）都在。
-写其它 *.go 之前，要有覆盖该路径的 waiver 行，或同一条 design 前缀。
-specs/ 下的工件可以直接写。先追加放行记录，再改代码。没有记录的写入会被 hook 拒绝。"
+repo=""
+if git_root="$(git -C "${PWD}" rev-parse --show-toplevel 2>/dev/null)"; then
+  repo="$git_root"
+elif git_root="$(git -C "${SKILL_ROOT}" rev-parse --show-toplevel 2>/dev/null)"; then
+  repo="$git_root"
+fi
+
+next=""
+err=""
+if [ -n "$repo" ]; then
+  if ! next="$("${SKILL_ROOT}/scripts/workflow_next.py" next --repo "$repo" 2>"${TMPDIR:-/tmp}/data-workflow-next.err")"; then
+    err="$(cat "${TMPDIR:-/tmp}/data-workflow-next.err" 2>/dev/null || true)"
+  fi
+else
+  err="找不到 git 根，没有读取 specs/*/run.json"
+fi
+
+usage="用法就这几条。记录在当前 git 根的 specs/<feature>/run.json，不是 config.yaml 的 repo，也不是上一场聊天。
+next：看现在该做什么。
+start <workflow> <feature>：新开一次。没有 data-service 门禁时用 change。
+wait <feature> \"问题\" \"对方能原样粘贴的一句\"：要问人时写下来并停止。
+answer <feature> \"对方的原话\"：对上了才继续。
+done <feature>：这一阶段做完。
+输出里有 RUN、NEED、WAIT、DO、OPEN 时，只做那一件。LAST 表示上次已经做完，记录还在 RECORD 那个文件里。不要从 SKILL.md 步骤 0 重开。
+写入门在 ${SKILL_ROOT}/references/edit-gate.md。protected_paths 和 waiver_globs 都没写时，仍拦 api/、proto、pb.go、status.go 和其它 *.go。"
+
+text="${next}"
+if [ -n "$err" ]; then
+  text="${text}
+workflow_next 失败：${err}"
+fi
+text="${text}
+
+${usage}"
 
 printf '{\n  "additional_context": "%s"\n}\n' "$(escape_for_json "$text")"

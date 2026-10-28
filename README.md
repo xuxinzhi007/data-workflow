@@ -176,7 +176,9 @@ bash ~/skills/data-workflow/scripts/install.sh
 
 装进带 `.cursor` 的项目后，新会话会注入这个技能，不靠「开始开发」这几个词。写入 `api/`、proto、`internal/biz/status.go` 或其它 Go 文件时，没有 `specs/passes.log` 放行记录，Cursor hook 会拒绝。记录格式在技能的 `references/edit-gate.md`。`--global` 不写这道 hook。Qoder / Claude / Codex 的副本没有这道拦截。
 
-要选工作流时仍说「开始开发」或 `@data-workflow`。知识源和模板读 `.<工具>/skills/data-workflow/config.yaml`，就在技能目录里面。`repo` 留空就是当前检出。
+要选工作流时仍说「开始开发」或 `@data-workflow`。新会话先跑技能目录里的 `scripts/workflow_next.py next`。上次停在哪在当前 git 根的 `specs/<feature>/run.json`，会话钩子会把这段输出注入进来。没有 data-service 门禁的改动用 `start change <feature>`。知识源和模板读 `.<工具>/skills/data-workflow/config.yaml`，就在技能目录里面。`repo` 留空就是当前检出。`protected_paths` 和 `waiver_globs` 没写时，写入门仍是默认的 api、proto、状态文件和其它 Go 文件。
+
+在本技能仓库里执行 `bash scripts/install.sh` 时，不另拷一份技能。`.cursor/hooks.json` 指向 `skills/data-workflow/hooks/`，改完的脚本就是下一次会话跑的那份。
 
 一次会话读一个闭集，不把 `stages/` 扫一遍，也不把阶段文件装成别的技能：
 

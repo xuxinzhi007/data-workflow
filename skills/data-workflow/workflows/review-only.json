@@ -1,5 +1,6 @@
 {
   "name": "review-only",
+  "kind": "review",
   "when": "只审不改：评审别人的 MR、检查一批已有改动、上线前把关。用户说「帮我看看这个改动」「审一下」「这个 MR 有什么问题」时走这条。",
   "principle": "不改业务代码、不 stage、不提交。发现问题就报告，改不改由用户决定。评审工件要写：审自己的分支时落到 $REPO/specs/<feature>/；审别人的工作树时落到 $CARDS/reviews/<feature>/，$CARDS 为空就问用户要一个该工作树之外的目录。",
   "artifacts_root": "自己的分支：specs/<feature>/；别人的工作树：$CARDS/reviews/<feature>/",

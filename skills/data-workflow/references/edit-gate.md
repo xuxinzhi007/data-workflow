@@ -36,3 +36,25 @@ waiver <前缀> <原因>
 `plan pass` 只在技术方案门过了之后写。hook 只认这个文件，不重新给九项负债打分。
 
 内部小改动用 `waiver`，原因写在同一行前缀后面。先追加这一行，再改 Go。
+
+## 项目自己的路径
+
+`config.yaml` 里可以写两个键，逗号分隔，相对仓库根：
+
+```yaml
+protected_paths: "api/**,*.proto,*.pb.go,internal/biz/status.go,*/biz/status.go"
+waiver_globs: "*.go"
+```
+
+写了就用写的。`protected_paths` 为空表示没有路径要 `design`。`waiver_globs` 为空表示没有路径要 `waiver`。两个键都不出现时，用上面那张表。
+
+`default_workflow: change` 只影响没有运行记录时 `workflow_next.py next` 提示哪条工作流。不改变这道写入门。
+
+## 和一次运行对上
+
+`specs/<feature>/run.json` 的 `status` 是 `working` 或 `waiting` 时：
+
+- 工作流 `kind` 是 `review`：除 `specs/` 以外的写入都拒绝。
+- 工作流 `kind` 是 `execute`：`design` 行里的 feature 必须是这次运行的名字。没有这份运行记录时，仍接受任意合法 feature。
+
+下一步读哪个文件、要不要停下来问一句，由 `scripts/workflow_next.py` 打印。本文件只规定写入能不能发生。

@@ -1,5 +1,6 @@
 {
   "name": "bugfix",
+  "kind": "execute",
   "when": "已知错误行为需要修正：功能不符合口径、状态卡住、数据不一致、接口返回错。用户说「这里不对」「修一下」「为什么结果是 X」时走这条。",
   "principle": "先证根因再动手。根因没证据就写代码 = 换个地方再犯一次。不写技术方案，但影响面与回滚不能省。",
   "artifacts_root": "specs/<feature>/",
@@ -45,6 +46,7 @@
     {
       "id": 3,
       "name": "回归测试先行",
+      "code": true,
       "reads": [
         "specs/<feature>/spec.md"
       ],

@@ -1,5 +1,6 @@
 {
   "name": "feature",
+  "kind": "execute",
   "when": "新能力、已有能力扩展、新增筛选/字段/状态/端点。用户说「做个功能」「加个字段」「支持按 X 过滤」时走这条。",
   "principle": "阶段串行，前一步的产出就是后一步的输入。任一门未过就停，不自行绕过。",
   "artifacts_root": "specs/<feature>/",
@@ -74,6 +75,7 @@
     {
       "id": 4,
       "name": "编码实现",
+      "code": true,
       "reads": [
         "specs/<feature>/plan.md",
         "$PLUGIN_ROOT/stages/implementation/references/go-style.md",

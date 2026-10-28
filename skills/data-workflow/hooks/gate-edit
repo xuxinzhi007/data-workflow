@@ -4,11 +4,14 @@
 放行记录的格式在 references/edit-gate.md。本脚本只认 specs/passes.log。
 """
 
+import fnmatch
 import json
 import os
 import re
 import subprocess
 import sys
+
+SKILL_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def emit(permission, agent_message="", user_message=""):
@@ -27,7 +30,7 @@ def repo_root(cwd):
             stderr=subprocess.DEVNULL,
             text=True,
         ).strip()
-        return out or None
+        return os.path.realpath(out) if out else None
     except (subprocess.CalledProcessError, FileNotFoundError, OSError):
         return None
 
@@ -38,12 +41,13 @@ def rel_path(root, raw):
     raw = raw.strip().strip("'\"")
     if not raw or raw.startswith("-"):
         return None
+    root_real = os.path.realpath(root)
     if os.path.isabs(raw):
-        path = raw
+        path = os.path.realpath(raw)
     else:
-        path = os.path.normpath(os.path.join(root, raw))
+        path = os.path.realpath(os.path.normpath(os.path.join(root_real, raw)))
     try:
-        rel = os.path.relpath(path, root)
+        rel = os.path.relpath(path, root_real)
     except ValueError:
         return None
     if rel.startswith(".."):
@@ -63,6 +67,124 @@ def protected(rel):
 
 def needs_waiver(rel):
     return rel.endswith(".go")
+
+
+def read_yaml_key(path, key):
+    if not os.path.isfile(path):
+        return None
+    prefix = key + ":"
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            lines = fh.readlines()
+    except OSError:
+        return None
+    for line in lines:
+        if line.startswith("#") or not line.strip():
+            continue
+        if line.startswith(prefix):
+            val = line.split(":", 1)[1].strip()
+            if len(val) >= 2 and val[0] == val[-1] and val[0] in "\"'":
+                val = val[1:-1]
+            val = re.sub(r"\s+#.*$", "", val).strip()
+            return val
+    return None
+
+
+def split_patterns(val):
+    if val is None:
+        return None
+    if not val.strip():
+        return []
+    return [part.strip() for part in val.split(",") if part.strip()]
+
+
+def policy(root):
+    protected_val = None
+    waiver_val = None
+    candidates = []
+    for tool in (".cursor", ".qoder", ".agents", ".claude", ".codex"):
+        candidates.append(os.path.join(root, tool, "skills", "data-workflow", "config.yaml"))
+    candidates.append(os.path.join(root, "config.yaml"))
+    home = os.environ.get("HOME") or ""
+    if home:
+        candidates.append(os.path.join(home, ".config", "data-workflow", "config.yaml"))
+    for path in candidates:
+        if protected_val is None:
+            protected_val = read_yaml_key(path, "protected_paths")
+        if waiver_val is None:
+            waiver_val = read_yaml_key(path, "waiver_globs")
+    return split_patterns(protected_val), split_patterns(waiver_val)
+
+
+def match_any(rel, patterns):
+    for pattern in patterns:
+        if pattern.endswith("/**"):
+            prefix = pattern[:-3].rstrip("/")
+            if prefix and (rel == prefix or rel.startswith(prefix + "/")):
+                return True
+            continue
+        if pattern.endswith("/"):
+            if rel.startswith(pattern) or rel.rstrip("/") == pattern.rstrip("/"):
+                return True
+            continue
+        if rel == pattern or fnmatch.fnmatch(rel, pattern) or fnmatch.fnmatch(os.path.basename(rel), pattern):
+            return True
+    return False
+
+
+def is_protected(root, rel):
+    patterns, _ = policy(root)
+    if patterns is None:
+        return protected(rel)
+    return match_any(rel, patterns)
+
+
+def is_waiver(root, rel):
+    _, patterns = policy(root)
+    if patterns is None:
+        return needs_waiver(rel)
+    return match_any(rel, patterns)
+
+
+def workflow_kind(name):
+    if not re.fullmatch(r"[A-Za-z0-9._-]+", name or ""):
+        return ""
+    path = os.path.join(SKILL_ROOT, "workflows", name + ".json")
+    if not os.path.isfile(path):
+        return ""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        return ""
+    if isinstance(data, dict):
+        return data.get("kind") or "execute"
+    return ""
+
+
+def active_runs(root):
+    specs = os.path.join(root, "specs")
+    found = []
+    if not os.path.isdir(specs):
+        return found
+    for name in sorted(os.listdir(specs)):
+        if not re.fullmatch(r"[A-Za-z0-9._-]+", name):
+            continue
+        path = os.path.join(specs, name, "run.json")
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        if data.get("status") not in ("working", "waiting"):
+            continue
+        workflow = data.get("workflow") or ""
+        found.append((name, workflow_kind(workflow)))
+    return found
 
 
 def covers(prefix, rel):
@@ -114,20 +236,38 @@ def decision(root, rel):
         return "allow", ""
     if rel == "specs" or rel.startswith("specs/"):
         return "allow", ""
+    runs = active_runs(root)
+    if any(kind == "review" for _, kind in runs):
+        return (
+            "deny",
+            "拒绝写入 %s。当前有未完成的审阅运行，只写 specs/。要改产品代码，等这次审阅结束或另开一次执行运行。"
+            % rel,
+        )
+    execute_features = {feature for feature, kind in runs if kind == "execute"}
     rows = read_passes(root)
-    if protected(rel):
+    if is_protected(root, rel):
         for kind, feature, prefix in rows:
+            if execute_features and feature not in execute_features:
+                continue
             if kind == "design" and covers(prefix, rel) and design_ok(root, feature):
                 return "allow", ""
+        if execute_features:
+            return (
+                "deny",
+                "拒绝写入 %s。design 行的 feature 要是当前运行 %s，并且 specs/<feature>/plan.md 与 gate 首行 plan pass 都在。"
+                % (rel, "、".join(sorted(execute_features))),
+            )
         return (
             "deny",
             "拒绝写入 %s。先完成 specs/<feature>/plan.md，把 specs/<feature>/gate 首行写成 plan pass，再往 specs/passes.log 追加：design <feature> <覆盖该文件的前缀>"
             % rel,
         )
-    if needs_waiver(rel):
+    if is_waiver(root, rel):
         for kind, a, b in rows:
             if kind == "waiver" and covers(a, rel):
                 return "allow", ""
+            if execute_features and a not in execute_features:
+                continue
             if kind == "design" and covers(b, rel) and design_ok(root, a):
                 return "allow", ""
         return (

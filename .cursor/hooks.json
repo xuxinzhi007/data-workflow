@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "skills/data-workflow/hooks/session-start"
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "skills/data-workflow/hooks/gate-edit",
+        "failClosed": true
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "skills/data-workflow/hooks/gate-edit",
+        "failClosed": true
+      }
+    ]
+  }
+}
