@@ -2,3 +2,5 @@
 config.yaml
 *.png
 !assets/*.png
+.idea
+.vscode

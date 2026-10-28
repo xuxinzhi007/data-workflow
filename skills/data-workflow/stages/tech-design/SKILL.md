@@ -1,6 +1,6 @@
 # Tech Design（技术方案）
 
-把已确认的一页方案填进公司《研发技术方案》模板。本技能不重新做需求分析，也不改一页方案里的决定。
+把已确认的一页方案填进公司《研发技术方案》模板。落 `plan.md` 前读 `../../references/doc-shape.md`：这篇的主活是怎么做，第一屏是接口改什么加上 3–6 步。本技能不重新做需求分析，也不改一页方案里的决定。
 
 评审阅读一页方案。模板是归档格式。
 
@@ -37,3 +37,10 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"   # → $KNOW / $TEMPLATES / $TEC
 | `$REPO/specs/<feature>/rollback.md` | `rollback-template.md`：可逆性判定、编号步骤、触发条件、数据回滚与备份 | 出事时照着做，不靠记忆 |
 
 回滚写不出可执行步骤（只有「回滚代码」四个字）= 方案没过门，回到 `grilling` 或 `../impact-assessment/SKILL.md` 补证据。
+
+方案门过了之后再写两份给编辑 hook 看的文件，格式见 `../../references/edit-gate.md`：
+
+- `$REPO/specs/<feature>/gate`，第一条非空行只有 `plan pass`
+- `$REPO/specs/passes.log` 追加 `design <feature> <前缀>`，前缀覆盖接下来要改的 `api/`、proto、`internal/biz/status.go` 和相关 Go 文件
+
+门没过就不要写 `plan pass`。

@@ -28,6 +28,8 @@ $REPO/specs/<feature>/
 
 模板在 `$PLUGIN_ROOT/templates/`：`spec-template.md`、`plan-template.md`、`impact-template.md`、`change-note-template.md`、`rollback-template.md`。**模板里的 GATE 段落不要删** —— 删掉就等于假装那一维不存在；没内容就写「无」。
 
+每份工件的主活和第一屏见 `doc-shape.md`。后一步写「见某文件某节」，不把上一份抄进来。
+
 ---
 
 ## `<feature>` 怎么命名

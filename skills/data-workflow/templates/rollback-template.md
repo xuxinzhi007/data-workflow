@@ -1,6 +1,7 @@
 # <主题> 回滚预案（rollback）
 
 > 产出者：`stages/tech-design/SKILL.md`（方案阶段写）＋ `stages/impact-assessment/SKILL.md`（轴 4 取证）。落 `specs/<feature>/rollback.md`。
+> 形状：`references/doc-shape.md`。主活是怎么做。第一屏是能不能回滚，加上编号步骤。
 > 规则：**别人照着这些步骤能回到改动前的状态。**「回滚代码即可」不算预案。
 > 上线前写，不是出事后写——出事后写的叫事故报告。
 

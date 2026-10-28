@@ -1,0 +1,215 @@
+#!/usr/bin/python3
+"""Cursor preToolUse / beforeShellExecution：没有放行记录就拒绝写入。
+
+放行记录的格式在 references/edit-gate.md。本脚本只认 specs/passes.log。
+"""
+
+import json
+import os
+import re
+import subprocess
+import sys
+
+
+def emit(permission, agent_message="", user_message=""):
+    out = {"permission": permission}
+    if agent_message:
+        out["agent_message"] = agent_message
+    if user_message:
+        out["user_message"] = user_message
+    sys.stdout.write(json.dumps(out, ensure_ascii=False) + "\n")
+
+
+def repo_root(cwd):
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", cwd or ".", "rev-parse", "--show-toplevel"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+        return out or None
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+        return None
+
+
+def rel_path(root, raw):
+    if not raw or not isinstance(raw, str):
+        return None
+    raw = raw.strip().strip("'\"")
+    if not raw or raw.startswith("-"):
+        return None
+    if os.path.isabs(raw):
+        path = raw
+    else:
+        path = os.path.normpath(os.path.join(root, raw))
+    try:
+        rel = os.path.relpath(path, root)
+    except ValueError:
+        return None
+    if rel.startswith(".."):
+        return None
+    return rel.replace("\\", "/")
+
+
+def protected(rel):
+    if rel.startswith("api/") or rel == "api":
+        return True
+    if rel.endswith(".proto") or rel.endswith(".pb.go"):
+        return True
+    if rel == "internal/biz/status.go" or rel.endswith("/biz/status.go"):
+        return True
+    return False
+
+
+def needs_waiver(rel):
+    return rel.endswith(".go")
+
+
+def covers(prefix, rel):
+    prefix = prefix.strip().strip("/")
+    if not prefix or ".." in prefix.split("/"):
+        return False
+    return rel == prefix or rel.startswith(prefix + "/")
+
+
+def read_passes(root):
+    path = os.path.join(root, "specs", "passes.log")
+    rows = []
+    if not os.path.isfile(path):
+        return rows
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split()
+            if len(parts) < 3:
+                continue
+            kind = parts[0]
+            if kind == "design" and len(parts) >= 3:
+                rows.append(("design", parts[1], parts[2]))
+            elif kind == "waiver" and len(parts) >= 3:
+                rows.append(("waiver", parts[1], " ".join(parts[2:])))
+    return rows
+
+
+def design_ok(root, feature):
+    if not re.fullmatch(r"[A-Za-z0-9._-]+", feature or ""):
+        return False
+    plan = os.path.join(root, "specs", feature, "plan.md")
+    gate = os.path.join(root, "specs", feature, "gate")
+    if not os.path.isfile(plan) or os.path.getsize(plan) == 0:
+        return False
+    if not os.path.isfile(gate):
+        return False
+    with open(gate, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            if line.strip():
+                return line.strip() == "plan pass"
+    return False
+
+
+def decision(root, rel):
+    if rel is None:
+        return "allow", ""
+    if rel == "specs" or rel.startswith("specs/"):
+        return "allow", ""
+    rows = read_passes(root)
+    if protected(rel):
+        for kind, feature, prefix in rows:
+            if kind == "design" and covers(prefix, rel) and design_ok(root, feature):
+                return "allow", ""
+        return (
+            "deny",
+            "拒绝写入 %s。先完成 specs/<feature>/plan.md，把 specs/<feature>/gate 首行写成 plan pass，再往 specs/passes.log 追加：design <feature> <覆盖该文件的前缀>"
+            % rel,
+        )
+    if needs_waiver(rel):
+        for kind, a, b in rows:
+            if kind == "waiver" and covers(a, rel):
+                return "allow", ""
+            if kind == "design" and covers(b, rel) and design_ok(root, a):
+                return "allow", ""
+        return (
+            "deny",
+            "拒绝写入 %s。内部改动往 specs/passes.log 追加一行：waiver <前缀> <原因>。已有方案门时也可以追加 design <feature> <前缀>。"
+            % rel,
+        )
+    return "allow", ""
+
+
+def destinations(data, root):
+    found = []
+    tool_input = data.get("tool_input") or data.get("toolInput") or {}
+    if isinstance(tool_input, dict):
+        for key in ("path", "file_path", "filePath", "target_file", "target_notebook"):
+            rel = rel_path(root, tool_input.get(key))
+            if rel:
+                found.append(rel)
+        edits = tool_input.get("edits") or tool_input.get("files") or []
+        if isinstance(edits, list):
+            for item in edits:
+                if isinstance(item, dict):
+                    for key in ("path", "file_path", "filePath"):
+                        rel = rel_path(root, item.get(key))
+                        if rel:
+                            found.append(rel)
+    command = data.get("command") or ""
+    if isinstance(command, str) and command.strip():
+        found.extend(shell_destinations(command, root))
+    return found
+
+
+def shell_destinations(command, root):
+    """只取写入目标，不把被搜索的路径当成写入。"""
+    found = []
+    patterns = [
+        r"(?:>>|>)\s*([^\s;&|]+)",
+        r"\btee\s+(?:-a\s+)?([^\s;&|]+)",
+        r"\bsed\s+-\S*i\S*\s+.*?([^\s;&|]+)\s*$",
+        r"\bperl\s+-\S*i\S*\s+.*?([^\s;&|]+)\s*$",
+    ]
+    for pattern in patterns:
+        for match in re.finditer(pattern, command):
+            rel = rel_path(root, match.group(1))
+            if rel:
+                found.append(rel)
+    if re.search(r"\b(?:rm|mv|cp)\b", command):
+        for token in re.findall(r"[A-Za-z0-9_./~-]+\.[A-Za-z0-9]+|[A-Za-z0-9_./~-]*api/[A-Za-z0-9_./~-]*", command):
+            rel = rel_path(root, token)
+            if rel:
+                found.append(rel)
+    return found
+
+
+def main():
+    raw = sys.stdin.read()
+    try:
+        data = json.loads(raw) if raw.strip() else {}
+    except json.JSONDecodeError:
+        emit("deny", "编辑门禁没有读到合法 JSON，拒绝这次操作。")
+        return 0
+    cwd = data.get("cwd") or os.getcwd()
+    root = repo_root(cwd)
+    if not root:
+        emit("allow")
+        return 0
+    paths = destinations(data, root)
+    if not paths:
+        emit("allow")
+        return 0
+    for rel in paths:
+        permission, message = decision(root, rel)
+        if permission == "deny":
+            emit("deny", message, message)
+            return 0
+    emit("allow")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except Exception as exc:  # noqa: BLE001 — fail closed via invalid? we emit deny
+        emit("deny", "编辑门禁脚本出错，拒绝这次操作：%s" % exc)
+        raise SystemExit(0)

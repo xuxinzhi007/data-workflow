@@ -41,6 +41,79 @@ fi
 
 src="$repo_root/skills/data-workflow"
 
+# Cursor 项目钩子。--global 不写：用户级 hook 会拦到所有仓库。
+merge_cursor_hooks() {
+  local mode="$1"
+  local hooks_file="$base/.cursor/hooks.json"
+  [ "$global" = 1 ] && return 0
+  [ -d "$base/.cursor" ] || return 0
+  python3 - "$hooks_file" "$mode" << 'PY'
+import json, os, sys
+path, mode = sys.argv[1], sys.argv[2]
+session = ".cursor/skills/data-workflow/hooks/session-start"
+gate = ".cursor/skills/data-workflow/hooks/gate-edit"
+ours = {session, gate}
+
+def load():
+    if not os.path.isfile(path):
+        return {"version": 1, "hooks": {}}
+    with open(path, encoding="utf-8") as fh:
+        try:
+            data = json.load(fh)
+        except json.JSONDecodeError:
+            return {"version": 1, "hooks": {}}
+    if not isinstance(data, dict):
+        return {"version": 1, "hooks": {}}
+    data.setdefault("version", 1)
+    if not isinstance(data.get("hooks"), dict):
+        data["hooks"] = {}
+    return data
+
+data = load()
+hooks = data["hooks"]
+
+def entries(event):
+    raw = hooks.get(event, [])
+    return [e for e in raw if isinstance(e, dict)] if isinstance(raw, list) else []
+
+def is_ours(entry):
+    return entry.get("command") in ours
+
+if mode == "remove":
+    for event in list(hooks):
+        kept = [e for e in entries(event) if not is_ours(e)]
+        if kept:
+            hooks[event] = kept
+        else:
+            del hooks[event]
+    if not hooks and set(data) <= {"version", "hooks"}:
+        if os.path.isfile(path):
+            os.remove(path)
+        print("HOOKS removed %s" % path)
+        raise SystemExit(0)
+else:
+    session_hooks = entries("sessionStart")
+    if not any(e.get("command") == session for e in session_hooks):
+        session_hooks.append({"command": session})
+    hooks["sessionStart"] = session_hooks
+    for event in ("preToolUse", "beforeShellExecution"):
+        event_hooks = entries(event)
+        if not any(e.get("command") == gate for e in event_hooks):
+            event_hooks.append({"command": gate, "failClosed": True})
+        hooks[event] = event_hooks
+
+os.makedirs(os.path.dirname(path), exist_ok=True)
+with open(path, "w", encoding="utf-8") as fh:
+    json.dump(data, fh, indent=2, ensure_ascii=False)
+    fh.write("\n")
+print("HOOKS %s %s" % (mode, path))
+PY
+}
+
+if [ "$unlink" = 1 ]; then
+  merge_cursor_hooks remove
+fi
+
 for sd in "${dirs[@]}"; do
   mkdir -p "$sd"
   for link in "$sd"/*; do
@@ -106,6 +179,11 @@ if [ "$unlink" = 0 ]; then
   if [ -n "$primary" ] && [ -f "$legacy" ]; then
     rm -f "$legacy"
     rmdir "$base/.data-workflow" 2>/dev/null || true
+  fi
+  if [ "$global" = 1 ]; then
+    printf 'HOOKS --global 不写 Cursor hook。强制绑定只在装进某个项目的 .cursor 时生效。\n'
+  else
+    merge_cursor_hooks add
   fi
   printf '\nDONE 复制到 %s 个工具目录。项目里的副本不依赖技能仓库。\n' "${#dirs[@]}"
   printf '     配置在 %s。要更新技能正文，再跑一次本脚本，config.yaml 不会被盖掉。\n' "$primary"

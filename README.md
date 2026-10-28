@@ -174,7 +174,9 @@ cd <data-service 仓库根>
 bash ~/skills/data-workflow/scripts/install.sh
 ```
 
-装完后在那个仓库里说「开始开发」或 `@data-workflow`。入口负责选型、选工作流、按门禁往下串。知识源和模板读 `.<工具>/skills/data-workflow/config.yaml`，就在技能目录里面。`repo` 留空就是当前检出。
+装进带 `.cursor` 的项目后，新会话会注入这个技能，不靠「开始开发」这几个词。写入 `api/`、proto、`internal/biz/status.go` 或其它 Go 文件时，没有 `specs/passes.log` 放行记录，Cursor hook 会拒绝。记录格式在技能的 `references/edit-gate.md`。`--global` 不写这道 hook。Qoder / Claude / Codex 的副本没有这道拦截。
+
+要选工作流时仍说「开始开发」或 `@data-workflow`。知识源和模板读 `.<工具>/skills/data-workflow/config.yaml`，就在技能目录里面。`repo` 留空就是当前检出。
 
 一次会话读一个闭集，不把 `stages/` 扫一遍，也不把阶段文件装成别的技能：
 

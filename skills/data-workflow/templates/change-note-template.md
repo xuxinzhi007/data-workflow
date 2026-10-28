@@ -2,6 +2,7 @@
 
 > 产出者：`stages/git-commit/SKILL.md`（提交前的文档审计门产物）。落 `specs/<feature>/change-note.md`。
 > 用途：让下一个人（和下一个 agent）不必读 diff 就知道**这次改了什么、为什么、代价是什么、文档同步了没有**。
+> 形状：`references/doc-shape.md`。主活是速查。第一屏是 §1 一句话，加上文档同步了没有。
 > 规则：只写会被 diff 之外的东西证伪的内容。不复述代码。
 
 - feature：`<name>` ／ 分支：`<branch>` ／ commit 范围：`<base>..<head>`

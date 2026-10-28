@@ -216,6 +216,7 @@
         "bash scripts/install.sh 探测 cwd（或 --global 时 ~）下的 .claude .cursor .qoder .codex .agents，只对存在的目录复制一份自包含的 skills/data-workflow，不软链回技能仓库",
         "连跑两次结果一致（幂等，不重复报错），已有 config.yaml 不被覆盖",
         "bash scripts/install.sh --unlink 卸掉这份副本，留下 config.yaml，不动其他技能",
+        "装进含 .cursor 的项目时，把 sessionStart / preToolUse / beforeShellExecution 合并进该项目 .cursor/hooks.json，命令指向副本里的 hooks/；--global 不写 hook；--unlink 摘掉这些命令",
         "bash scripts/resolve.sh <key> 按 DATA_WORKFLOW_<KEY> env > <项目>/<工具>/skills/data-workflow/config.yaml > <项目根>/config.yaml > ~/.config/data-workflow/config.yaml > 空 的顺序解析，不读技能仓库的 config.yaml",
         "config.yaml 未配置或键为空时，知识源回退 $REPO/docs 并打印 DEGRADED，绝不猜绝对路径",
         "对 skills/ scripts/ templates/ workflows/ README.md AGENTS.md 跑「个人主目录绝对路径」grep 无命中（个人路径只允许出现在被 gitignore 的 config.yaml；evals 自身不在此列，避免自指）"

@@ -1,0 +1,26 @@
+#!/bin/bash
+# Cursor sessionStart：把本技能的绑定注入当前会话。不依赖用户说出触发词。
+# 输出只写 additional_context。失败时仍吐出一行说明，避免空输出。
+
+case "$0" in
+  */*|*\\*) SCRIPT_DIR="$(cd "${0%[/\\]*}" && pwd)" ;;
+  *) SCRIPT_DIR="$(pwd)" ;;
+esac
+SKILL_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+escape_for_json() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\r'/\\r}"
+  s="${s//$'\t'/\\t}"
+  printf '%s' "$s"
+}
+
+text="data-workflow 已绑定这个仓库。先读 ${SKILL_ROOT}/SKILL.md，再读 ${SKILL_ROOT}/references/edit-gate.md。
+写 api/、*.proto、*.pb.go、internal/biz/status.go 之前，specs/passes.log 要有覆盖该路径的 design 行，并且 specs/<feature>/plan.md 与 specs/<feature>/gate（首行 plan pass）都在。
+写其它 *.go 之前，要有覆盖该路径的 waiver 行，或同一条 design 前缀。
+specs/ 下的工件可以直接写。先追加放行记录，再改代码。没有记录的写入会被 hook 拒绝。"
+
+printf '{\n  "additional_context": "%s"\n}\n' "$(escape_for_json "$text")"

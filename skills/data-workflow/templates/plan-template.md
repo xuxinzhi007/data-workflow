@@ -2,6 +2,7 @@
 
 > 产出者：`stages/tech-design/SKILL.md`。落 `specs/<feature>/plan.md`。
 > 前置：`specs/<feature>/spec.md` 的九项评估无阻塞项、决定表已拍板。
+> 形状：`references/doc-shape.md`。主活是怎么做。第一屏是 §1 接口和 §3 的 3–6 步。
 > 规则：**本文件不重开需求分析**。公司模板（`$TECH_DESIGN_TEMPLATE`）存在时以公司模板为准，本文件只补工程细节；公司模板缺失时才用它，并在开头注明「未使用公司模板」。
 
 - feature：`<name>` ／ 分支：`<branch>` ／ 基线：`<sha>`

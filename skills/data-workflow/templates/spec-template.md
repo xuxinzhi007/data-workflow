@@ -1,6 +1,7 @@
 # <主题> 需求规格（spec）
 
 > 产出者：`stages/requirement-analysis/SKILL.md`。落 `specs/<feature>/spec.md`。
+> 形状：`references/doc-shape.md`。主活是拍板。第一屏只留 §1 和已拍板的决定，其余是速查。
 > 规则：**事实与决定分开写**。事实每条带 `文件:符号`；决定每条必须有人拍板。
 > 空章节写「无」，不要删章节——删掉就等于假装这一维不存在。
 

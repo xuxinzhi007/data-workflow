@@ -1,6 +1,6 @@
 ---
 name: data-workflow
-description: data-service 开发工作台，需求到提交的唯一入口。用户说 @data-workflow、开始开发、需求分析、影响面、技术方案、编码实现、改动审核、审一下、质量检查、接口测试、排查、状态含义、提交、提 MR、画架构图时读取本文件，再只读 stages/ 里对应的那一个阶段文件。不用于：纯 git 操作、解决合并冲突、与 data-service 无关的任务。
+description: data-service 开发工作台。Cursor 项目安装后会话开始即绑定，写入 api/、proto、pb.go、internal/biz/status.go 或其它 Go 文件时，没有 specs/passes.log 放行记录会被 hook 拒绝。用户说 @data-workflow、开始开发、需求分析、影响面、技术方案、编码实现、改动审核、审一下、质量检查、接口测试、排查、状态含义、提交、提 MR、画架构图时读取本文件，再只读 stages/ 里对应的那一个阶段文件。不用于：纯 git 操作、解决合并冲突、与 data-service 无关的任务。
 ---
 
 # data-service 开发工作台
@@ -20,6 +20,10 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"
 ```
 
 路径可能含空格，命令里必须引号包裹。解析出空值的键**不许猜绝对路径**：要么问用户，要么显式声明降级后继续。
+
+## 绑定
+
+Cursor 项目安装后，会话开始的 hook 注入本文件和 `references/edit-gate.md`。写代码不依赖「开始开发」这几个词。`api/`、`*.proto`、`*.pb.go`、`internal/biz/status.go` 以及其它 `*.go`，没有 `specs/passes.log` 里覆盖该路径的记录，hook 拒绝写入。记录格式只维护在 `references/edit-gate.md`。
 
 ## 启动
 
@@ -108,7 +112,7 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"
 
 ## 工件
 
-每步的产出都落盘，落点与命名见 `references/artifact-tree.md`，模板在 `$PLUGIN_ROOT/templates/`。
+每步的产出都落盘，落点与命名见 `references/artifact-tree.md`，模板在 `$PLUGIN_ROOT/templates/`。写 spec、impact、plan、rollback、review、change-note 之前读 `references/doc-shape.md`：一篇一个主活，第一屏答完「这是干什么的、读者现在该做什么」。
 
 **工件是流程的记忆**：对话会被上下文压缩吃掉，落盘的文件不会。三条纪律——一步一产物、产物只引用不复述、每条事实可复现（带 `文件:符号` 或命令输出，做不到就写 `UNVERIFIED`）。
 
