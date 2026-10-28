@@ -1,15 +1,10 @@
----
-name: tech-design
-description: data-service 技术方案。把已拍板的一页方案填进公司研发技术方案模板，需要架构图时调 data-workflow:excalidraw-diagram。用户说写技术方案、出个方案文档、tech design 时使用。不用于：需求还没拍板（先 data-workflow:requirement-analysis）、直接写代码（用 data-workflow:implementation）。
----
-
 # Tech Design（技术方案）
 
 把已确认的一页方案填进公司《研发技术方案》模板。本技能不重新做需求分析，也不改一页方案里的决定。
 
 评审阅读一页方案。模板是归档格式。
 
-`$PLUGIN_ROOT` = 本 SKILL.md 往上两级的目录（软链安装时先 `readlink -f`）。模板路径运行时解析，不写死：
+`$PLUGIN_ROOT` 是含 `scripts/paths.sh` 的仓库根。会话已由入口解析过就直接用。单独打开本文件时，从本文件向上找到该目录（本文件在 `stages/` 下，不是向上两级）。模板路径运行时解析，不写死：
 
 ```bash
 eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"   # → $KNOW / $TEMPLATES / $TECH_DESIGN_TEMPLATE
@@ -41,4 +36,4 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"   # → $KNOW / $TEMPLATES / $TEC
 | `$REPO/specs/<feature>/plan.md` | `$PLUGIN_ROOT/templates/plan-template.md` 填好的版本（接口/数据/状态/权限/验证/回滚 + 偏差记录） | 编码与审核阶段的输入，随代码一起提交 |
 | `$REPO/specs/<feature>/rollback.md` | `rollback-template.md`：可逆性判定、编号步骤、触发条件、数据回滚与备份 | 出事时照着做，不靠记忆 |
 
-回滚写不出可执行步骤（只有「回滚代码」四个字）= 方案没过门，回到 `grilling` 或 `data-workflow:impact-assessment` 补证据。
+回滚写不出可执行步骤（只有「回滚代码」四个字）= 方案没过门，回到 `grilling` 或 `../impact-assessment/SKILL.md` 补证据。

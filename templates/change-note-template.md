@@ -1,6 +1,6 @@
 # <主题> 变更说明（change note）
 
-> 产出者：`data-workflow:git-commit`（提交前的文档审计门产物）。落 `specs/<feature>/change-note.md`。
+> 产出者：`stages/git-commit/SKILL.md`（提交前的文档审计门产物）。落 `specs/<feature>/change-note.md`。
 > 用途：让下一个人（和下一个 agent）不必读 diff 就知道**这次改了什么、为什么、代价是什么、文档同步了没有**。
 > 规则：只写会被 diff 之外的东西证伪的内容。不复述代码。
 
@@ -57,7 +57,7 @@
 | `specs/<feature>/impact.md` | | | |
 | `README.md`（仓库根） | | | |
 | `CONTEXT.md`（术语） | | | |
-| 知识层 `$KNOW/<域>/`、`$CARDS/` | | | 归档见 `data-workflow:data-workflow` 的 `references/feature-archive.md` |
+| 知识层 `$KNOW/<域>/`、`$CARDS/` | | | 归档见 `references/feature-archive.md` |
 | 仓库 `docs/` | | | 降级区：**不为它改口径**，只在自己产出里标注它已失效 |
 
 > **GATE：有「需要同步但没同步」的项时，不能直接提交。**

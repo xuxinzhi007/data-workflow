@@ -1,8 +1,3 @@
----
-name: excalidraw-diagram
-description: Generate and render high-quality architecture, system design, data flow, and pipeline diagrams in Excalidraw format (.excalidraw, .svg, .png). Use when the user asks to draw architecture diagrams, flowcharts, system topologies, or mentions Excalidraw, visual diagrams, or pipeline charts.
----
-
 # Excalidraw Architecture & Diagram Generator
 
 为项目快速生成高品质、高保真的系统架构图、数据流水线图与流程拓扑图。

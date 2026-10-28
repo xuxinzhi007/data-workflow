@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": 1,
-      "skill": "data-workflow:oncall",
+      "skill": "stages/oncall/SKILL.md",
       "targets": [
         "Phase 0 MQTT 假话"
       ],
@@ -20,7 +20,7 @@
     },
     {
       "id": 2,
-      "skill": "data-workflow:oncall",
+      "skill": "stages/oncall/SKILL.md",
       "targets": [
         "状态族隔离规则"
       ],
@@ -36,7 +36,7 @@
     },
     {
       "id": 3,
-      "skill": "data-workflow:oncall",
+      "skill": "stages/oncall/SKILL.md",
       "targets": [
         "staleness"
       ],
@@ -54,7 +54,7 @@
     },
     {
       "id": 4,
-      "skill": "data-workflow:change-review",
+      "skill": "stages/change-review/SKILL.md",
       "targets": [
         "虚构 API"
       ],
@@ -75,7 +75,7 @@
     },
     {
       "id": 5,
-      "skill": "data-workflow:oncall",
+      "skill": "stages/oncall/SKILL.md",
       "targets": [
         "记忆回写端到端"
       ],
@@ -95,7 +95,7 @@
     },
     {
       "id": 6,
-      "skill": "data-workflow:data-workflow",
+      "skill": "data-workflow",
       "targets": [
         "痛点② token"
       ],
@@ -111,14 +111,14 @@
     },
     {
       "id": 7,
-      "skill": "data-workflow:quality-gate",
+      "skill": "stages/quality-gate/SKILL.md",
       "targets": [
         "静默空跑的命令"
       ],
       "prompt": "proto 改了，怎么重新生成？",
       "pass": [
         "给出带 PROTO= 的 make api-one，或指向 $REPO/Makefile 里真实的生成目标",
-        "不假设某个 IDE 的规则目录存在（落点按 data-workflow:data-workflow 的 references/project-index.md 解析）"
+        "不假设某个 IDE 的规则目录存在（落点按 data-workflow 的 references/project-index.md 解析）"
       ],
       "fail": [
         "给出裸 make api-one",
@@ -127,7 +127,7 @@
     },
     {
       "id": 8,
-      "skill": "data-workflow:tech-design",
+      "skill": "stages/tech-design/SKILL.md",
       "targets": [
         "死技能复活"
       ],
@@ -143,7 +143,7 @@
     },
     {
       "id": 9,
-      "skill": "data-workflow:impact-assessment",
+      "skill": "stages/impact-assessment/SKILL.md",
       "targets": [
         "痛点④ 影响面与维护性没评估",
         "UNVERIFIED 不等于没影响"
@@ -165,7 +165,7 @@
     },
     {
       "id": 10,
-      "skill": "data-workflow:interface-test",
+      "skill": "stages/interface-test/SKILL.md",
       "targets": [
         "痛点⑤ 缺接口测试",
         "四态裁决与 WAIVED 的诚实性"
@@ -187,7 +187,7 @@
     },
     {
       "id": 11,
-      "skill": "data-workflow:git-commit",
+      "skill": "stages/git-commit/SKILL.md",
       "targets": [
         "痛点③ 缺文档产出与提交前审计"
       ],

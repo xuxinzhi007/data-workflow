@@ -1,8 +1,3 @@
----
-name: implementation
-description: data-service 编码实现。写代码、改 bug、重构时执行：显式假设、最小改动、不铺中间层、Go 与 Proto 规范、改完过复用门禁。用户说开始写、实现一下、改一下、修这个 bug、编码实现时使用。不用于：还没拍板的需求（先 data-workflow:requirement-analysis）、只审已有 diff（用 data-workflow:change-review）、只跑构建与测试（用 data-workflow:quality-gate）。
----
-
 # Implementation Guardrails
 
 Apply this skill before making code changes or performing code review.

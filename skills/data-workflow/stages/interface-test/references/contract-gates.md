@@ -1,6 +1,6 @@
 # 契约门：判据、命令与已知环境事实
 
-`data-workflow:interface-test` 的三级门在这里给具体命令与判据。
+`../../interface-test/SKILL.md` 的三级门在这里给具体命令与判据。
 
 **下面所有「本仓事实」（文件路径、Makefile 目标、环境变量名）都会随 commit 变化**：用之前先核一眼，不要照抄。核对命令附在每条后面。
 
@@ -101,10 +101,10 @@ curl -sS -o /dev/null -w '%{http_code}\n' --max-time 3 "${TEST_BASE_URL:-http://
 
 | 想做的事 | 该去哪 |
 |---|---|
-| 构建、单测覆盖率、`make test` | `data-workflow:quality-gate` |
-| 调用方清单、状态机消费点、权限与回滚 | `data-workflow:impact-assessment` |
-| 线上真实症状与运行时证据 | `data-workflow:oncall` |
-| 逐行代码规范 | `data-workflow:change-review` |
+| 构建、单测覆盖率、`make test` | `../../quality-gate/SKILL.md` |
+| 调用方清单、状态机消费点、权限与回滚 | `../../impact-assessment/SKILL.md` |
+| 线上真实症状与运行时证据 | `../../oncall/SKILL.md` |
+| 逐行代码规范 | `../../change-review/SKILL.md` |
 
 接口测试只回答「契约与端点行为有没有被证据覆盖」，不重复上面四件事。
 

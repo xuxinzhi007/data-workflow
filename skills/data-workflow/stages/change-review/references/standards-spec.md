@@ -1,10 +1,10 @@
 # data-service 代码审核规范
 
-> 本 skill 是个人工程规范文件（`$PERSONAL_AGENTS_MD`，由 `$PLUGIN_ROOT/scripts/paths.sh` 解析；仓库级规范则看 `$REPO/AGENTS.md`、`$REPO/CLAUDE.md`、`$REPO/.cursor/rules/*.mdc`）的可执行审核清单。每次开发或审核时必须逐条对照。两处都为空 → 只用本文件下面的 R 系列条目，不要臆造规范。
+> 本文件是审核清单，编号 **REV-01–REV-09**。仓内成文规范用另一套 **R01–R18**（落点见 `../../../references/project-index.md`）。两边同时在场时听仓内规范，本清单不顶替它，只补仓内没写的项。仓内规范与 `$PERSONAL_AGENTS_MD` 都为空时，才逐条用下面的 REV 条目，不臆造第三套编号。
 
 ## 审核流程
 
-**先定范围，再按下列顺序输出**：默认审 `git status`/`git diff` 的未提交改动；用户指定 commit 范围（如 `HEAD~1..HEAD`）时按指定范围。变更概览表只列范围内文件，R07 影响面评估同样锚定该范围，不外溢到全仓评估。
+**先定范围，再按下列顺序输出**：默认审 `git status`/`git diff` 的未提交改动；用户指定 commit 范围（如 `HEAD~1..HEAD`）时按指定范围。变更概览表只列范围内文件，REV-07 影响面评估同样锚定该范围，不外溢到全仓评估。
 
 执行审核时按以下顺序输出：
 
@@ -25,7 +25,7 @@
 
 ---
 
-## R01 — 分层架构硬约束
+## REV-01 — 分层架构硬约束
 
 逐文件检查变更是否符合分层：
 
@@ -43,7 +43,7 @@
 
 ---
 
-## R02 — SQL 与查询约束
+## REV-02 — SQL 与查询约束
 
 检查 `internal/data` 层的所有 SQL：
 
@@ -57,7 +57,7 @@
 
 ---
 
-## R03 — 生成文件保护
+## REV-03 — 生成文件保护
 
 以下文件禁止手动修改：
 
@@ -72,13 +72,13 @@ cmd/data-service/wire_gen.go
 
 **检查点：**
 - 变更列表中是否包含上述文件？如包含，是否通过命令生成？
-- 修改 `.proto` 后是否重新生成？命令以 `$REPO/Makefile` 的目标为唯一正确副本（单文件生成需要 `PROTO=` 参数，裸跑会静默空转）；工程约束文件落点按 `data-workflow:data-workflow` 的 `references/project-index.md` 解析，不假设某个 IDE 的目录名。
+- 修改 `.proto` 后是否重新生成？命令以 `$REPO/Makefile` 的目标为唯一正确副本（单文件生成需要 `PROTO=` 参数，裸跑会静默空转）；工程约束文件落点按 `../../../references/project-index.md` 解析，不假设某个 IDE 的目录名。
 - 修改配置 proto 后是否执行了 `make config`？
 - 新增/调整依赖注入后是否执行了 `cd cmd/data-service && wire`？
 
 ---
 
-## R04 — 事务与并发安全
+## REV-04 — 事务与并发安全
 
 **事务边界：**
 - 多步 DB 操作是否有事务保护？
@@ -96,7 +96,7 @@ cmd/data-service/wire_gen.go
 
 ---
 
-## R05 — 接口与错误处理
+## REV-05 — 接口与错误处理
 
 - [ ] 接口变更先在 `api/<module>/v1/*.proto` 定义，不直接改生成产物
 - [ ] 函数参数或返回值超过 3 个时，是否改为结构体？
@@ -107,7 +107,7 @@ cmd/data-service/wire_gen.go
 
 ---
 
-## R06 — 禁止项
+## REV-06 — 禁止项
 
 - [ ] 无只调用一次的几行小函数（内联到调用方）
 - [ ] 无全局状态引入（保持显式注入）
@@ -116,7 +116,7 @@ cmd/data-service/wire_gen.go
 
 ---
 
-## R07 — 影响面评估
+## REV-07 — 影响面评估
 
 每次审核必须输出影响面：
 
@@ -144,7 +144,7 @@ cmd/data-service/wire_gen.go
 
 ---
 
-## R08 — 测试覆盖检查
+## REV-08 — 测试覆盖检查
 
 - [ ] 新增功能是否有对应的单元测试？
 - [ ] 行为变更（Breaking Change）是否有测试覆盖旧行为和新行为？
@@ -153,7 +153,7 @@ cmd/data-service/wire_gen.go
 
 ---
 
-## R09 — 代码风格
+## REV-09 — 代码风格
 
 - 面向过程脚本风格，极少注释（代码即文档）
 - 函数命名清晰，自解释
@@ -180,8 +180,8 @@ cmd/data-service/wire_gen.go
 ```
 | 检查项 | 状态 | 发现 |
 |--------|------|------|
-| R01 分层 | PASS/WARN/FAIL | 描述 |
-| R02 SQL | ... | ... |
+| REV-01 分层 | PASS/WARN/FAIL | 描述 |
+| REV-02 SQL | ... | ... |
 | ... | ... | ... |
 
 **总体评级：** PASS / CONDITIONAL_PASS / NEEDS_REVISION

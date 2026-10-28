@@ -46,9 +46,10 @@ $REPO/specs/<feature>/
 
 | 产出 | 落点 | 理由 |
 |---|---|---|
-| `specs/<feature>/**` | **被测仓库 `$REPO`** | 与代码同生命周期，评审时能一起看，换人不断线 |
+| `specs/<feature>/**`（feature / bugfix / hotfix，以及审自己的分支） | **被测仓库 `$REPO`** | 与代码同生命周期，评审时能一起看，换人不断线 |
+| review-only 审别人的工作树 | `$CARDS/reviews/<feature>/` | 不改对方工作树。`$CARDS` 为空就问用户要一个该工作树之外的目录 |
 | 排查卡片 | `$CARDS/`（个人知识层） | 结论跨需求复用，按症状检索；**不进仓库** |
-| 已稳定的领域知识 | `$KNOW/<域>/` | 归档走 `data-workflow:data-workflow` 的 `references/feature-archive.md` |
+| 已稳定的领域知识 | `$KNOW/<域>/` | 归档走 `references/feature-archive.md` |
 | 决策前的临时工作记忆 | `$REPO/.cursor/plans/`（或该 IDE 的等价目录） | 临时，不升级为工件 |
 
 `specs/` 若被仓库 `.gitignore` 忽略，就**不提交**，只在本地留着当工作记忆，并在 change-note 里写清产物路径。先核一眼：`git check-ignore -v specs/`。
@@ -72,6 +73,6 @@ $REPO/specs/<feature>/
 | `feature.json` | spec → impact → plan + rollback → review/×3 → interface-test → quality → change-note |
 | `bugfix.json` | spec(精简) → impact → review/×3 → quality → change-note + 卡片 |
 | `hotfix.json` | rollback → quality → change-note（**跳过的阶段必须记账**） |
-| `review-only.json` | diff.patch → review/×3 → interface-test（全程只读） |
+| `review-only.json` | diff.patch → review/×3 → interface-test（不改业务代码；别人的工作树不写 `$REPO/specs/`） |
 
 新业务场景 = **新工作流模板**（重排现有技能与工件），不是新技能。技能池是复用的，模板才是扩展点。

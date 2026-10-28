@@ -5,7 +5,7 @@
   "height": 1320,
   "cards": [
     {
-      "title": "① 启动 · data-workflow:data-workflow",
+      "title": "① 启动 · data-workflow",
       "sub": "一次会话只跑一次，结果向下传递；所有步骤技能不再重复探测",
       "theme": "dark",
       "x": 30,

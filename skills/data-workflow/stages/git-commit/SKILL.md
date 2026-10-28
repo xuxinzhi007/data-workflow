@@ -1,8 +1,3 @@
----
-name: git-commit
-description: data-service 提交与 MR。创建分支、写 commit message、提 MR 之前执行：分支名规范、Conventional Commits、中文 title、提交前文档审计门（specs/README/CONTEXT 是否同步，不过门必须显式记账）、MR 描述套公司模板。用户说提交、commit、建分支、提 MR、文档审计时使用。不用于：审核改动内容（用 data-workflow:change-review）、跑测试（用 data-workflow:quality-gate）、解决合并冲突。
----
-
 # Git 分支、提交与 MR 规范
 
 ## 新建分支
@@ -117,7 +112,7 @@ BREAKING CHANGE: /v1/users 接口已被删除。
 
 沉默提交 = 没过门。文档债务不留痕，三个月后没人知道那份 spec 是过期的还是错的。
 
-`change-note.md` 用 `$PLUGIN_ROOT/templates/change-note-template.md` 生成，落 `specs/<feature>/change-note.md`，**与代码同一次提交**（工件树见 `data-workflow:data-workflow` 的 `references/artifact-tree.md`）。
+`change-note.md` 用 `$PLUGIN_ROOT/templates/change-note-template.md` 生成，落 `specs/<feature>/change-note.md`，**与代码同一次提交**（工件树见 `../../references/artifact-tree.md`）。
 
 审计结论写进 commit body 或 MR 描述的「测试情况 / 关联设计方案」字段，不要只留在会话里。
 
@@ -130,7 +125,7 @@ glab mr create --title "<type>(<scope>): <描述>" --description-file <描述文
 glab mr update <mr-id> --description-file <描述文件>
 ```
 
-生成 MR 说明时，先读 `$MR_TEMPLATE`（由 `paths.sh` 解析，见 `data-workflow:data-workflow`），按该文件的章节和字段名填写。`$MR_TEMPLATE` 为空或文件读不到时用下面这份兜底，字段名保持不变，并在 MR 说明里注明「未使用公司模板」。
+生成 MR 说明时，先读 `$MR_TEMPLATE`（由 `paths.sh` 解析，见 `data-workflow`），按该文件的章节和字段名填写。`$MR_TEMPLATE` 为空或文件读不到时用下面这份兜底，字段名保持不变，并在 MR 说明里注明「未使用公司模板」。
 
 ```markdown
 ## 变更背景

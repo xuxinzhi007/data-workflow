@@ -1,6 +1,6 @@
 # <主题> 技术方案（plan）
 
-> 产出者：`data-workflow:tech-design`。落 `specs/<feature>/plan.md`。
+> 产出者：`stages/tech-design/SKILL.md`。落 `specs/<feature>/plan.md`。
 > 前置：`specs/<feature>/spec.md` 的九项评估无阻塞项、决定表已拍板。
 > 规则：**本文件不重开需求分析**。公司模板（`$TECH_DESIGN_TEMPLATE`）存在时以公司模板为准，本文件只补工程细节；公司模板缺失时才用它，并在开头注明「未使用公司模板」。
 

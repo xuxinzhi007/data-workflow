@@ -1,8 +1,3 @@
----
-name: requirement-analysis
-description: data-service 需求分析与负债评估。把模糊需求问成可实现、可验收、可回滚的口径：先出事实清单，再出决定表；九项负债与风险必须在选方案之前答完；影响面（调用方/状态机/权限/回滚）交给 data-workflow:impact-assessment 取证据，方案至少两个且必含最小改动。用户说需求分析、这个需求怎么做、帮我拆一下需求、写个 spec、这个改动值不值得做时使用。不用于：已经拍板只等写代码（用 data-workflow:implementation）、纯技术选型文档（用 data-workflow:tech-design）、排查线上问题（用 data-workflow:oncall）。
----
-
 # Requirement Analysis（需求 + 负债双评估）
 
 编码前分析需求。目标不是写长方案，而是回答两个问题：
@@ -10,7 +5,7 @@ description: data-service 需求分析与负债评估。把模糊需求问成可
 1. **现状是什么** —— 只能来自代码与知识层，不许来自记忆。
 2. **这次改动是资产还是负债** —— 必须有判定标准，不许「符合规范」式结论。
 
-第二个问题必须在**选方案之前**答完。方案定型后再问「设计合理吗」，只能挑毛病，改不了方向——那是 `data-workflow:change-review` 的事，不是需求阶段的事。
+第二个问题必须在**选方案之前**答完。方案定型后再问「设计合理吗」，只能挑毛病，改不了方向——那是 `../change-review/SKILL.md` 的事，不是需求阶段的事。
 
 ## 先看口径
 
@@ -26,7 +21,7 @@ description: data-service 需求分析与负债评估。把模糊需求问成可
 
 业务口径走知识层 `$KNOW`（会话开头由 L0 执行 `eval "$(bash scripts/paths.sh)"` 解析；单独进入本技能时先自己解析一次，解析为空就只读代码 + 仓库 `docs/`，并声明「知识层未配置」后继续，不许猜绝对路径）。
 
-如果需求涉及 Go 实现，后续编码前再读 `data-workflow:implementation` 的 `references/go-style.md`；完成 Go 改动前读它的 `references/reuse-gate.md`。拍板用全局技能 `grilling`。一页方案确认后再读 `data-workflow:tech-design` 填公司模板。
+如果需求涉及 Go 实现，后续编码前再读 `../implementation/references/go-style.md`；完成 Go 改动前读 `../implementation/references/reuse-gate.md`。拍板用全局技能 `grilling`。一页方案确认后再读 `../tech-design/SKILL.md` 填公司模板。
 
 ## 两个产出，一次交付
 
@@ -82,7 +77,7 @@ description: data-service 需求分析与负债评估。把模糊需求问成可
 5. 拆接口变更：只写核心字段与兼容性影响，先落 `api/<module>/v1/*.proto`，不从 service/data 倒推。
 6. 拆后端流程：`service → biz → data` 写 3–6 步。service 只做校验与协议适配，biz 写规则与编排，data 只做持久化、筛选、排序、分页、聚合。
 7. **九项前置评估**（上一节），逐项落结论与依据。A 组三项可先粗判，第 1/3/4/6 项等第 8 步的证据回来再定稿。
-8. **影响面评估**：调用 `data-workflow:impact-assessment`，产出 `specs/<feature>/impact.md`。四轴（调用方 / 状态机 / 租户权限 / 回滚）+ 维护性三查，**每项要么带 grep 证据，要么标 UNVERIFIED**——标了 UNVERIFIED 的项不许在决定表里当已知条件用。
+8. **影响面评估**：调用 `../impact-assessment/SKILL.md`，产出 `specs/<feature>/impact.md`。四轴（调用方 / 状态机 / 租户权限 / 回滚）+ 维护性三查，**每项要么带 grep 证据，要么标 UNVERIFIED**——标了 UNVERIFIED 的项不许在决定表里当已知条件用。
 9. **方案对比**（上一节），两个以上，含最小改动。排除理由指到第 1–9 项，影响面清单里「受影响能力 N 个、其中共享型 M 个」是最常用的排除依据。
 10. 标出待拍板点 → 用 `grilling` 拷问（一次一问、按依赖顺序、每问附推荐答案、能从代码查到的不问用户）→ 清零后写一页方案 → 拍板后按全局技能 `to-spec` 写 spec。
 
@@ -96,7 +91,7 @@ description: data-service 需求分析与负债评估。把模糊需求问成可
 | 只有一个问题，或问题之间有依赖（后一个要拿前一个的结论当输入） | 主 agent 自己 Grep/Read，不派发 |
 | 需求要拍板、要选方案、要下结论 | **不派**。判断留在主 agent，子 agent 只交事实 |
 
-派发纪律（细则见 `data-workflow:data-workflow` 的 `references/subagent-protocol.md`）：brief 里写清目标、边界、必答、禁止，**不塞业务事实**（塞进去会锚定它的结论，覆盖率反而下降）；子 agent 只读，不许改文件；回收时逐条核对证据能否指到 `文件:符号`，指不到的降级为「待确认」，不进事实清单。
+派发纪律（细则见 `../../references/subagent-protocol.md`）：brief 里写清目标、边界、必答、禁止，**不塞业务事实**（塞进去会锚定它的结论，覆盖率反而下降）；子 agent 只读，不许改文件；回收时逐条核对证据能否指到 `文件:符号`，指不到的降级为「待确认」，不进事实清单。
 
 ## 门禁（阻塞项，不自行绕过）
 

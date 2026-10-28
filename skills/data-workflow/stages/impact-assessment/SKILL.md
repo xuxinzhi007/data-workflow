@@ -1,8 +1,3 @@
----
-name: impact-assessment
-description: data-service 改动影响面与爆炸半径评估。在需求已明确、动代码之前，用 grep 证据回答「这一改会打到谁」：调用方、状态机、租户与权限、回滚四轴，外加维护性三查。用户说评估影响面、这个改动会影响什么、爆炸半径、会不会影响别的业务、上线风险、能不能回滚时使用；requirement-analysis 与 change-review 也会点名调用本技能。不用于：需求拆解与拍板（用 data-workflow:requirement-analysis）、逐行代码规范审核（用 data-workflow:change-review）、线上症状排查（用 data-workflow:oncall）。
----
-
 # Impact Assessment（影响面与爆炸半径）
 
 回答一个问题：**这次改动会打到谁，打到了怎么收场。**
@@ -76,7 +71,7 @@ description: data-service 改动影响面与爆炸半径评估。在需求已明
 
 ## 产物
 
-落 `specs/<feature>/impact.md`（模板 `$PLUGIN_ROOT/templates/impact-template.md`）。工件树与命名见 `data-workflow:data-workflow` 的 `references/artifact-tree.md`。
+落 `specs/<feature>/impact.md`（模板 `$PLUGIN_ROOT/templates/impact-template.md`）。工件树与命名见 `../../references/artifact-tree.md`。
 
 一屏摘要格式：
 

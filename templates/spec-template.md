@@ -1,6 +1,6 @@
 # <主题> 需求规格（spec）
 
-> 产出者：`data-workflow:requirement-analysis`。落 `specs/<feature>/spec.md`。
+> 产出者：`stages/requirement-analysis/SKILL.md`。落 `specs/<feature>/spec.md`。
 > 规则：**事实与决定分开写**。事实每条带 `文件:符号`；决定每条必须有人拍板。
 > 空章节写「无」，不要删章节——删掉就等于假装这一维不存在。
 
@@ -53,7 +53,7 @@
 > **GATE：第 2/4/6/7/8/9 项任一阻塞且无缓解措施 → 停在需求阶段，不进技术方案。**
 > **GATE：3 项以上「无法判定」→ 信息不足，回去要信息，不硬写方案。**
 
-## 6 影响面（引 `data-workflow:impact-assessment`）
+## 6 影响面（引 `stages/impact-assessment/SKILL.md`）
 
 见 `specs/<feature>/impact.md`。此处只写结论一行：调用方 ×N、状态机消费点 ×N、跨租户新路径 有/无、阻塞项 有/无。
 

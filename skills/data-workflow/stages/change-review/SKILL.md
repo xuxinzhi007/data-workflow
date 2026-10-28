@@ -1,8 +1,3 @@
----
-name: change-review
-description: data-service 改动风险审核。只审本次改动的文件及其影响链，反查会被牵连的现有能力，检查 panic、崩溃、数据正确性、兼容性、性能、安全漏洞、复用与死代码、设计合理性，按 high、medium、low 分级；大 diff 拆成 spec 合规 / 代码质量 / 接口影响三轴并行子 agent 审同一份 diff.patch，带 review 指纹（工作树一变即 STALE）。用户说改动审核、审核我的改动、审一下这次改动、上线审核、提交前审核、会不会影响现有功能、change review 时使用。不用于：跑测试与覆盖率（用 data-workflow:quality-gate）、追查线上症状（用 data-workflow:oncall）、从零实现功能（用 data-workflow:implementation）。
----
-
 # Change Review（改动审核）
 
 判断类审核，不是验证类门禁。只回答一个问题：**这次改动会不会把现有能力搞坏、会不会在线上出事。**
@@ -11,7 +6,7 @@ description: data-service 改动风险审核。只审本次改动的文件及其
 
 | 技能 | 管什么 | 本技能不做什么 |
 |------|--------|----------------|
-| `code-review`（项目） | 全量规范对照 R01-R09 | 不逐条过全项目规则表 |
+| `code-review`（项目） | 仓内成文规范逐条对照（R 编号） | 不逐条过那张表；仓内没有成文规范时才用 `references/standards-spec.md` 的 REV-01–REV-09 |
 | `quality-gate`（项目） | 跑命令验证：编译/单测/覆盖率/生成文件 | 不跑测试、不做覆盖率 |
 | `interface-test`（本插件） | 契约三级门 + 四态裁决 PASS/CONCERNS/FAIL/WAIVED | 不做接口裁决，只报兼容性 finding |
 | **本技能** | 改动的影响链 + 上线风险判断 | —— |
@@ -24,7 +19,7 @@ description: data-service 改动风险审核。只审本次改动的文件及其
    - **改动符号清单**：函数、方法、结构体字段、proto 字段、repo 方法、SQL 查询条件、配置项。
 3. **审查范围只到清单为止。** 清单外的既有问题（历史屎山、别人的烂代码）只在报告末尾「顺带发现」写最多 3 行，不展开、不阻塞、不要求本次修。
 4. 纯文档、纯注释、纯问答、未改代码 → 直接回「无需改动审核」，不硬凑报告。
-5. **落一份共享 diff + 指纹**（三轴都要读同一个文件，不许各拉各的）：
+5. **落一份共享 diff + 指纹**（三轴都要读同一个文件，不许各拉各的）。落点默认 `$REPO/specs/<feature>/`。`review-only` 审别人的工作树时，改用该工作流的 `artifacts_root`（`$CARDS/reviews/<feature>/`），下面命令里的 `specs/<feature>` 换成那个目录，不写进对方仓库。
 
 ```bash
 mkdir -p specs/<feature>/review
@@ -35,7 +30,7 @@ printf 'review 指纹: base=%s head=%s files=%s lines=%s\n' \
   "$(wc -l < specs/<feature>/diff.patch | tr -d ' ')"
 ```
 
-指纹写进报告头。**工作树一变，旧报告即 STALE**：审完之后又改了代码，结论不再成立，必须重跑（至少重跑受影响的那一轴），不许拿旧报告当通过凭证。
+指纹写进报告头。**被审 diff 变了，旧报告即 STALE**（新 commit，或新的未提交业务改动）。写入评审工件不算。结论不再成立时必须重跑（至少重跑受影响的那一轴），不许拿旧报告当通过凭证。
 
 ## A0.5 派发方式（单 agent 还是三轴并行）
 
@@ -52,7 +47,7 @@ printf 'review 指纹: base=%s head=%s files=%s lines=%s\n' \
 | ② 代码质量与安全 | A2 A3 A5 A6 A7 A8 | 每个 finding 带 文件:符号 + 触发条件 + 后果 + 修复方向 |
 | ③ 接口与影响链 | A1 反查 + A4 兼容性 | 受影响能力清单；有 proto 改动时跑 `scripts/contract_diff.sh` 并给裁决 |
 
-派发纪律（细则见 `data-workflow:data-workflow` 的 `references/subagent-protocol.md`）：
+派发纪律（细则见 `../../references/subagent-protocol.md`）：
 
 - brief 四要素：目标 / 边界（只审清单内）/ 必答 / 禁止。**brief 里不塞业务事实**——给路径让它自己读，塞进去只会锚定结论。
 - 三轴都是**只读**：不许改代码、不许跑写操作、不许提交。
@@ -157,8 +152,8 @@ questions     阻碍确认的问题（无则「无」）
 ## 命令纪律
 
 - 只用：`git status`、`git diff`、`go vet ./<pkg>`，其余靠内建 Read/Grep/Glob（不触发权限确认）。
-- 重定向只允许一处：A0 第 5 步把 diff 写进 `specs/<feature>/diff.patch`（三轴共享的唯一输入）。除此之外禁止管道与重定向（`|`、`>`、`>>`、`tee`）——这是权限确认弹窗的元凶，要看输出直接读终端。
-- 不跑测试、不跑覆盖率、不现场发明验证脚本；需要真实执行验证时 Read `data-workflow:quality-gate` 并按其执行；接口契约裁决 Read `data-workflow:interface-test`。
+- 重定向只允许一处：A0 第 5 步把 diff 写进 `<artifacts_root>/diff.patch`（三轴共享的唯一输入；默认 `$REPO/specs/<feature>/`）。除此之外禁止管道与重定向（`|`、`>`、`>>`、`tee`）——这是权限确认弹窗的元凶，要看输出直接读终端。
+- 不跑测试、不跑覆盖率、不现场发明验证脚本；需要真实执行验证时 Read `../quality-gate/SKILL.md` 并按其执行；接口契约裁决 Read `../interface-test/SKILL.md`。
 - 不为了审核去改代码；发现问题只报告，改不改由用户决定（用户明说「顺手修」才动）。修复串行做，不派并行子 agent。
 
 ## 链路位置
@@ -167,4 +162,4 @@ questions     阻碍确认的问题（无则「无」）
 编码实现 → 改动审核（本技能，读+判断）→ 修复 → interface-test（契约门）→ quality-gate（跑命令验证）→ 文档审计 → 提交
 ```
 
-先审后跑门禁：审核发现的修改会重跑一轮测试，顺序反了就是白跑。审核只给判断，**不给 PASS/FAIL 裁决**——裁决归 `data-workflow:interface-test` 与 `data-workflow:quality-gate`，两边口径不许互相顶替。
+先审后跑门禁：审核发现的修改会重跑一轮测试，顺序反了就是白跑。审核只给判断，**不给 PASS/FAIL 裁决**——裁决归 `../interface-test/SKILL.md` 与 `../quality-gate/SKILL.md`，两边口径不许互相顶替。

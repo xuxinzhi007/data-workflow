@@ -60,16 +60,16 @@
 
 ## 3 三轴审核的标准派法
 
-`data-workflow:change-review` 与 `workflows/review-only.json` 用这套：
+`stages/change-review/SKILL.md` 与 `workflows/review-only.json` 用这套：
 
-1. 主 agent 先把 diff 落盘：`git diff <base>..HEAD > specs/<feature>/diff.patch`，记指纹（base sha / head sha / 文件数 / 行数）。
+1. 主 agent 先把 diff 落盘：`git diff <base>..HEAD > <artifacts_root>/diff.patch`（feature 链的 `artifacts_root` 是 `specs/<feature>/`；review-only 审别人的工作树时用该工作流写明的目录），记指纹（base sha / head sha / 文件数 / 行数）。
 2. 写三份 brief：`spec-compliance`（是否符合 spec 与需求口径）、`code-quality`（规范与可维护性）、`interface-impact`（契约与调用方）。
 3. 三个子 agent **并行**，都只读同一份 `diff.patch`，各写自己的 `report-*.md`。
 4. 主 agent 读三份 report，合并成一份裁决（风险等级 + 逐条问题）。**合并这一步不外包。**
 
 ### freshness：审完就别再动工作树
 
-review 结论绑定指纹。**工作树一变（新 commit、新未提交改动），指纹失效 → 结论 STALE → 必须重跑。**
+review 结论绑定指纹。**被审 diff 变了（新 commit、新的未提交业务改动），指纹失效 → 结论 STALE → 必须重跑。** 写入评审工件不算。
 
 产物里写一行：`review 指纹: base=<sha> head=<sha> files=N lines=M`。对不上就是过期结论，不许拿来当依据。
 

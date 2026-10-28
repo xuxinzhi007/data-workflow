@@ -1,6 +1,6 @@
 # <主题> 影响面评估（impact）
 
-> 产出者：`data-workflow:impact-assessment`。落 `specs/<feature>/impact.md`。
+> 产出者：`stages/impact-assessment/SKILL.md`。落 `specs/<feature>/impact.md`。
 > 规则：**每一项要么带证据，要么写 `UNVERIFIED <结论> —— 缺 <证据>，可用 <命令/问谁> 补`。没有第三态。**
 > 空着不写 = 未做评估；写「影响较小 / 风险可控」= 未做评估。
 

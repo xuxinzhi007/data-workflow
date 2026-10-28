@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-# install.sh —— 把本仓 skills/ 铺进各 agent 工具的原生技能目录（软链，改完即生效）。
+# install.sh —— 只把 skills/data-workflow 铺进各 agent 工具的原生技能目录（软链，改完即生效）。
 #
-# 为什么：技能本体是 agentskills 标准（SKILL.md + references/ + scripts/），Claude Code / Cursor /
-# Qoder / Codex 都读；但每个工具只认自己的目录。v1 靠手工软链，换工具就断。
-# 本脚本探测目标位置已存在哪些 .<tool> 目录，只铺存在的，不凭空造目录污染机器。
+# 阶段文件在 data-workflow/stages/ 里，不是独立技能。再跑一次会卸掉以前按阶段拆开的软链。
 #
 # 用法:
 #   install.sh                 # 铺到当前目录（目标项目根）下已存在的 .claude/.cursor/.qoder/.codex/.agents
@@ -33,30 +31,41 @@ for d in .claude .cursor .qoder .codex .agents; do
   [ -d "$base/$d" ] && dirs+=("$base/$d/skills")
 done
 
-if [ "${#dirs[@]}" = 0 ]; then
+if [ "${#dirs[@]}" -eq 0 ]; then
   printf 'NOTHING %s 下没有 .claude/.cursor/.qoder/.codex/.agents 任何一个。\n' "$base"
   printf '        先初始化目标工具，或显式传 target_dir / --global。\n'
   exit 0
 fi
 
+src="$repo_root/skills/data-workflow"
+
 for sd in "${dirs[@]}"; do
   mkdir -p "$sd"
-  for skill in "$repo_root"/skills/*/; do
-    name="$(basename "$skill")"
-    link="$sd/$name"
-    if [ "$unlink" = 1 ]; then
-      if [ -L "$link" ] && [ "$(readlink "$link")" = "$repo_root/skills/$name" ]; then
-        rm "$link"
-        printf 'UNLINK %s\n' "$link"
-      fi
-      continue
-    fi
-    ln -sfn "$repo_root/skills/$name" "$link"
-    printf 'LINK   %s -> skills/%s\n' "$link" "$name"
+  for link in "$sd"/*; do
+    [ -L "$link" ] || continue
+    target_path="$(readlink "$link")"
+    case "$target_path" in
+      "$repo_root/skills"/*)
+        if [ "$target_path" != "$src" ]; then
+          rm "$link"
+          printf 'UNLINK %s\n' "$link"
+        fi
+        ;;
+    esac
   done
+  link="$sd/data-workflow"
+  if [ "$unlink" = 1 ]; then
+    if [ -L "$link" ] && [ "$(readlink "$link")" = "$src" ]; then
+      rm "$link"
+      printf 'UNLINK %s\n' "$link"
+    fi
+    continue
+  fi
+  ln -sfn "$src" "$link"
+  printf 'LINK   %s -> skills/data-workflow\n' "$link"
 done
 
 if [ "$unlink" = 0 ]; then
-  printf '\nDONE 铺到 %s 个工具目录。技能之间用命名空间名互引，换机器不断。\n' "${#dirs[@]}"
+  printf '\nDONE 铺到 %s 个工具目录。每个目录里只有 data-workflow；阶段在它的 stages/ 里。\n' "${#dirs[@]}"
   printf '     知识源配置见本仓 config.yaml（不存在时复制 config.example.yaml）。\n'
 fi

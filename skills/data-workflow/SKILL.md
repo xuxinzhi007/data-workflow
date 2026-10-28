@@ -1,15 +1,15 @@
 ---
 name: data-workflow
-description: data-service 开发工作台，需求到提交的唯一入口。用户说 @data-workflow、data-skill、开始开发、dev、开发工作台、今天干什么活，或要做需求分析、技术方案、编码实现、改动审核、质量检查、排查确认、提交时读取本文件并按菜单执行。不用于：只判断改动风险（直接 data-workflow:change-review）、追查线上症状与状态含义（直接 data-workflow:oncall）、纯 git 操作、画图（直接 data-workflow:excalidraw-diagram）、与 data-service 无关的任务。
+description: data-service 开发工作台，需求到提交的唯一入口。用户说 @data-workflow、开始开发、需求分析、影响面、技术方案、编码实现、改动审核、审一下、质量检查、接口测试、排查、状态含义、提交、提 MR、画架构图时读取本文件，再只读 stages/ 里对应的那一个阶段文件。不用于：纯 git 操作、解决合并冲突、与 data-service 无关的任务。
 ---
 
 # data-service 开发工作台
 
-本文件只负责**选型、顺序、门禁**。具体步骤在被点名的技能里；业务事实一律运行时从知识层读，本文件不保存任何取值、状态名、字段名。
+本文件只负责**选型、顺序、门禁**。具体步骤在 `stages/` 里被点名的那一个文件；业务事实一律运行时从知识层读，本文件不保存任何取值、状态名、字段名。阶段文件不是独立技能，安装后工具目录里只有这一个 `data-workflow`。
 
 项目索引（去哪读什么）在 `references/project-index.md`，进入具体工作后再读。
 
-`$PLUGIN_ROOT` = 本 SKILL.md 往上两级的目录（`scripts/` 与 `skills/` 同级；软链安装时先用 `readlink -f` 解析）。
+`$PLUGIN_ROOT` = 本 SKILL.md 往上两级的目录（`scripts/` 与 `skills/` 同级；软链安装时先用 `readlink -f` 解析）。`stages/` 里的阶段文件说的 `$PLUGIN_ROOT` 是同一个仓库根：从该文件向上找到含 `scripts/paths.sh` 的目录，不是向上两级。反引号里的 `stages/...` 与技能根的 `references/...` 都相对本文件所在目录。
 
 外部路径不写死在技能里，会话开头解析一次（步骤 0 之前）：
 
@@ -32,7 +32,11 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"
 
 记下 branch、commit、是否有未提交改动，以及每份知识文档的 FRESH / STALE / SKIP。结果**向下游所有步骤传递，任何步骤技能不再重复探测**。
 
-新鲜度规则：`FRESH` 可当证据引用；`STALE`（含缺 frontmatter 的）只当线索——用它选搜索目标，取值回代码重新推导，并在产出里说明哪份文档已过期。门禁**只标注、不阻塞**，不要因为 STALE 就停下不干活。
+新鲜度分三层，同时成立：
+
+1. **脚本只标注**。`knowledge_drift.sh` 恒 exit 0（exit 2 仅表示文档无法解析），把每份文档标成 FRESH / STALE / SKIP。缺 frontmatter 算 STALE。
+2. **STALE 不停工**。过期文档用来选搜索目标，取值回代码重新推导，产出里写明哪份文档已过期。`FRESH` 可当证据引用。
+3. **过门要回代码**。产出里引用了 STALE 文档的取值、却没回代码重新推导 = 知识新鲜度门未过，停。
 
 ### 步骤 1 查重（进入任何一步之前）
 
@@ -44,12 +48,12 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"
 
 ### 步骤 2 选型
 
-用户这句话已点明下表某一行：直接读该行技能并执行，跳过菜单。
+用户这句话已点明下表某一行：直接读该行的阶段文件并执行，跳过菜单。一次只读表里点名的那一个文件。
 用户只说开始干活：立刻用 AskUserQuestion 弹菜单，等选择后再往下。一次一题，`multiSelect: true`，题目写「这次做哪几件？可多选，按下面顺序串行。」选项：需求分析 / 影响面评估 / 技术方案 / 编码实现 / 改动审核 / 质量与接口 / 排查确认 / 提交。
 
 ### 步骤 3 选工作流
 
-选完要做的事，再选**按哪条流程串**。工作流是确定性状态机（`$PLUGIN_ROOT/workflows/*.json`），阶段顺序、每阶段的技能、门禁、能不能派子 agent 都写在里面：
+选完要做的事，再选**按哪条流程串**。工作流是确定性状态机（`$PLUGIN_ROOT/workflows/*.json`），阶段顺序、每阶段的 `file`（相对本技能根的阶段文件）、门禁、能不能派子 agent 都写在里面。读那个文件，不把它当成另一个已安装技能：
 
 | 场景 | 工作流 |
 |---|---|
@@ -58,23 +62,23 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"
 | 线上正在出事，最短路径止血 | `workflows/hotfix.json` |
 | 只审不改（评 MR、上线前把关） | `workflows/review-only.json` |
 
-**新业务场景 = 写新工作流模板（重排现有技能），不是加新技能。** 技能池是复用的，模板才是扩展点。工作流里没有的阶段就不做，做了也要在 change-note 记账。
+**新业务场景 = 写新工作流模板（重排 `stages/` 里已有的阶段文件），不是再装一个技能。** 工作流里没有的阶段就不做，做了也要在 change-note 记账。
 
 ## 选型表
 
-`$KNOW/**` 按业务域拆分，**一次只加载一个域文件**；`$TEMPLATES/**` 放公司模板。清单与信任级别见 `data-workflow:oncall` 的 `references/knowledge-sources.md`。
+`$KNOW/**` 按业务域拆分，**一次只加载一个域文件**；`$TEMPLATES/**` 放公司模板。清单与信任级别见 `stages/oncall/references/knowledge-sources.md`。
 
 | 选择 | 执行 |
 |------|------|
-| 需求分析 | `data-workflow:requirement-analysis`。拍板用全局技能 `grilling`（要它读文档时把文档路径一起给它）。访谈前先从 `$KNOW/<相关域>/` 取一个域文件建立口径，不要凭记忆问用户已写过的东西。九项负债与风险评估必须在选方案之前答完。产出 `specs/<feature>/spec.md` |
-| 影响面评估 | `data-workflow:impact-assessment`。四轴（调用方 / 状态机 / 租户权限 / 回滚）+ 维护性三查，每项带证据或 `UNVERIFIED`。产出 `specs/<feature>/impact.md` |
-| 技术方案 | `data-workflow:tech-design`（模板 `$TECH_DESIGN_TEMPLATE`，为空则问用户）。需要架构图时用 `data-workflow:excalidraw-diagram`。一页方案未确认时回到 `grilling`。产出 `plan.md` + `rollback.md` |
-| 编码实现 | `data-workflow:implementation`。写 Go 前读它的 `references/go-style.md`，改完 Go 后读 `references/reuse-gate.md` |
-| 改动审核 | `data-workflow:change-review`。三轴并行子 agent（spec 合规 / 代码质量 / 接口影响）共读同一份 `specs/<feature>/diff.patch`，主 agent 合并裁决 |
-| 质量检查 | `data-workflow:quality-gate`，以命令输出为准 |
-| 接口测试 | `data-workflow:interface-test`。三级门：`go test ./api/...` → `scripts/contract_diff.sh` → 场景回放（跑不了如实 WAIVED）。四态裁决 PASS/CONCERNS/FAIL/WAIVED |
-| 排查确认 | `data-workflow:oncall`，保持只读。业务知识走它的 `references/routing.md` 域路由，**不要读仓库 `docs/support/`——那是降级区**。根因是偶发故障或性能回退时再读全局技能 `diagnosing-bugs`；不存在就停在 oncall 结论 |
-| 提交 | `data-workflow:git-commit`（MR 模板 `$MR_TEMPLATE`）。**提交前过文档审计门**，产出 `specs/<feature>/change-note.md` |
+| 需求分析 | `stages/requirement-analysis/SKILL.md`。拍板用全局技能 `grilling`（要它读文档时把文档路径一起给它）。访谈前先从 `$KNOW/<相关域>/` 取一个域文件建立口径，不要凭记忆问用户已写过的东西。九项负债与风险评估必须在选方案之前答完。产出 `specs/<feature>/spec.md` |
+| 影响面评估 | `stages/impact-assessment/SKILL.md`。四轴（调用方 / 状态机 / 租户权限 / 回滚）+ 维护性三查，每项带证据或 `UNVERIFIED`。产出 `specs/<feature>/impact.md` |
+| 技术方案 | `stages/tech-design/SKILL.md`（模板 `$TECH_DESIGN_TEMPLATE`，为空则问用户）。需要架构图时用 `stages/excalidraw-diagram/SKILL.md`。一页方案未确认时回到 `grilling`。产出 `plan.md` + `rollback.md` |
+| 编码实现 | `stages/implementation/SKILL.md`。写 Go 前读 `stages/implementation/references/go-style.md`，改完 Go 后读 `stages/implementation/references/reuse-gate.md` |
+| 改动审核 | `stages/change-review/SKILL.md`。三轴并行子 agent（spec 合规 / 代码质量 / 接口影响）共读同一份 `specs/<feature>/diff.patch`，主 agent 合并裁决 |
+| 质量检查 | `stages/quality-gate/SKILL.md`，以命令输出为准 |
+| 接口测试 | `stages/interface-test/SKILL.md`。三级门：`go test ./api/...` → `scripts/contract_diff.sh` → 场景回放（跑不了如实 WAIVED）。四态裁决 PASS/CONCERNS/FAIL/WAIVED |
+| 排查确认 | `stages/oncall/SKILL.md`，保持只读。业务知识走 `stages/oncall/references/routing.md` 域路由，**不要读仓库 `docs/support/`——那是降级区**。根因是偶发故障或性能回退时再读全局技能 `diagnosing-bugs`；不存在就停在 oncall 结论 |
+| 提交 | `stages/git-commit/SKILL.md`（MR 模板 `$MR_TEMPLATE`）。**提交前过文档审计门**，产出 `specs/<feature>/change-note.md` |
 
 点名才读，不进菜单：`ponytail-review`（删过度设计）、`security-best-practices`、`security-threat-model`、`gh-fix-ci`、`gh-address-comments`、`domain-modeling`（改 `CONTEXT.md` 或术语时）。这些是全局技能，按名字调用。
 
@@ -128,7 +132,7 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"
 3. **改动审核门**：有 high 或 medium 时停，不进入质量门；review 指纹（base/head sha + 文件数 + 行数）与工作树不一致时结论 STALE，必须重跑。
 4. **接口门**：`go test ./api/...` 失败 = FAIL；`contract_diff.sh` 报 BREAKING 而没逐行裁决 = FAIL；场景回放跑不了只能记 WAIVED 并写补跑条件，**不许谎报 PASS**。
 5. **文档审计门**（提交前）：对照 `git diff --name-only` 核 `specs/<feature>/`、README、CONTEXT、知识层是否同步；不同步就必须在 change-note 里显式记「接受的文档风险」，二选一，不许沉默提交。
-6. **知识新鲜度**：产出里引用了 `STALE` 文档的取值、却没回代码重新推导，算未过。
+6. **知识新鲜度**：按步骤 0 的三层执行。完成标准：产出引用了 STALE 取值却未回代码 = 未过；文档本身 STALE 不停工。
 
 编码实现一旦入选，改动审核 → 质量 → 接口 → 文档审计按上面顺序跟着做完；提交留到最后。
 
@@ -136,4 +140,4 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"
 
 1. **答案与产出里不复述知识层内容，只引用你读过的文件。**复述是「看起来完整却漏链路」的来源。
 2. **一次只加载一个业务域文件。**跨域问题分小节各自给信源，不做合并大表。
-3. **技能之间用命名空间名互相调用（`data-workflow:xxx` 或全局技能名），不写绝对路径。**新增引用时同样遵守。
+3. **阶段是本技能内的文件，读 `stages/<name>/SKILL.md`，不把它们装成别的技能，也不用技能名去调用。** 全局技能（`grilling`、`diagnosing-bugs` 等）仍按名字调用。新增引用时同样遵守。

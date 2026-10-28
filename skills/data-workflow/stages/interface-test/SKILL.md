@@ -1,8 +1,3 @@
----
-name: interface-test
-description: data-service 接口测试与契约门禁。三级门：进程内契约测试 go test ./api/...、proto 契约破坏性 diff、需要真实服务的场景回放；结论用 PASS/CONCERNS/FAIL/WAIVED 四态裁决并记账。用户说接口测试、跑一下契约、验证接口、这个改动会不会破坏前端调用、openapi 有没有变、api 测试、回归接口时使用；quality-gate 也会点名调用本技能。不用于：单元测试覆盖率讨论与构建（用 data-workflow:quality-gate）、影响面与调用方清单（用 data-workflow:impact-assessment）、线上症状排查（用 data-workflow:oncall）。
----
-
 # Interface Test（接口测试与契约门）
 
 回答一个问题：**接口层面的改动，有没有可执行的证据证明它没破坏调用方。**
@@ -54,7 +49,7 @@ WAIVED 是**记账**，不是免罪：产物里必须留下「谁在什么条件
 
 ## 产物
 
-落 `specs/<feature>/interface-test.md`（模板 `$PLUGIN_ROOT/templates/plan-template.md` 的验证段，或单独成文）。一屏摘要：
+落 `specs/<feature>/interface-test.md`（模板 `$PLUGIN_ROOT/templates/plan-template.md` 的验证段，或单独成文）。`review-only` 审别人的工作树时，改落到该工作流的 `artifacts_root`，不写进对方仓库。一屏摘要：
 
 ```
 接口测试 <feature>  base=<ref>

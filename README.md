@@ -30,13 +30,13 @@ data-service（Go / Kratos）从需求到提交的完整开发工作流，打包
 3. **改动审核门** —— high / medium 即停；review 指纹（base/head sha + 文件数 + 行数）与工作树不符 = 结论 STALE，必须重跑。
 4. **接口门** —— 契约测试失败、或 `contract_diff.sh` 报 breaking 而没逐行裁决 = FAIL；场景回放跑不了只能如实 WAIVED，不许谎报 PASS。
 5. **文档审计门** —— 提交前对照 `git diff` 核 `specs/<feature>/`、README、CONTEXT、生成物；不同步就补齐，或在 change-note 显式记「接受的文档风险」，不许沉默提交。
-6. **新鲜度门** —— `knowledge_drift.sh` 标 STALE 的文档只当线索，引用了它的取值却没回代码推导，算未过。
+6. **新鲜度门** —— 脚本只把文档标成 STALE，标成 STALE 本身不停工。产出引用了过期取值却没回代码推导，算未过。
 
 两条旁路不进主线：`oncall`（线上排查，仓库只读，诊断不授权修改）与 `excalidraw-diagram`（画图，上面两张图就是它产出的）。
 
 ## 工件、工作流与多 agent
 
-**工件是流程的记忆**：对话会被上下文压缩吃掉，落盘的文件不会。每步产物落 `$REPO/specs/<feature>/`（spec / impact / plan / rollback / diff.patch / review/×3 / quality / interface-test / change-note / agents/），模板在 `templates/` 且内嵌 GATE 声明。
+**工件是流程的记忆**：对话会被上下文压缩吃掉，落盘的文件不会。feature / bugfix / hotfix 以及审自己的分支，产物落 `$REPO/specs/<feature>/`（spec / impact / plan / rollback / diff.patch / review/×3 / quality / interface-test / change-note / agents/）。review-only 审别人的工作树时，评审工件改落到 `$CARDS/reviews/<feature>/`，不写进对方仓库。模板在 `templates/` 且内嵌 GATE 声明。
 
 **工作流是扩展点**：`workflows/*.json` 是确定性状态机（阶段序列 + 每阶段技能 + 门禁 + 能否派子 agent）。新业务场景写新模板重排现有技能，**不是加新技能**——`feature` / `bugfix` / `hotfix` / `review-only` 四个模板互为裁剪版。
 
@@ -81,41 +81,44 @@ data-workflow/
 │   ├── proto_contract.py            把 proto 归一成可 diff 的事实行
 │   └── svg_to_png.sh                headless Chrome 补 PNG（generator 依赖的 rsvg-convert 本机没装）
 └── skills/
-    ├── data-workflow/               L0 编排器
-    │   └── references/              project-index · feature-archive ·
-    │                                subagent-protocol · artifact-tree
-    ├── requirement-analysis/        + debt-gate.md（九项前置评估）
-    ├── impact-assessment/           + blast-radius.md（四轴取证与回滚模板）
-    ├── tech-design/
-    ├── implementation/              + go-style.md · reuse-gate.md
-    ├── change-review/               + standards-spec.md
-    ├── quality-gate/
-    ├── interface-test/              + contract-gates.md（三级门与四态裁决）
-    ├── git-commit/
-    ├── oncall/                      + 7 份 references（routing / state-protocol / trace /
-    │                                evidence / answer / capture / knowledge-sources）
-    └── excalidraw-diagram/          + excalidraw-spec.md + scripts/diagram_generator.js
+    └── data-workflow/               唯一安装的技能
+        ├── SKILL.md                 入口：选型、顺序、门禁
+        ├── references/              project-index · feature-archive ·
+        │                            subagent-protocol · artifact-tree
+        └── stages/                  阶段文件，不单独安装
+            ├── requirement-analysis/    + debt-gate.md
+            ├── impact-assessment/       + blast-radius.md
+            ├── tech-design/
+            ├── implementation/          + go-style.md · reuse-gate.md
+            ├── change-review/           + standards-spec.md
+            ├── quality-gate/
+            ├── interface-test/          + contract-gates.md
+            ├── git-commit/
+            ├── oncall/                  + 7 份 references
+            └── excalidraw-diagram/      + excalidraw-spec.md + scripts/
 ```
 
-渐进披露三级加载：名称+描述常驻 → SKILL.md 触发时才读 → references 点名才读。
+渐进披露：常驻的只有 `data-workflow` 这一条名称和描述 → 触发后读它的 `SKILL.md` → 选型表点名后才读 `stages/` 里的那一个文件。一次会话实际读哪些文件，见下方「使用」。
 
-## 技能清单
+## 阶段文件
 
-| 技能 | 作用 | 不用于 |
+安装后工具的 `skills/` 里只有 `data-workflow`。下表是它内部的阶段，不是各自独立的技能。
+
+| 阶段文件 | 作用 | 不用于 |
 |---|---|---|
-| `data-workflow:data-workflow` | 入口：环境探测 → 查重 → 选型 → 选工作流 → 串联 → 六道门 | 直接干活，它只路由 |
-| `data-workflow:requirement-analysis` | 需求拆解、事实清单 + 决定表、九项负债评估先于选方案；拍板走 `grilling` | 已明确的需求 |
-| `data-workflow:impact-assessment` | 影响面四轴（调用方 / 状态机 / 权限 / 回滚）+ 维护性三查，每项带证据或 `UNVERIFIED` | 已经拍板只等写代码 |
-| `data-workflow:tech-design` | 套公司模板写技术方案，同时落 `plan.md` + `rollback.md` | 小改动的随手设计 |
-| `data-workflow:implementation` | 编码实现 + Go 规范（R01–R18）+ 复用门禁 | 审核已有改动 |
-| `data-workflow:change-review` | 改动风险审核；大 diff 拆三轴并行子 agent 共读同一份 `diff.patch`，带 review 指纹 | 需求分析、全仓审计 |
-| `data-workflow:quality-gate` | 用命令真实输出证明可提交：构建 / 聚焦单测 / 覆盖率 / 生成物 | 接口裁决（归 interface-test） |
-| `data-workflow:interface-test` | 契约三级门（进程内契约测试 → proto 破坏性 diff → 场景回放）+ 四态裁决 | 跑单测覆盖率（归 quality-gate） |
-| `data-workflow:git-commit` | 分支名、Conventional Commits、**提交前文档审计门**、MR 描述 | 普通 git 查询 |
-| `data-workflow:oncall` | 线上排查：状态族隔离、证据阶梯、降级区 | 纯代码风格、纯 git 操作 |
-| `data-workflow:excalidraw-diagram` | spec JSON → `.excalidraw` + `.svg` + `.png` | 手绘草图、UML 严格语法 |
+| 入口 `SKILL.md` | 环境探测 → 查重 → 选型 → 选工作流 → 串联 → 六道门 | 直接干活，它只路由 |
+| `stages/requirement-analysis/SKILL.md` | 需求拆解、事实清单 + 决定表、九项负债评估先于选方案；拍板走 `grilling` | 已明确的需求 |
+| `stages/impact-assessment/SKILL.md` | 影响面四轴（调用方 / 状态机 / 权限 / 回滚）+ 维护性三查，每项带证据或 `UNVERIFIED` | 已经拍板只等写代码 |
+| `stages/tech-design/SKILL.md` | 套公司模板写技术方案，同时落 `plan.md` + `rollback.md` | 小改动的随手设计 |
+| `stages/implementation/SKILL.md` | 编码实现 + 仓内 Go 细则（R01–R18）+ 复用门禁 | 审核已有改动 |
+| `stages/change-review/SKILL.md` | 改动风险审核；大 diff 拆三轴并行子 agent 共读同一份 `diff.patch`，带 review 指纹 | 需求分析、全仓审计 |
+| `stages/quality-gate/SKILL.md` | 用命令真实输出证明可提交：构建 / 聚焦单测 / 覆盖率 / 生成物 | 接口裁决（归 interface-test） |
+| `stages/interface-test/SKILL.md` | 契约三级门（进程内契约测试 → proto 破坏性 diff → 场景回放）+ 四态裁决 | 跑单测覆盖率（归 quality-gate） |
+| `stages/git-commit/SKILL.md` | 分支名、Conventional Commits、**提交前文档审计门**、MR 描述 | 普通 git 查询 |
+| `stages/oncall/SKILL.md` | 线上排查：状态族隔离、证据阶梯、降级区 | 纯代码风格、纯 git 操作 |
+| `stages/excalidraw-diagram/SKILL.md` | spec JSON → `.excalidraw` + `.svg` + `.png` | 手绘草图、UML 严格语法 |
 
-技能之间只用**命名空间名**互相调用，不写绝对路径 —— 换机器、换目录都不会断。
+阶段之间用技能根下的相对路径阅读（`stages/<name>/SKILL.md`），不另装技能，也不用技能名互相调用。全局技能（`grilling`、`diagnosing-bugs`）仍按名字调用。
 
 ## 脚本
 
@@ -130,7 +133,7 @@ data-workflow/
 | `scripts/proto_contract.py` | 把 proto 归一成 `RPC/REQ/RES/FIELD/ENUMVAL/FILE` 事实行，供 contract_diff 比对 |
 | `scripts/svg_to_png.sh` | headless Chrome 把 SVG 转 PNG（2x），补上 generator 缺失的那一步 |
 
-门禁**只标注、不阻塞**：恒 exit 0，exit 2 仅表示文档无法解析。缺 frontmatter 按 STALE 处理 —— 让未纳管的文档自我暴露，而不是靠制度。
+新鲜度脚本只标注：恒 exit 0，exit 2 仅表示文档无法解析。缺 frontmatter 按 STALE 处理，让未纳管的文档自我暴露。STALE 不停工；产出引用了过期取值却没回代码，才算新鲜度门未过（入口技能步骤 0）。
 
 被测仓库优先级：`$DS_REPO` > `config.yaml` 的 `repo` > 当前目录所在仓库。知识源优先级：`DATA_WORKFLOW_<KEY>` 环境变量 > `./config.yaml` > `<插件根>/config.yaml` > `~/.config/data-workflow/config.yaml` > 空（知识源为空时 drift 打印 `DEGRADED` 并回退 `<repo>/docs`）。
 
@@ -141,7 +144,8 @@ data-workflow/
 | `$KNOW/<域>/` | 已稳定的领域知识，按业务域拆分 |
 | `$KNOW/排查卡片/` | oncall 调查结论，`symptoms:` 字段就是 grep 检索面 |
 | `$TEMPLATES/` | 公司模板（研发技术方案、MR） |
-| `$REPO/specs/<feature>/` | 工件树：每步产物落盘，是流程的记忆（见 `references/artifact-tree.md`） |
+| `$REPO/specs/<feature>/` | feature / bugfix / hotfix，以及审自己的分支。落点细则见 `references/artifact-tree.md` |
+| `$CARDS/reviews/<feature>/` | review-only 审别人的工作树时的评审工件，不进对方仓库 |
 | 该 IDE 的临时目录（`.cursor/plans/`、`.qoder/plans/` 等） | 决策前的工作记忆，临时，不升级为工件 |
 
 每张卡带 `verified_commit` 与 `watches`，`knowledge_drift.sh` 读同一组字段，卡片免费获得可门禁性。
@@ -163,19 +167,39 @@ bash scripts/paths.sh                # 验证解析结果
 | `templates_root` | 公司模板根 | 需要模板时问用户，不自创章节 |
 | `repo` | 被测代码仓库 | 回退当前目录所在 git 仓库 |
 | `tech_design_template` / `mr_template` | 两个具体模板文件 | 问用户；MR 用技能内兜底模板并注明 |
-| `personal_agents_md` | 个人工程规范文件 | 只用仓库内规范与本仓 R 系列条目 |
+| `personal_agents_md` | 个人工程规范文件 | 只用仓库内规范与本仓 REV- 清单；仓内 R01–R18 在场时听仓内 |
 
 也可以完全不建 `config.yaml`，改用环境变量：`DATA_WORKFLOW_KNOWLEDGE_ROOT=/path/to/knowledge`。
+
+## 使用
+
+在 data-service 的检出里用。装到那个仓库根目录。装完后，工具的 `skills/` 里只有一个 `data-workflow`。`--global` 会让这台机器上每个项目都看见这一条描述；不相关的仓库也会为它占掉常驻位置，只有确实希望随处可触发时才用。
+
+```bash
+cd <data-service 仓库根>
+bash ~/skills/data-workflow/scripts/install.sh
+```
+
+装完后在那个仓库里说「开始开发」或 `@data-workflow`。入口负责选型、选工作流、按门禁往下串。知识源和被测仓库读本仓库的 `config.yaml`（见「知识源配置」），不写进目标项目。
+
+一次会话读一个闭集，不把 `stages/` 扫一遍，也不把阶段文件装成别的技能：
+
+1. 常驻的只有 `data-workflow` 的名称和描述。
+2. 触发后只读它的 `SKILL.md`。
+3. 选型表或工作流点名后，只读那一个 `stages/<name>/SKILL.md`。阶段自己的细则点名才读。
+4. 下一阶段读上一阶段落盘的产物，不重读上一个阶段文件。
+
+软链对工具是透明的：读 `.cursor/skills/data-workflow/SKILL.md` 就是在读本仓库里的那一个文件。阶段文件在这条链的里面。
 
 ## 安装与更新
 
 ```bash
 git clone <本仓库> ~/skills/data-workflow
-cd <你的项目>                       # 或加 --global 铺到 $HOME
+cd <data-service 仓库根>          # 或加 --global 铺到 $HOME
 bash ~/skills/data-workflow/scripts/install.sh
 ```
 
-`install.sh` 只对**已存在**的 `.qoder` `.claude` `.cursor` `.codex` `.agents` 目录动手，在其中建 `skills/<name>` 软链指向本仓库，绝不创建你没有的工具目录：
+`install.sh` 只对**已存在**的 `.qoder` `.claude` `.cursor` `.codex` `.agents` 目录动手，在其中建一条 `skills/data-workflow` 软链指向本仓库的 `skills/data-workflow/`，绝不创建你没有的工具目录。以前按阶段拆开的软链，再跑一次安装会被卸掉：
 
 ```bash
 bash scripts/install.sh             # 铺到当前项目
@@ -213,8 +237,8 @@ ln -sfn ~/skills/data-workflow ~/.qoder/plugins/cache/local/data-workflow/0.2.0 
 
 ```bash
 cd ~/skills/data-workflow
-node skills/excalidraw-diagram/scripts/diagram_generator.js .staging/architecture.spec.json assets architecture
-node skills/excalidraw-diagram/scripts/diagram_generator.js .staging/flow.spec.json        assets flow
+node skills/data-workflow/stages/excalidraw-diagram/scripts/diagram_generator.js .staging/architecture.spec.json assets architecture
+node skills/data-workflow/stages/excalidraw-diagram/scripts/diagram_generator.js .staging/flow.spec.json        assets flow
 bash scripts/svg_to_png.sh assets/architecture.svg assets/architecture.png 2
 bash scripts/svg_to_png.sh assets/flow.svg         assets/flow.png         2
 ```

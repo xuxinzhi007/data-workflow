@@ -1,6 +1,6 @@
 # 爆炸半径：判定细则与 grep 配方
 
-`data-workflow:impact-assessment` 的证据怎么取。**只有方法与命令模板，没有任何业务取值**；命中结果一律以当前 checkout 为准。
+`../../impact-assessment/SKILL.md` 的证据怎么取。**只有方法与命令模板，没有任何业务取值**；命中结果一律以当前 checkout 为准。
 
 所有命令在 `$REPO` 下执行（`eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"` 解析）。
 
@@ -43,7 +43,7 @@ grep -rn 'json:"<field>"' --include='*.go' internal/ api/
 | 语义变更 | 字段名不变但含义/单位/取值域变了（最隐蔽，最容易漏） |
 | 错误码/HTTP 状态变更 | 同一场景返回码变了，调用方按码分支就会走错 |
 
-契约层面的机器判定交给 `data-workflow:interface-test` 的 `scripts/contract_diff.sh`，不要靠肉眼比 proto。
+契约层面的机器判定交给 `$PLUGIN_ROOT/scripts/contract_diff.sh`，不要靠肉眼比 proto。
 
 ---
 
@@ -74,7 +74,7 @@ grep -rn "<ConstName>" --include='*.go' internal/service
 
 **为什么必须全查**：漏一个 `switch` 的分支不会编译报错，会静默走 `default`；漏一个白名单不会报错，会让新状态的数据在列表里消失。这两种都是「上线后才发现」的类型。
 
-同时查**状态族归属**：同名数字在不同族里含义不同（`data-workflow:oncall` 的 `references/state-protocol.md` 有状态族隔离五规则）。新增状态必须写清属于哪一族，否则读取方会串族。
+同时查**状态族归属**：同名数字在不同族里含义不同（`../../oncall/references/state-protocol.md` 有状态族隔离五规则）。新增状态必须写清属于哪一族，否则读取方会串族。
 
 ---
 
