@@ -21,11 +21,18 @@ INSTALL = os.path.join(REPO_ROOT, "scripts", "install.sh")
 FEATURE = "probe"
 
 
+def with_store(root, env=None):
+    base = dict(env or os.environ)
+    base["DATA_WORKFLOW_STORE"] = root
+    return base
+
+
 def run(root, *args):
     return subprocess.run(
         [RUNNER, *args, "--repo", root],
         capture_output=True,
         text=True,
+        env=with_store(root),
     )
 
 
@@ -176,6 +183,7 @@ def hook_text(root):
         cwd=root,
         capture_output=True,
         text=True,
+        env=with_store(root),
         check=True,
     )
     data = json.loads(proc.stdout)
@@ -393,6 +401,7 @@ def gate_permission(hook, root, path):
         cwd=root,
         capture_output=True,
         text=True,
+        env=with_store(root),
         check=True,
     )
     return json.loads(proc.stdout).get("permission")
@@ -473,7 +482,7 @@ def case_foreign():
                 cwd=root,
                 capture_output=True,
                 text=True,
-                env=clean_env(),
+                env=with_store(root, clean_env()),
             )
 
         started = copy_run("start", "change", FEATURE)
@@ -500,7 +509,7 @@ def case_foreign():
             cwd=root,
             capture_output=True,
             text=True,
-            env=clean_env(),
+            env=with_store(root, clean_env()),
             check=True,
         )
         injected = json.loads(hook.stdout).get("additional_context") or ""

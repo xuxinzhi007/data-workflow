@@ -12,6 +12,8 @@ import subprocess
 import sys
 
 SKILL_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
+import layout
 
 
 def emit(permission, agent_message="", user_message=""):
@@ -232,11 +234,18 @@ def design_ok(root, feature):
 
 
 def decision(root, rel):
+    files = layout.store_root(root, SKILL_ROOT)
     if rel is None:
         return "allow", ""
     if rel == "specs" or rel.startswith("specs/"):
-        return "allow", ""
-    runs = active_runs(root)
+        if os.path.realpath(files) == os.path.realpath(root):
+            return "allow", ""
+        return (
+            "deny",
+            "拒绝写入 %s。运行记录写在 %s ，不写进被测仓库。"
+            % (rel, os.path.join(files, "specs")),
+        )
+    runs = active_runs(files)
     if any(kind == "review" for _, kind in runs):
         return (
             "deny",
@@ -244,12 +253,12 @@ def decision(root, rel):
             % rel,
         )
     execute_features = {feature for feature, kind in runs if kind == "execute"}
-    rows = read_passes(root)
+    rows = read_passes(files)
     if is_protected(root, rel):
         for kind, feature, prefix in rows:
             if execute_features and feature not in execute_features:
                 continue
-            if kind == "design" and covers(prefix, rel) and design_ok(root, feature):
+            if kind == "design" and covers(prefix, rel) and design_ok(files, feature):
                 return "allow", ""
         if execute_features:
             return (
@@ -268,7 +277,7 @@ def decision(root, rel):
                 return "allow", ""
             if execute_features and a not in execute_features:
                 continue
-            if kind == "design" and covers(b, rel) and design_ok(root, a):
+            if kind == "design" and covers(b, rel) and design_ok(files, a):
                 return "allow", ""
         return (
             "deny",

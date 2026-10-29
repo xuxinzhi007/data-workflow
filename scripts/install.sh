@@ -183,6 +183,7 @@ for sd in "${dirs[@]}"; do
   fi
   mkdir -p "$dest"
   rsync -a --delete --exclude config.yaml "$src/" "$dest/"
+  printf '%s\n' "$repo_root" > "$dest/origin"
   printf 'COPY   %s\n' "$dest"
 done
 

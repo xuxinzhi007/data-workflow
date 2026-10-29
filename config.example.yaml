@@ -40,6 +40,9 @@ personal_agents_md: ""
 # protected_paths: "api/**,*.proto,*.pb.go,internal/biz/status.go,*/biz/status.go"
 # waiver_globs: "*.go"
 
+# 运行记录写到这个目录。留空时：本仓库自己使用写仓库根；装进别的仓库写技能来源仓库的 runs/<仓库名>/。
+# artifacts_root: ""
+
 # 编码阶段的 done 执行这一条。退出码不是 0 就不进入下一步。
 # 留空时用仓库已经声明的入口：package.json 的 test、Makefile 的 test、pytest、cargo test。
 # 都没有就停在 RED。不按某一个服务猜测试命令。

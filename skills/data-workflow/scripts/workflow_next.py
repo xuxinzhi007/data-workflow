@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 """下一步只做一件事：读哪个阶段文件，或者停下来等一句可以原样粘贴的回复。
 
-不写 spec，不改业务代码，不派子代理。运行记录在 <仓库>/specs/<feature>/run.json。
+不写 spec，不改业务代码，不派子代理。运行记录在产物目录的 specs/<feature>/run.json。
+装进别的仓库时，产物目录在技能来源仓库的 runs/<仓库名>/。
 """
 
 import glob
@@ -11,9 +12,21 @@ import re
 import subprocess
 import sys
 
+import layout
+
 ME = os.path.abspath(__file__)
 SKILL_ROOT = os.path.dirname(os.path.dirname(ME))
 FEATURE_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+BUSINESS = ""
+STORE = ""
+
+
+def shown(rel):
+    if not STORE or not BUSINESS:
+        return rel
+    if os.path.realpath(STORE) == os.path.realpath(BUSINESS):
+        return rel
+    return os.path.join(STORE, rel)
 
 
 def repo_root(explicit):
@@ -126,7 +139,8 @@ def declared_verify(root):
 
 
 def run_verify(root, feature):
-    cmd = declared_verify(root)
+    business = BUSINESS or root
+    cmd = declared_verify(business)
     if not cmd:
         print("RED")
         print("verify 未配置")
@@ -135,7 +149,7 @@ def run_verify(root, feature):
         proc = subprocess.run(
             cmd,
             shell=True,
-            cwd=root,
+            cwd=business,
             capture_output=True,
             text=True,
             timeout=180,
@@ -145,12 +159,12 @@ def run_verify(root, feature):
         write_verify_log(root, feature, 124, output if isinstance(output, str) else "")
         print("RED")
         print("VERIFY exit 124")
-        print("LOG specs/%s/verify.log" % feature)
+        print("LOG %s" % shown("specs/%s/verify.log" % feature))
         return False
     output = "cmd %s\n" % cmd + (proc.stdout or "") + (proc.stderr or "")
     write_verify_log(root, feature, proc.returncode, output)
     print("VERIFY exit %s" % proc.returncode)
-    print("LOG specs/%s/verify.log" % feature)
+    print("LOG %s" % shown("specs/%s/verify.log" % feature))
     if proc.returncode != 0:
         print("RED")
         lines = [line for line in output.splitlines() if line.strip()]
@@ -331,7 +345,7 @@ def advance(workflow, run):
 def print_context(root, run):
     feature = run.get("feature") or ""
     print("RUN %s %s %s" % (feature, run.get("workflow") or "", run.get("status") or ""))
-    print("RECORD specs/%s/run.json" % feature)
+    print("RECORD %s" % shown("specs/%s/run.json" % feature))
     print("REPO %s" % root)
     print("SKILL %s" % SKILL_ROOT)
 
@@ -359,7 +373,7 @@ def show(root, run):
             return 0
         if run.get("status") == "abandoned":
             print("LAST %s" % feature)
-            print("RECORD specs/%s/run.json" % feature)
+            print("RECORD %s" % shown("specs/%s/run.json" % feature))
             return 0
         if run.get("status") == "done":
             print_context(root, run)
@@ -381,7 +395,7 @@ def show(root, run):
             print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
             print("READ %s" % stage.get("file"))
             for path in missing:
-                print("NEED %s" % path)
+                print("NEED %s" % shown(path))
             print("写完后运行：")
             print("%s next %s" % (ME, feature))
             return 0
@@ -443,7 +457,7 @@ def cmd_next(root, feature):
         return show(root, load_run(root, open_runs[0][0]))
     name = latest_run(root, runs)[0]
     print("LAST %s" % name)
-    print("RECORD specs/%s/run.json" % name)
+    print("RECORD %s" % shown("specs/%s/run.json" % name))
     return 0
 
 
@@ -544,7 +558,7 @@ def cmd_done(root, feature):
         print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
         print("READ %s" % stage.get("file"))
         for path in missing:
-            print("NEED %s" % path)
+            print("NEED %s" % shown(path))
         print("写完后运行：")
         print("%s next %s" % (ME, feature))
         return 1
@@ -571,7 +585,7 @@ def cmd_abandon(root, feature):
     run["reply"] = ""
     save_run(root, run)
     print("LAST %s" % feature)
-    print("RECORD specs/%s/run.json" % feature)
+    print("RECORD %s" % shown("specs/%s/run.json" % feature))
     return 0
 
 
@@ -598,6 +612,10 @@ def main(argv):
     if not root or not os.path.isdir(root):
         print("BAD repo")
         return 1
+    global BUSINESS, STORE
+    BUSINESS = root
+    STORE = layout.store_root(root, SKILL_ROOT)
+    root = STORE
     if not args:
         return usage()
     cmd = args[0]

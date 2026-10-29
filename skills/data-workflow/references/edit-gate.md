@@ -1,6 +1,6 @@
 # 编辑门禁
 
-Cursor 项目安装会把 hook 写进该仓库的 `.cursor/hooks.json`。会话开始就注入本技能，不等触发词。`preToolUse` 和 `beforeShellExecution` 在写入前查 `specs/passes.log`。没有记录就拒绝。
+Cursor 项目安装会把 hook 写进该仓库的 `.cursor/hooks.json`。会话开始就注入本技能，不等触发词。`preToolUse` 和 `beforeShellExecution` 在写入前查产物目录里的 `specs/passes.log`。本仓库自己使用时，这个目录就是仓库根。装进别的仓库时，它在技能来源仓库的 `runs/<仓库名>/`。
 
 `--global` 不写这道 hook。Qoder、Claude、Codex 的副本没有这道拦截，那些环境里门禁仍只在技能被读到之后生效。
 
