@@ -7,7 +7,7 @@ data-service（Go / Kratos）的阶段链是高风险变更上的模板，不是
 ## 你在什么状态，读什么
 
 - 第一次安装 → [`docs/install.md`](docs/install.md)
-- 已经有未完成的 `specs/<feature>/run.json` → 只看会话里注入的 `next` 输出。本文件其余段不用读
+- 会话里有 NOTICE → 那是另一条未完成运行，不代替当前这句话。要继续它再跑 `next`
 - 要选工作流，或看卡在哪一道门 → [`skills/data-workflow/references/workflows.md`](skills/data-workflow/references/workflows.md)
 - 要查 `next` / `wait` / `done` → [`skills/data-workflow/references/commands.md`](skills/data-workflow/references/commands.md)。Agent 输入框输入 `/`，选 `dw-next`、`dw-done`、`dw-wait`、`dw-start`
 - 要知道一个词在业务里指什么 → 知识层。路径空就问。键在 [`config.example.yaml`](config.example.yaml)。留空时 drift 打印 `DEGRADED`，回退 `<repo>/docs`
@@ -16,11 +16,11 @@ data-service（Go / Kratos）的阶段链是高风险变更上的模板，不是
 
 ## 知识层
 
-业务梳理用现在这套，不另建技能。顺序在 `stages/oncall/references/routing.md`：先 grep `$CARDS/`，再只读一个域文件，取值回代码。卡片带 `verified_commit`、`watches`、`verified_at`。`knowledge_drift.sh` 标 `FRESH` / `STALE`，不停工。`status: superseded` 的卡跳过，留着查历史。
+业务梳理用现在这套，不另建技能。顺序在 `stages/oncall/references/routing.md`：先 grep `$CARDS/`，再读相关的一个域文件，取值回代码。证据指向另一个域时再读那一个。卡片带 `verified_commit`、`watches`、`verified_at`。`knowledge_drift.sh` 标 `FRESH` / `STALE`，不停工。`status: superseded` 的卡跳过，留着查历史。代码证明的是现在的行为，不是「业务要求永远如此」。
 
-没有出处的词进待确认，用 `wait` 停，不编一个看起来合理的含义。用户要留下这条，按 `stages/oncall/references/capture.md` 写一张卡，带上 `object`、`applies_to`，被取代的旧卡标 `superseded`。一次运行结束时，只回写这次证实或推翻的那一条。不先写领域百科。
+没有出处的词进待确认，用 `wait` 停，不编一个看起来合理的含义。命中卡片后对照它的 `watches`：代码仍符合才当现行规则；已经不符合就标冲突，旧卡标 `superseded`。用户要留下这条，按 `stages/oncall/references/capture.md` 写一张卡，带上 `kind`、`object`、`applies_to`。一次运行结束时，只回写这次证实或推翻的那一条。不先写领域百科。
 
-业务要快改时，同样先写用户真正要的那一句。现有符号能做的，不加表、不加字段、不加开关、不加中间层，走 `change`。问这笔业务欠了什么债，读 `stages/requirement-analysis/references/debt-gate.md`。九步只在改动碰到底层门禁，或最小改动做不到时才开。
+动手前读 `skills/data-workflow/references/scope.md`。先写用户真正要解决的问题和怎样算满足，再决定改多宽。L1 走 `change`。契约、持久化、权限、状态、回滚即使改动很小也升到 `feature` 或 `hotfix`。与这次无关的债不进这次 diff。
 
 任意仓库定架构也走 `change`。形状写在 `specs/<feature>/decision.md`：现有边界、这次不新增什么、下一刀落在哪。data-service 的九步是高风险模板，不是这套架构本身。别的仓库用自己的 `protected_paths`；两个保护键都写成空，才关掉默认的 Go 路径。
 

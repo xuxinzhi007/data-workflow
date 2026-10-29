@@ -3,7 +3,7 @@
 
 编码步骤的 done：没有检查入口、package.json 的 test、Makefile 的 test、
 只有 go.mod、显式 verify 盖过 package.json。
-会话钩子：没有运行、只有已完成运行时不注入；有未完成运行时只注入下一步。
+会话钩子：没有运行、只有已完成运行时不注入。有未完成运行时注入 NOTICE，不注入 next 的操作指令，也不改 run.json。
 """
 
 import json
@@ -238,12 +238,32 @@ def case_hook_quiet():
         git_init(open_root)
         started = run(open_root, "start", "change", FEATURE)
         text = hook_text(open_root)
+        status = json.load(open(os.path.join(open_root, "specs", FEATURE, "run.json"), encoding="utf-8")).get("status")
+        nxt = run(open_root, "next")
         expect(
             started.returncode == 0
-            and "NEED" in text
-            and "用法就这几条" not in text,
-            "open run injects the next step",
-            text,
+            and text.startswith("NOTICE %s working" % FEATURE)
+            and "NEED" not in text
+            and "写完后运行" not in text
+            and status == "working"
+            and "NEED" in nxt.stdout,
+            "open run injects a notice and next still prints the step",
+            text + nxt.stdout,
+        )
+        waited = run(open_root, "wait", FEATURE, "继续吗？", "继续")
+        noticed = hook_text(open_root)
+        record = json.load(open(os.path.join(open_root, "specs", FEATURE, "run.json"), encoding="utf-8"))
+        resumed = run(open_root, "next")
+        expect(
+            waited.returncode == 0
+            and "NOTICE %s waiting" % FEATURE in noticed
+            and "摘要：继续吗？" in noticed
+            and "answer " not in noticed
+            and record.get("status") == "waiting"
+            and "WAIT" in resumed.stdout
+            and "REPLY 继续" in resumed.stdout,
+            "waiting notice does not resume or clear the run",
+            noticed + resumed.stdout,
         )
     finally:
         shutil.rmtree(empty, ignore_errors=True)
@@ -484,9 +504,15 @@ def case_foreign():
             check=True,
         )
         injected = json.loads(hook.stdout).get("additional_context") or ""
+        after = json.load(open(os.path.join(folder, "run.json"), encoding="utf-8"))
         expect(
-            "NEED" in injected and "check.md" in injected and "用法就这几条" not in injected,
-            "foreign session hook injects the copy next step",
+            "NOTICE" in injected
+            and FEATURE in injected
+            and "NEED" not in injected
+            and "写完后运行" not in injected
+            and after.get("status") == "working"
+            and after.get("stage") == record.get("stage"),
+            "foreign session hook injects a notice and leaves the run",
             injected,
         )
         feature = copy_run("start", "feature", "chain")

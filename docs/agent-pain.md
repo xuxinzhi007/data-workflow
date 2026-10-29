@@ -8,6 +8,6 @@
 2. 模型说做完了，但没有红灯或命令输出。这是验证问题。data-service 的质量门已经写在阶段文件里，不在每次会话的开场白里再讲一遍。
 3. 长任务忘掉先前的决定。未做完的 `specs/<feature>/run.json` 就是给这件事留的。做完的运行不必每场聊天再念一次。
 
-因此会话钩子只在 `next` 打出未完成步骤时注入那段输出。没有未完成运行时不注入用法说明。AGENTS.md 只留知识源入口和「有未完成步骤才照做」。
+因此会话钩子在有未完成运行时注入一条 NOTICE，不注入 `next` 的操作指令。没有未完成运行时不注入。AGENTS.md 写明 NOTICE 不代替当前需求。
 
 开发过程里的对应问题是：模型说改完了，但没有一条命令的退出码。编码阶段的 `done` 跑该仓库已经声明的测试入口。显式命令写在 `verify`。没写时依次看 `package.json` 的 `test`、`Makefile` 的 `test`、pytest、`cargo test`。都没有，或退出码不是 0，就停在 `RED`。不替某个服务选一套测试。结果在 `specs/<feature>/verify.log`。重复检查是 `python3 skills/data-workflow/scripts/check_runner.py`。它覆盖五种检查入口、pnpm、yarn、pytest、cargo、拍板回复，以及一次按别的仓库安装：副本自己的 runner 和钩子、空知识源、默认写入门禁、旁边的其他技能还在。

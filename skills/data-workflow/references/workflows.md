@@ -16,7 +16,7 @@
 | 接口门 | `specs/<feature>/interface-test.md` |
 | 文档审计 + 提交 | `specs/<feature>/change-note.md` |
 
-`bugfix` / `hotfix` 的第 ① 步是排查。`oncall` 不插入 feature 主链。用户说一路到底时连续做，门禁命中时停。每步用一句话汇报工件路径和门的结论。
+`bugfix` / `hotfix` 的第 ① 步是排查。`oncall` 不插入 feature 主链。进这条链之前先读 `references/scope.md`。L1 不进这里。门禁命中就停。每步用一句话汇报工件路径和门的结论。
 
 公司模板只承接已确认的内容，空章节写「无」。用户没要求发工单时不发布 issue。
 
@@ -35,7 +35,7 @@
 2. STALE 不停工。过期文档用来选搜索目标，取值回代码重新推导，产出里写明哪份文档已过期。FRESH 可当证据引用。
 3. 产出引用了 STALE 取值却没回代码重新推导，新鲜度门未过，停。
 
-查重：`specs/` 与 `$CARDS/` 里是否已有覆盖此事的工件；是否与已钉住的决定冲突。`run.json` 的 status 不是 done 时，先 `next`，只做它打印的那一步。
+查重：`specs/` 与 `$CARDS/` 里是否已有覆盖此事的工件；是否与已钉住的决定冲突。正在继续同一次运行、且 `run.json` 的 status 不是 done 时，先 `next`，只做它打印的那一步。
 
 ## 门
 

@@ -65,7 +65,7 @@
 
 hook 继续拦没有放行记录的写入。放行记录要和 `run.json` 对得上：执行类改受保护路径时，`design` 行里的 feature 必须是当前这次运行。
 
-会话开始只加一句：若仓库里有未完成的 `specs/*/run.json`，先跑 `workflow-next.sh`，只做它打印的那一步。
+会话开始只通知还有未完成运行。用户要继续它时，再跑 `next`，只做它打印的那一步。
 
 这样官方任务导出停住时，记录里会留下那句推荐回复。人回那一句，脚本才放行后面的修改。
 
@@ -73,7 +73,7 @@ hook 继续拦没有放行记录的写入。放行记录要和 `run.json` 对得
 
 `python3 skills/data-workflow/scripts/workflow_next.py next`。产物路径取工作流里已经写过的 `artifacts`：像路径的才检查，像「代码改动」这种句子不检查。`code: true` 的阶段要 `done` 才往下。没有路径产物、也不是改代码的阶段，改写成 `specs/<feature>/stage-<id>.md`。文件里还有「待拍板」就打印 `OPEN`，不进入下一阶段。
 
-会话开始会跑一次 `next`。只有未做完的运行才注入那段输出。做完的运行留在 `specs/<feature>/run.json`，不在每场聊天里再念一遍。技能仓库对自己安装时，hook 指向 `skills/data-workflow/hooks/`，不另拷一份。
+会话开始会跑一次 `next`，注入的是 NOTICE，不是那段操作指令。做完的运行留在 `specs/<feature>/run.json`，不注入。用户要继续时再跑 `next`，才会看到 `WAIT` 或 `NEED`。技能仓库对自己安装时，hook 指向 `skills/data-workflow/hooks/`，不另拷一份。
 
 `config.yaml` 没写 `protected_paths` 时，hook 仍按原来的 api、proto、pb.go、status.go 拒绝。写了空值才放开。data-service 的配置不用改。
 

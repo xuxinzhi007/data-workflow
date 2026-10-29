@@ -1,7 +1,7 @@
 {
   "name": "feature",
   "kind": "execute",
-  "when": "新能力、已有能力扩展、新增筛选/字段/状态/端点。用户说「做个功能」「加个字段」「支持按 X 过滤」时走这条。",
+  "when": "references/scope.md 定为 L3 的变更：公共契约、持久化迁移、权限、状态机、跨服务契约、难以回滚。已有边界内的筛选或小功能走 change，不因为用户说「做个功能」就进这条。",
   "principle": "阶段串行，前一步的产出就是后一步的输入。任一门未过就停，不自行绕过。",
   "artifacts_root": "specs/<feature>/",
   "stages": [
@@ -16,7 +16,7 @@
         "specs/<feature>/spec.md"
       ],
       "template": "templates/spec-template.md",
-      "gate": "九项前置评估无阻塞项；候选方案 ≥2 且含最小改动；待拍板清零（走全局技能 grilling）",
+      "gate": "先按 references/scope.md 定级。L1 改走 change。L3 才留在这里：spec.md 含验收、非目标、相关债和最小改动；九项无阻塞；待拍板清零",
       "on_gate_fail": "停在需求阶段，报告缺什么信息，不进技术方案",
       "subagents": {
         "allowed": true,

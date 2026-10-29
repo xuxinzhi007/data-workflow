@@ -1,6 +1,6 @@
 ---
 name: data-workflow
-description: 装进任意仓库后，未完成的运行在该仓库 specs/<feature>/run.json。有未完成步骤时先跑 scripts/workflow_next.py next，只做它打印的那一件。编码步骤的 done 跑该仓库自己的测试入口，退出码不是 0 就停。没有 data-service 门禁时用 start change <feature>。做架构也走 change：形状写在 decision.md，不套九步。梳理一个词、字段或状态的含义时，先查排查卡片再读一个域文件，取值回代码，不编口径。用户这次真正要的范围小于方案时，停在能复用的现有符号或最小改动上。技术债读负债门，不另开结构。data-service 上还绑定写入门禁和原有阶段链。用户说 @data-workflow、开始开发、架构设计、梳理业务、这个词什么意思、需求分析、影响面、技术方案、编码实现、改动审核、审一下、质量检查、接口测试、排查、状态含义、提交、提 MR、画架构图时读取本文件，再只读点名的那一个阶段文件。不用于：纯 git 操作、解决合并冲突。
+description: 装进任意仓库后，未完成的运行在该仓库 specs/<feature>/run.json。会话里的 NOTICE 只说明它还在，不代替当前这句话。用户要继续那条时再跑 scripts/workflow_next.py next，只做它打印的那一件。不要因为来了新需求就把它标成完成或放弃。编码步骤的 done 跑该仓库自己的测试入口，退出码不是 0 就停。没有 data-service 门禁时用 start change <feature>。做架构也走 change：形状写在 decision.md，不套九步。梳理一个词、字段或状态的含义时，先查排查卡片再读一个域文件，取值回代码，不编口径。用户这次真正要的范围小于方案时，停在能复用的现有符号或最小改动上。技术债读负债门，不另开结构。data-service 上还绑定写入门禁和原有阶段链。用户说 @data-workflow、开始开发、架构设计、梳理业务、这个词什么意思、需求分析、影响面、技术方案、编码实现、改动审核、审一下、质量检查、接口测试、排查、状态含义、提交、提 MR、画架构图时读取本文件，再只读点名的那一个阶段文件。不用于：纯 git 操作、解决合并冲突。
 ---
 
 # data-service 开发工作台
@@ -17,11 +17,11 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"
 
 ## 绑定
 
-Cursor 项目安装后，没有 `specs/passes.log` 里覆盖该路径的记录，hook 拒绝写入。路径表只维护在 `references/edit-gate.md`。`protected_paths` 和 `waiver_globs` 都没写时，默认仍是 `api/`、proto、pb.go、`internal/biz/status.go` 和其它 `*.go`。有未完成运行时，会话钩子只注入 `next` 的那一段。这次注入依赖 Cursor 加载了 `.cursor/hooks.json` 里的 `sessionStart`。新会话没有看到下一步时，先确认这份钩子文件被加载。
+Cursor 项目安装后，没有 `specs/passes.log` 里覆盖该路径的记录，hook 拒绝写入。路径表只维护在 `references/edit-gate.md`。`protected_paths` 和 `waiver_globs` 都没写时，默认仍是 `api/`、proto、pb.go、`internal/biz/status.go` 和其它 `*.go`。有未完成运行时，会话钩子注入一条 NOTICE：运行名、状态、一行摘要。NOTICE 不代替当前需求。用户要继续那条时，再跑 `next`，只做它打印的那一件。这次注入依赖 Cursor 加载了 `.cursor/hooks.json` 里的 `sessionStart`。新会话没有看到 NOTICE 时，先确认这份钩子文件被加载。
 
 ## 继续一次运行
 
-未完成的运行在当前 git 根的 `specs/<feature>/run.json`。没有注入，或输出是 `LAST` / `NO_RUN` 时，回答当前的问题。
+未完成的运行在当前 git 根的 `specs/<feature>/run.json`。会话注入是 NOTICE 时，先做当前这句话。用户要继续那条，或那条和当前需求是同一件事时，再跑 `next`。没有注入，或输出是 `LAST` / `NO_RUN` 时，回答当前的问题。`next` 打出的 NEED、WAIT、DO、OPEN 只约束正在继续的那条运行。
 
 | 看到 | 做 |
 |---|---|
@@ -38,7 +38,7 @@ Cursor 项目安装后，没有 `specs/passes.log` 里覆盖该路径的记录�
 
 ## 选工作流
 
-用户这句话已经点明选型表某一行：直接读该行的阶段文件。用户只说开始干活：用 AskUserQuestion 弹菜单，一次一题，可多选，按表的顺序串行。
+用户这句话已经点明选型表某一行：直接读该行的阶段文件。用户只说开始干活：先读 `references/scope.md`，按 L1 / L2 / L3 定这一次的范围，再选工作流。不先弹出九步菜单。
 
 进入选型表里 data-service 的一行之前，先读 `references/workflows.md`，再读那一个阶段文件。
 
@@ -52,9 +52,11 @@ Cursor 项目安装后，没有 `specs/passes.log` 里覆盖该路径的记录�
 
 新业务场景是新的工作流模板，不是再装一个技能。
 
-只梳理、不改代码时，不 `start`。读 `stages/oncall/references/routing.md`：先 grep `$CARDS/`，再只读一个域文件，取值回代码。`status: superseded` 的卡跳过。没有出处的词写成待确认，然后 `wait`。用户要留下这条时，再读 `stages/oncall/references/capture.md` 写一张卡。不先写一篇领域百科。
+只梳理、不改代码时，不 `start`。读 `stages/oncall/references/routing.md`：先 grep `$CARDS/`，再读相关的一个域文件，取值回代码。证据指向另一个域时再读那一个。`status: superseded` 的卡跳过。关键结论标已证实、推断、待确认或存在冲突。没有出处的词写成待确认，然后 `wait`。不影响方案的细节不清楚，写明假设后继续。用户要留下这条时，再读 `stages/oncall/references/capture.md` 写一张卡。不先写一篇领域百科。
 
-先写用户这次真正要的那一句。仓库里已有的 `文件:符号` 能做到，就复用，不加表、不加字段、不加开关、不加中间层。最小改动做得到，走 `change`。碰 `api/`、proto、状态、租户权限、回滚时才走 `feature` 或 `hotfix`，方案里仍要有一个最小改动。问现有业务欠了什么债，读 `stages/requirement-analysis/references/debt-gate.md`：还债或欠债都落到 `文件:符号`；欠债写落点、怎么还、何时还。
+动手前读 `references/scope.md`。先写用户真正要解决的问题和怎样算满足，再选方案。已有 `文件:符号` 能做到就复用。L1 走 `change`。碰到契约、持久化、权限、状态或回滚，即使用户把它叫成小改动，也走 `feature` 或 `hotfix`。与这次无关的债不进这次 diff。
+
+梳理和需求判断发给用户的第一份，按 `references/doc-shape.md` 的结论层：要不要改、现在能不能改、下一步。依据和实施细节等用户追问再写。
 
 ## 选型表
 

@@ -243,7 +243,7 @@
         "kind 为 review 的未完成运行存在时，hook 拒绝 specs/ 以外的写入",
         "config.yaml 没有 protected_paths 时，hook 仍按 api/、proto、pb.go、status.go 拒绝；写了空的 protected_paths 才放开这些路径",
         "workflows/change.json 三步：decision.md、改文件、check.md。不套 feature 的九项负债",
-        "会话 hook 只在 next 打出未完成步骤时注入那段原文，不附用法说明。LAST 和 NO_RUN 不注入",
+        "会话 hook 在有未完成运行时注入 NOTICE（运行名、状态、一行摘要），不注入 next 的操作指令，也不改 run.json。LAST 和 NO_RUN 不注入。用户继续时 next 仍打印 NEED、WAIT、DO 或 OPEN",
         "编码阶段的 done 跑该仓库的测试入口：config 的 verify，否则 package.json 的 test、Makefile 的 test、pytest 或 cargo test。都没有或退出码不是 0 时停在 RED",
         "对技能仓库自己执行 install.sh 时，hook 指向 skills/data-workflow/hooks/，不另拷一份技能",
         "装进另一个仓库后，用的是副本里的 workflow_next.py 和钩子。知识源为空就保持空。默认仍拒绝 proto 和 Go 文件。旁边已有的其他技能还在。再装一次不覆盖该仓库的 config.yaml"

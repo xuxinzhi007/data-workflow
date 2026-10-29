@@ -10,7 +10,7 @@ python3 "$PLUGIN_ROOT/scripts/workflow_next.py" <子命令>
 
 | 子命令 | 何时 | 成功时看到 |
 |---|---|---|
-| `next` | 有未完成的 `specs/<feature>/run.json` | 只一件：`NEED`、`WAIT`、`DO`、`OPEN` 或 `DONE` |
+| `next` | 用户要继续那条未完成运行 | 只一件：`NEED`、`WAIT`、`DO`、`OPEN` 或 `DONE` |
 | `next` | 没有未完成运行 | `NO_RUN`，或 `LAST` 加记录路径 |
 | `start <workflow> <feature>` | 新开。workflow 为 feature、bugfix、hotfix、review-only、change | 停在第一阶段缺的文件 |
 | `wait <feature> "<问题>" "<一句回复>"` | `OPEN`，或还要问一句 | `run.json` 里有这句 reply |

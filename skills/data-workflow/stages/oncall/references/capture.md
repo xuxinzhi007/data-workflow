@@ -33,6 +33,7 @@ frontmatter 关键字段（本文件即模板；仓库内 `docs/support/knowledg
 ---
 id: support-YYYYMMDD-short-name
 title: 简短、可检索的问题标题
+kind: fact                     # fact 现状 / decision 当时为什么这样选 / problem 现存问题
 status: verified-static        # verified-static / verified-runtime / needs-runtime / stale / superseded
 domains: [job]                 # 业务域，与知识层域目录同名
 object: ""                     # 这条关于哪个业务对象
