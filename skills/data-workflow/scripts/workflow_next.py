@@ -66,6 +66,100 @@ def config_value(root, key):
     return None
 
 
+def write_verify_log(root, feature, code, output):
+    folder = os.path.join(root, "specs", feature)
+    os.makedirs(folder, exist_ok=True)
+    text = output or ""
+    if len(text) > 8000:
+        text = text[-8000:]
+    with open(os.path.join(folder, "verify.log"), "w", encoding="utf-8") as fh:
+        fh.write("exit %s\n" % code)
+        fh.write(text)
+        if text and not text.endswith("\n"):
+            fh.write("\n")
+
+
+def declared_verify(root):
+    """仓库自己写明的那条测试命令。没有就空，不按语言猜一套。"""
+    explicit = config_value(root, "verify")
+    if explicit:
+        return explicit
+    package_json = os.path.join(root, "package.json")
+    if os.path.isfile(package_json):
+        try:
+            with open(package_json, encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, json.JSONDecodeError):
+            data = {}
+        script = (data.get("scripts") or {}).get("test") if isinstance(data, dict) else ""
+        if script and script != 'echo "Error: no test specified" && exit 1':
+            if os.path.isfile(os.path.join(root, "pnpm-lock.yaml")):
+                return "pnpm test"
+            if os.path.isfile(os.path.join(root, "yarn.lock")):
+                return "yarn test"
+            return "npm test"
+    makefile = os.path.join(root, "Makefile")
+    if os.path.isfile(makefile):
+        try:
+            with open(makefile, encoding="utf-8", errors="replace") as fh:
+                text = fh.read()
+        except OSError:
+            text = ""
+        if re.search(r"(?m)^test:", text):
+            return "make test"
+    if os.path.isfile(os.path.join(root, "pytest.ini")) or os.path.isfile(
+        os.path.join(root, "pyproject.toml")
+    ):
+        pyproject = os.path.join(root, "pyproject.toml")
+        use_pytest = os.path.isfile(os.path.join(root, "pytest.ini"))
+        if not use_pytest and os.path.isfile(pyproject):
+            try:
+                with open(pyproject, encoding="utf-8", errors="replace") as fh:
+                    use_pytest = "[tool.pytest" in fh.read()
+            except OSError:
+                use_pytest = False
+        if use_pytest:
+            return "python3 -m pytest -q"
+    if os.path.isfile(os.path.join(root, "Cargo.toml")):
+        return "cargo test"
+    return ""
+
+
+def run_verify(root, feature):
+    cmd = declared_verify(root)
+    if not cmd:
+        print("RED")
+        print("verify 未配置")
+        return False
+    try:
+        proc = subprocess.run(
+            cmd,
+            shell=True,
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+    except subprocess.TimeoutExpired as exc:
+        output = (exc.stdout or "") + (exc.stderr or "")
+        write_verify_log(root, feature, 124, output if isinstance(output, str) else "")
+        print("RED")
+        print("VERIFY exit 124")
+        print("LOG specs/%s/verify.log" % feature)
+        return False
+    output = "cmd %s\n" % cmd + (proc.stdout or "") + (proc.stderr or "")
+    write_verify_log(root, feature, proc.returncode, output)
+    print("VERIFY exit %s" % proc.returncode)
+    print("LOG specs/%s/verify.log" % feature)
+    if proc.returncode != 0:
+        print("RED")
+        lines = [line for line in output.splitlines() if line.strip()]
+        for line in lines[-8:]:
+            print(line)
+        return False
+    return True
+
+
 def load_workflow(name):
     if not FEATURE_RE.fullmatch(name or ""):
         return None
@@ -263,6 +357,10 @@ def show(root, run):
         if run.get("status") == "waiting":
             print_wait(root, run)
             return 0
+        if run.get("status") == "abandoned":
+            print("LAST %s" % feature)
+            print("RECORD specs/%s/run.json" % feature)
+            return 0
         if run.get("status") == "done":
             print_context(root, run)
             print("DONE %s" % feature)
@@ -311,15 +409,6 @@ def show(root, run):
     return 0
 
 
-def start_hint(root):
-    default = config_value(root, "default_workflow")
-    if default:
-        print("DEFAULT %s" % default)
-        print("START %s start %s <feature>" % (ME, default))
-    else:
-        print("START %s start feature|bugfix|hotfix|review-only|change <feature>" % ME)
-
-
 def latest_run(root, runs):
     def mtime(item):
         path = run_path(root, item[0])
@@ -339,12 +428,9 @@ def cmd_next(root, feature):
             return 1
         return show(root, run)
     runs = list_runs(root)
-    open_runs = [item for item in runs if item[2] != "done"]
+    open_runs = [item for item in runs if item[2] not in ("done", "abandoned")]
     if not runs:
         print("NO_RUN")
-        print("REPO %s" % root)
-        print("RECORD 无")
-        start_hint(root)
         return 0
     if len(open_runs) > 1:
         print("MANY")
@@ -356,10 +442,9 @@ def cmd_next(root, feature):
     if len(open_runs) == 1:
         return show(root, load_run(root, open_runs[0][0]))
     name = latest_run(root, runs)[0]
-    print("LAST")
-    code = show(root, load_run(root, name))
-    start_hint(root)
-    return code
+    print("LAST %s" % name)
+    print("RECORD specs/%s/run.json" % name)
+    return 0
 
 
 def cmd_start(root, workflow_name, feature):
@@ -371,7 +456,7 @@ def cmd_start(root, workflow_name, feature):
         print("BAD workflow %s" % workflow_name)
         return 1
     existing = load_run(root, feature)
-    if existing and existing.get("status") != "done":
+    if existing and existing.get("status") not in ("done", "abandoned"):
         print("ALREADY %s %s" % (feature, existing.get("status")))
         return show(root, existing)
     first = workflow["stages"][0]
@@ -468,10 +553,26 @@ def cmd_done(root, feature):
         print("OPEN")
         print("文件里还有待拍板。先 wait，再 answer。")
         return 1
+    if stage.get("code") and not run_verify(root, feature):
+        return 1
     if not advance(workflow, run):
         return 1
     save_run(root, run)
     return show(root, run)
+
+
+def cmd_abandon(root, feature):
+    run = load_run(root, feature)
+    if run is None:
+        print("NO_RUN %s" % feature)
+        return 1
+    run["status"] = "abandoned"
+    run["question"] = ""
+    run["reply"] = ""
+    save_run(root, run)
+    print("LAST %s" % feature)
+    print("RECORD specs/%s/run.json" % feature)
+    return 0
 
 
 def usage():
@@ -480,6 +581,7 @@ def usage():
     print("      workflow_next.py wait <feature> <问题> <一句回复> [--repo DIR]")
     print("      workflow_next.py answer <feature> <回复原文> [--repo DIR]")
     print("      workflow_next.py done <feature> [--repo DIR]")
+    print("      workflow_next.py abandon <feature> [--repo DIR]")
     return 2
 
 
@@ -513,6 +615,8 @@ def main(argv):
         return cmd_answer(root, args[1], " ".join(args[2:]))
     if cmd == "done" and len(args) == 2:
         return cmd_done(root, args[1])
+    if cmd == "abandon" and len(args) == 2:
+        return cmd_abandon(root, args[1])
     return usage()
 
 

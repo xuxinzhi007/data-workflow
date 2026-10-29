@@ -155,6 +155,10 @@ glab mr update <mr-id> --description-file <描述文件>
 - 查询数据量：
 ```
 
+## 这次新知道的一条
+
+提交前，如果这次运行证实或推翻了一条口径，按 `../oncall/references/capture.md` 写一张卡：谁、何时、为什么，加上 `object` 和 `applies_to`。只写这次用到的那一条。不写复盘，不补全整个域。没有新口径就跳过。
+
 ### MR 要求
 
 1. 同一次回复先给 commit 信息，再给填好的 MR 正文。MR 标题与 commit subject 一致。

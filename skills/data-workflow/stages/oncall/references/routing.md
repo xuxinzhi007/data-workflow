@@ -16,8 +16,10 @@ grep -rl "<症状词>|<状态值>|<RPC名>|<表名>" $CARDS/
 
 - `FRESH` → 可作为第 3 层证据直接引用。
 - `STALE` → **只当线索**：用它选搜索目标，然后从 `watches` 列出的文件重新推导每个取值，并在答案里说明该卡已过期。
+- `SUPERSEDED` → 跳过，看 `supersedes` 指向的那张卡。旧卡留着查历史。
+- `CONFLICT` → 同一个 `object` 落在不同的 `applies_to`。只用当前服务这一张，不把另一张的规则拿来用。
 - 无 frontmatter → 按 `STALE` 处理。
-- 卡片 `status: superseded` → 跳过，看它指向的替代卡。
+- 卡片写了 `applies_to`，且不是当前这次问的服务或仓库 → 跳过。
 
 索引表在 `$CARDS/README.md`（每卡约 1 行，比逐卡打开便宜）。
 

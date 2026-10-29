@@ -35,22 +35,19 @@ else
   err="找不到 git 根，没有读取 specs/*/run.json"
 fi
 
-usage="用法就这几条。记录在当前 git 根的 specs/<feature>/run.json，不是 config.yaml 的 repo，也不是上一场聊天。
-next：看现在该做什么。
-start <workflow> <feature>：新开一次。没有 data-service 门禁时用 change。
-wait <feature> \"问题\" \"对方能原样粘贴的一句\"：要问人时写下来并停止。
-answer <feature> \"对方的原话\"：对上了才继续。
-done <feature>：这一阶段做完。
-输出里有 RUN、NEED、WAIT、DO、OPEN 时，只做那一件。LAST 表示上次已经做完，记录还在 RECORD 那个文件里。不要从 SKILL.md 步骤 0 重开。
-写入门在 ${SKILL_ROOT}/references/edit-gate.md。protected_paths 和 waiver_globs 都没写时，仍拦 api/、proto、pb.go、status.go 和其它 *.go。"
-
-text="${next}"
+text=""
+first="$(printf '%s\n' "$next" | head -n 1)"
+case "$first" in
+  LAST|LAST\ *|NO_RUN|NO_RUN\ *|"")
+    text=""
+    ;;
+  *)
+    text="$next"
+    ;;
+esac
 if [ -n "$err" ]; then
   text="${text}
 workflow_next 失败：${err}"
 fi
-text="${text}
-
-${usage}"
 
 printf '{\n  "additional_context": "%s"\n}\n' "$(escape_for_json "$text")"

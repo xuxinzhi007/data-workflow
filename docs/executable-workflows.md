@@ -73,7 +73,7 @@ hook 继续拦没有放行记录的写入。放行记录要和 `run.json` 对得
 
 `python3 skills/data-workflow/scripts/workflow_next.py next`。产物路径取工作流里已经写过的 `artifacts`：像路径的才检查，像「代码改动」这种句子不检查。`code: true` 的阶段要 `done` 才往下。没有路径产物、也不是改代码的阶段，改写成 `specs/<feature>/stage-<id>.md`。文件里还有「待拍板」就打印 `OPEN`，不进入下一阶段。
 
-会话开始会跑一次 `next`，把输出放在注入文本的最前面。换会话要看的是 `specs/<feature>/run.json`，不是上一场聊天。技能仓库对自己安装时，hook 指向 `skills/data-workflow/hooks/`，不另拷一份。
+会话开始会跑一次 `next`。只有未做完的运行才注入那段输出。做完的运行留在 `specs/<feature>/run.json`，不在每场聊天里再念一遍。技能仓库对自己安装时，hook 指向 `skills/data-workflow/hooks/`，不另拷一份。
 
 `config.yaml` 没写 `protected_paths` 时，hook 仍按原来的 api、proto、pb.go、status.go 拒绝。写了空值才放开。data-service 的配置不用改。
 

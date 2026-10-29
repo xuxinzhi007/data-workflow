@@ -34,12 +34,13 @@ mr_template: ""
 # 个人规范文件（可选）；change-review 的 standards-spec 会读它补充个人偏好，留空则跳过。
 personal_agents_md: ""
 
-# 没有运行记录时，workflow_next.py next 提示用哪条工作流。留空则列出 feature|bugfix|hotfix|review-only|change。
-# 没有 data-service 九项负债的仓库写成 change。
-default_workflow: ""
-
 # 写入门。两个键都不出现时，用 references/edit-gate.md 的默认表（api/、proto、pb.go、status.go、其它 *.go）。
 # 写了就按逗号分隔的清单，相对仓库根。protected_paths 为空表示没有路径要 design。
 # waiver_globs 为空表示没有路径要 waiver。
 # protected_paths: "api/**,*.proto,*.pb.go,internal/biz/status.go,*/biz/status.go"
 # waiver_globs: "*.go"
+
+# 编码阶段的 done 执行这一条。退出码不是 0 就不进入下一步。
+# 留空时用仓库已经声明的入口：package.json 的 test、Makefile 的 test、pytest、cargo test。
+# 都没有就停在 RED。不按某一个服务猜测试命令。
+verify: ""

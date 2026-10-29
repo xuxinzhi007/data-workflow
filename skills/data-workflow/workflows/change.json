@@ -1,7 +1,7 @@
 {
   "name": "change",
   "kind": "execute",
-  "when": "任意仓库里的一次改动。没有 data-service 的九项负债、proto 或状态门时用这条。不套 feature 的阶段表。",
+  "when": "任意仓库里的一次改动，或给这个仓库定架构。没有 data-service 的九项负债、proto 或状态门时用这条。不套 feature 的阶段表。",
   "principle": "先把决定写成一句，再改文件，再把核对命令的结果写下来。有一个没拍板的选择就停，把可原样粘贴的回复放进 run.json。",
   "artifacts_root": "specs/<feature>/",
   "stages": [

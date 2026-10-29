@@ -10,7 +10,7 @@
 #   1. git rev-list --count <commit>..HEAD          → 落后多少 commit
 #   2. git diff --name-only <commit>..HEAD -- <watches> → 被盯文件是否动过
 #   3. 逐文件 git diff --shortstat                  → 变动量级
-# 每份文档输出一行 FRESH / STALE / MISSING。
+# 每份文档输出一行 FRESH / STALE / SUPERSEDED / CONFLICT / MISSING。
 #
 # 门禁永不阻塞：正常恒 exit 0。exit 2 仅用于「文件读不了 / frontmatter 未闭合」这类无法解析的情况。
 # 缺 frontmatter 或缺 verified_commit 按 STALE 处理 —— 这让未纳管的文档自我暴露，而不是靠制度。
@@ -112,6 +112,14 @@ grade() {
     fi
   fi
 
+  card_status="$(fm_field "$doc" status)"
+  card_status="${card_status#\"}"
+  card_status="${card_status%\"}"
+  if [ "$card_status" = "superseded" ]; then
+    printf 'SUPERSEDED %s（当前检索跳过，历史仍可查）\n' "$doc"
+    return 0
+  fi
+
   commit="$(fm_field "$doc" verified_commit)"
   if [ -z "$commit" ]; then
     printf 'STALE %s: 无 verified_commit（未纳管，按过期处理，只可当线索）\n' "$doc"
@@ -184,5 +192,39 @@ for t in "${targets[@]}"; do
   s=$?
   [ "$s" -gt "$rc" ] && rc="$s"
 done
+
+if [ "${#targets[@]}" -ge 2 ]; then
+  awk '
+    FNR == 1 {
+      if (NR > 1 && obj != "") emit()
+      infm = 0; started = 0; obj = ""; app = ""; file = FILENAME
+    }
+    !started && $0 ~ /^---[[:space:]]*$/ { started = 1; infm = 1; next }
+    infm && $0 ~ /^---[[:space:]]*$/ { infm = 0; next }
+    infm && $0 ~ /^object:/ {
+      sub(/^object:[[:space:]]*/, "")
+      gsub(/^["'\'']|["'\'']$/, "")
+      obj = $0
+      next
+    }
+    infm && $0 ~ /^applies_to:/ {
+      sub(/^applies_to:[[:space:]]*/, "")
+      gsub(/^["'\'']|["'\'']$/, "")
+      app = $0
+      next
+    }
+    END { if (obj != "") emit() }
+    function emit(   key) {
+      if (obj == "" || app == "") return
+      key = obj
+      if (key in seen && seen[key] != app)
+        printf "CONFLICT %s 与 %s：object %s 落在不同 applies_to（%s / %s）\n", seenfile[key], file, obj, seen[key], app
+      else if (!(key in seen)) {
+        seen[key] = app
+        seenfile[key] = file
+      }
+    }
+  ' "${targets[@]}"
+fi
 
 exit "$rc"

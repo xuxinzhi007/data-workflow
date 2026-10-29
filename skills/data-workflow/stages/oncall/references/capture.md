@@ -35,6 +35,12 @@ id: support-YYYYMMDD-short-name
 title: 简短、可检索的问题标题
 status: verified-static        # verified-static / verified-runtime / needs-runtime / stale / superseded
 domains: [job]                 # 业务域，与知识层域目录同名
+object: ""                     # 这条关于哪个业务对象
+state: ""                      # 状态转换；没有就空
+relation: ""                   # 对象之间的关系；没有就空
+valid_from: ""                 # 从何时起当前有效
+supersedes: ""                 # 取代了哪张旧卡的 id；旧卡改成 superseded，不删除
+applies_to: ""                 # 哪个服务 / 模块 / 仓库。别的服务的同名规则不拿来用
 symptoms: [用户看到的关键词或错误码]   # ← 这是 grep 检索面，必须写用户会说的话
 verified_branch: <当前分支>
 verified_commit: <核实时的 HEAD 全 hash>

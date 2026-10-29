@@ -97,6 +97,8 @@ proto 字段号或类型改动、字段删除改名；返回语义变化（之�
 
 判定为 Breaking Change 的，单独列出并停下问用户，不静默带过。
 
+这次 diff 是否新欠了债：状态上多一个没有 `plan pass` 的语义分支、proto 复用字段号、绕过已有抽象的临时判断。有就列出 `文件:符号`。不把偿还写进这次 diff。要还，另开 `change` 或 `bugfix`。细则在 `../requirement-analysis/references/debt-gate.md`。
+
 ### A5 性能
 
 循环内查询或 RPC（N+1）、附属属性用 JOIN 而不是批量回填、大表查询无 WHERE 收窄、SELECT 全字段、新增查询条件是否需要索引、锁或事务范围是否过大。

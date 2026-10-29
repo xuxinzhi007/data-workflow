@@ -124,8 +124,28 @@ print("HOOKS %s %s" % (mode, path))
 PY
 }
 
+install_commands() {
+  [ "$global" = 1 ] && return 0
+  [ -d "$base/.cursor" ] || return 0
+  local dest="$base/.cursor/commands"
+  local name
+  if [ "$unlink" = 1 ]; then
+    for name in dw-next.md dw-done.md dw-wait.md dw-start.md; do
+      rm -f "$dest/$name"
+    done
+    printf 'COMMANDS removed %s\n' "$dest"
+    return 0
+  fi
+  mkdir -p "$dest"
+  for name in dw-next.md dw-done.md dw-wait.md dw-start.md; do
+    cp "$src/commands/$name" "$dest/$name"
+    printf 'COMMAND %s\n' "$dest/$name"
+  done
+}
+
 if [ "$unlink" = 1 ]; then
   merge_cursor_hooks remove
+  install_commands
 fi
 
 for sd in "${dirs[@]}"; do
@@ -202,6 +222,7 @@ if [ "$unlink" = 0 ]; then
     printf 'HOOKS --global 不写 Cursor hook。强制绑定只在装进某个项目的 .cursor 时生效。\n'
   else
     merge_cursor_hooks add
+    install_commands
   fi
   if [ "$dogfood" = 1 ]; then
     printf '\nDONE 本仓库不另拷技能。会话钩子指向 %s/hooks/。\n' "$src"

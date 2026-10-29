@@ -43,4 +43,4 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"   # → $KNOW / $TEMPLATES / $TEC
 - `$REPO/specs/<feature>/gate`，第一条非空行只有 `plan pass`
 - `$REPO/specs/passes.log` 追加 `design <feature> <前缀>`，前缀覆盖接下来要改的 `api/`、proto、`internal/biz/status.go` 和相关 Go 文件
 
-门没过就不要写 `plan pass`。
+门没过就不要写 `plan pass`。`plan.md` 里的每一项技术动作都要对应 `spec.md` 里的一条明确需求。对应不上的删掉，或在 `spec.md` 里写明为什么现在就要。写不上的，不要写 `plan pass`。这次发现的存量债记下来，不在这份方案里顺手偿还。

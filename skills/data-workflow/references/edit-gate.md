@@ -4,7 +4,11 @@ Cursor 项目安装会把 hook 写进该仓库的 `.cursor/hooks.json`。会话�
 
 `--global` 不写这道 hook。Qoder、Claude、Codex 的副本没有这道拦截，那些环境里门禁仍只在技能被读到之后生效。
 
-hook 看得见的是写入工具的目标路径，以及命令文本里带有路径的写入（重定向、`tee`、`sed -i`、`rm`、`mv`、`cp`）。从补丁文件间接写入时，命令文本里没有目标路径，hook 看不到。
+hook 看得见的是写入工具的目标路径（`path`、`file_path`、`filePath`），以及命令文本里带有路径的写入（重定向、`tee`、`sed -i`、`rm`、`mv`、`cp`）。从补丁文件间接写入时，命令文本里没有目标路径，hook 看不到。
+
+shell 这条是尽力而为。挡不住 `python -c` 里打开文件、变量拼出来的路径、heredoc，以及 `&&` 或管道后面的 `sed -i`。提交前和 CI 里的 diff 才是兜底。
+
+`failClosed: true` 时，钩子崩溃、超时或没有打出 JSON，Cursor 会阻止这次操作。并发调用偶尔会拿到空 stdout，界面只说 hook 没有输出。被拒绝且没有拒绝理由时，重试一次。
 
 ## 谁要记录
 
@@ -47,8 +51,6 @@ waiver_globs: "*.go"
 ```
 
 写了就用写的。`protected_paths` 为空表示没有路径要 `design`。`waiver_globs` 为空表示没有路径要 `waiver`。两个键都不出现时，用上面那张表。
-
-`default_workflow: change` 只影响没有运行记录时 `workflow_next.py next` 提示哪条工作流。不改变这道写入门。
 
 ## 和一次运行对上
 
