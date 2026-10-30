@@ -1,8 +1,8 @@
 {
   "name": "feature",
   "kind": "execute",
-  "when": "references/scope.md 定为 L3 的变更：公共契约、持久化迁移、权限、状态机、跨服务契约、难以回滚。已有边界内的筛选或小功能走 change，不因为用户说「做个功能」就进这条。",
-  "principle": "阶段串行，前一步的产出就是后一步的输入。任一门未过就停，不自行绕过。",
+  "when": "references/scope.md 定为 L3 的变更：公共契约、持久化迁移、权限、状态机、跨服务契约、难以回滚。已有边界内的筛选或小功能走 change，不因为用户说「做个功能」就进这条。本模板按 Go 栈（data-service 实例）预设编码与契约门；未声明 Go 栈的项目默认走 change，或由该项目提供对应 stack 模板。",
+  "principle": "阶段串行，前一步的产出就是后一步的输入。任一门未过就停，不自行绕过。Go 栈专属门（go-style、contract_diff、go test）只对声明了 Go 栈的项目生效。",
   "artifacts_root": "specs/<feature>/",
   "stages": [
     {
@@ -74,7 +74,7 @@
     },
     {
       "id": 4,
-      "name": "编码实现",
+      "name": "编码实现（Go 栈）",
       "code": true,
       "reads": [
         "specs/<feature>/plan.md",
@@ -83,9 +83,9 @@
       ],
       "artifacts": [
         "代码改动",
-        "api/**/*_contract_test.go（碰到端点而无覆盖时补）"
+        "api/**/*_contract_test.go（仅当 stack=go，碰到端点而无覆盖时补）"
       ],
-      "gate": "复用门禁：第 2 次出现同语义逻辑必须复用已有实现；跨层依赖 = 0",
+      "gate": "（仅当 stack=go）读 go-style.md 与 reuse-gate.md；复用门禁：第 2 次出现同语义逻辑必须复用已有实现；跨层依赖 = 0",
       "on_gate_fail": "改实现，不许带着重复逻辑往下走",
       "subagents": {
         "allowed": false,
@@ -124,7 +124,7 @@
       "artifacts": [
         "specs/<feature>/quality.md"
       ],
-      "gate": "构建 + 单测 + 接口三级门（① go test ./api/... ② contract_diff.sh ③ 场景回放或如实 WAIVED）",
+      "gate": "构建 + 单测 + 接口三级门（① go test ./api/...（Go 栈）② contract_diff.sh（Go 栈）③ 场景回放或如实 WAIVED）",
       "on_gate_fail": "停在失败项；WAIVED 必须写补跑条件",
       "calls": [
         "stages/interface-test/SKILL.md"

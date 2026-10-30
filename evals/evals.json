@@ -241,7 +241,7 @@
         "wait 把 question 和 reply 写入 specs/<feature>/run.json；answer 只有和 reply 一致才把 status 改回 working",
         "code 阶段不会因为没有路径产物就自动跳过，要 done 才进入下一阶段",
         "kind 为 review 的未完成运行存在时，hook 拒绝 specs/ 以外的写入",
-        "config.yaml 没有 protected_paths 时，hook 仍按 api/、proto、pb.go、status.go 拒绝；写了空的 protected_paths 才放开这些路径",
+        "config.yaml 没有 protected_paths 时，默认不拦（技能不猜任何项目的核心文件）；data-service 实例在其 config.yaml 里声明 api/、proto、pb.go、status.go 后才启用拦截",
         "workflows/change.json 三步：decision.md、改文件、check.md。不套 feature 的九项负债",
         "会话 hook 在有未完成运行时注入 NOTICE（运行名、状态、一行摘要），不注入 next 的操作指令，也不改 run.json。LAST 和 NO_RUN 不注入。用户继续时 next 仍打印 NEED、WAIT、DO 或 OPEN",
         "编码阶段的 done 跑该仓库的测试入口：config 的 verify，否则 package.json 的 test、Makefile 的 test、pytest 或 cargo test。都没有或退出码不是 0 时停在 RED",
@@ -252,7 +252,7 @@
         "脚本替模型写 spec 或改业务代码",
         "问完问题只停在对话里，run.json 没有 reply",
         "审阅运行仍允许改产品代码",
-        "没写 protected_paths 时把 data-service 的默认门禁放开"
+        "没写 protected_paths 时仍按 api/、proto、pb.go、status.go 默认拦截（已改为默认不拦，data-service 需声明才拦）"
       ]
     }
   ]

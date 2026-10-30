@@ -1,6 +1,6 @@
 # 命令
 
-Agent 输入框里输入 `/`，选 `dw-next`、`dw-done`、`dw-wait`、`dw-start`。`install.sh` 把这四个文件写到目标仓库的 `.cursor/commands/`。`--global` 不写。
+Agent 输入框里输入 `/`，选 `dw-next`、`dw-done`、`dw-wait`、`dw-start`。`install.sh` 把这四个文件写到**当前项目**的 `.cursor/commands/`，默认安装也一样——技能副本在 `$HOME`，命令在项目里，可提交给团队共享入口。
 
 脚本只有一份，相对技能根：
 

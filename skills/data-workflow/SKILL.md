@@ -1,9 +1,9 @@
 ---
 name: data-workflow
-description: 装进任意仓库后，未完成的运行在产物目录的 specs/<feature>/run.json。本仓库自己使用时产物目录就是仓库根。装进别的仓库时，产物目录在技能来源仓库的 runs/<仓库名>/，不写进被测仓库。会话里的 NOTICE 只说明它还在，不代替当前这句话。用户要继续那条时再跑 scripts/workflow_next.py next，只做它打印的那一件。不要因为来了新需求就把它标成完成或放弃。编码步骤的 done 跑该仓库自己的测试入口，退出码不是 0 就停。没有 data-service 门禁时用 start change <feature>。做架构也走 change：形状写在 decision.md，不套九步。梳理一个词、字段或状态的含义时，先查排查卡片再读一个域文件，取值回代码，不编口径。用户这次真正要的范围小于方案时，停在能复用的现有符号或最小改动上。技术债读负债门，不另开结构。data-service 上还绑定写入门禁和原有阶段链。用户说 @data-workflow、开始开发、架构设计、梳理业务、这个词什么意思、需求分析、影响面、技术方案、编码实现、改动审核、审一下、质量检查、接口测试、排查、状态含义、提交、提 MR、画架构图时读取本文件，再只读点名的那一个阶段文件。不用于：纯 git 操作、解决合并冲突。
+description: 未完成的运行在 specs/<feature>/run.json，产物目录就是当前工作仓库根——在哪 install 就写哪，不回到技能源仓库。会话里的 NOTICE 只说明它还在，不代替当前这句话。用户要继续那条时再跑 scripts/workflow_next.py next，只做它打印的那一件。不要因为来了新需求就把它标成完成或放弃。编码步骤的 done 跑该仓库自己的测试入口，退出码不是 0 就停。任意仓库的一次改动或定架构走 start change <feature>：形状写在 decision.md，不套九步。梳理一个词、字段或状态的含义时，先查排查卡片再读一个域文件，取值回代码，不编口径。用户这次真正要的范围小于方案时，停在能复用的现有符号或最小改动上。技术债读负债门，不另开结构。写入门禁默认无受保护路径；data-service 实例通过 config.yaml 注入其门禁路径与 Go 栈。用户说 @data-workflow、开始开发、架构设计、梳理业务、这个词什么意思、需求分析、影响面、技术方案、编码实现、改动审核、审一下、质量检查、接口测试、排查、状态含义、提交、提 MR、画架构图时读取本文件，再只读点名的那一个阶段文件。不用于：纯 git 操作、解决合并冲突。
 ---
 
-# data-service 开发工作台
+# 开发工作台（data-workflow）
 
 本文件只做选型。具体步骤在点名的那一个 `stages/` 文件里。业务事实运行时从知识层读。安装后工具目录里只有这一个 `data-workflow`。装进别的仓库后，那个仓库里的代理读这份副本。
 
@@ -17,11 +17,11 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"
 
 ## 绑定
 
-Cursor 项目安装后，没有 `specs/passes.log` 里覆盖该路径的记录，hook 拒绝写入。路径表只维护在 `references/edit-gate.md`。`protected_paths` 和 `waiver_globs` 都没写时，默认仍是 `api/`、proto、pb.go、`internal/biz/status.go` 和其它 `*.go`。有未完成运行时，会话钩子注入一条 NOTICE：运行名、状态、一行摘要。NOTICE 不代替当前需求。用户要继续那条时，再跑 `next`，只做它打印的那一件。这次注入依赖 Cursor 加载了 `.cursor/hooks.json` 里的 `sessionStart`。新会话没有看到 NOTICE 时，先确认这份钩子文件被加载。
+Cursor 项目安装后，没有 `specs/passes.log` 里覆盖该路径的记录，hook 拒绝写入。路径表只维护在 `references/edit-gate.md`。`protected_paths` 和 `waiver_globs` 都没写时，**默认没有受保护路径**（技能不猜任何项目的核心文件）；data-service 实例通过它的 `config.yaml` 注入门禁路径。有未完成运行时，会话钩子注入一条 NOTICE：运行名、状态、一行摘要。NOTICE 不代替当前需求。用户要继续那条时，再跑 `next`，只做它打印的那一件。这次注入依赖 Cursor 加载了 `.cursor/hooks.json` 里的 `sessionStart`。新会话没有看到 NOTICE 时，先确认这份钩子文件被加载。
 
 ## 继续一次运行
 
-未完成的运行在产物目录的 `specs/<feature>/run.json`。本仓库自己使用时，产物目录就是仓库根。装进别的仓库时，产物目录是技能来源仓库的 `runs/<仓库名>/`，不在被测仓库里新建 `specs/` 或 `.scratch/`。会话注入是 NOTICE 时，先做当前这句话。用户要继续那条，或那条和当前需求是同一件事时，再跑 `next`。没有注入，或输出是 `LAST` / `NO_RUN` 时，回答当前的问题。`next` 打出的 NEED、WAIT、DO、OPEN 只约束正在继续的那条运行。
+未完成的运行在 `specs/<feature>/run.json`。产物目录就是当前工作仓库根——在哪个仓库 install、在哪干活，记录就落在哪里，不回到技能源仓库，也不写进别人的工作树。`install.sh` 已把 `specs/` 写进该仓库的 `.gitignore`。会话注入是 NOTICE 时，先做当前这句话。用户要继续那条，或那条和当前需求是同一件事时，再跑 `next`。没有注入，或输出是 `LAST` / `NO_RUN` 时，回答当前的问题。`next` 打出的 NEED、WAIT、DO、OPEN 只约束正在继续的那条运行。
 
 | 看到 | 做 |
 |---|---|
@@ -32,23 +32,23 @@ Cursor 项目安装后，没有 `specs/passes.log` 里覆盖该路径的记录�
 | `DONE` | 这次运行结束。证实或推翻了一条口径时，按 capture.md 写一张卡 |
 | `LAST` | 这次没有未完成步骤。回答当前的问题 |
 
-`start feature|bugfix|hotfix|review-only|change <feature>` 新开一次。没有 data-service 的九项负债时用 `change`。改动落在 `api/`、proto、pb.go、`internal/biz/status.go`，或涉及状态机、租户权限、回滚时，不用 `change`，用 `feature` 或 `hotfix`。
+`start feature|bugfix|hotfix|review-only|change <feature>` 新开一次。任意仓库的一次改动或定架构用 `change`（形状写进 `decision.md`）。data-service（Go 栈）实例的 L3 变更——落在其 `api/`、proto、pb.go、`internal/biz/status.go`，或涉及状态机、租户权限、回滚——不用 `change`，用 `feature` 或 `hotfix`。
 
-这轮不做了就 `abandon <feature>`。状态变成 `abandoned` 之后，钩子不再注入。不按天数、也不按 HEAD 变化自动放弃。停在 `working` 的运行下次仍会注入，直到 `abandon`。编码步骤的退出码是完成信号的下界。状态和 proto 的语义是否正确，看 `plan pass`、契约 diff 和审核。
+这轮不做了就 `abandon <feature>`。状态变成 `abandoned` 之后，钩子不再注入。不按天数、也不按 HEAD 变化自动放弃。停在 `working` 的运行下次仍会注入，直到 `abandon`。编码步骤的退出码是完成信号的下界。状态和契约（data-service 实例是 proto）的语义是否正确，看 `plan pass`、契约 diff 和审核。
 
 ## 选工作流
 
 用户这句话已经点明选型表某一行：直接读该行的阶段文件。用户只说开始干活：先读 `references/scope.md`，按 L1 / L2 / L3 定这一次的范围，再选工作流。不先弹出九步菜单。
 
-进入选型表里 data-service 的一行之前，先读 `references/workflows.md`，再读那一个阶段文件。
+进入选型表里 feature / bugfix / hotfix（data-service Go 栈实例）的一行之前，先读 `references/workflows.md`，再读那一个阶段文件。
 
 | 场景 | 工作流 |
 |---|---|
-| 新能力 / 扩展 / 新字段 / 新端点 | `workflows/feature.json` |
-| 已知错误行为要修 | `workflows/bugfix.json` |
-| 线上正在出事 | `workflows/hotfix.json` |
+| data-service（Go 栈）新能力 / 扩展 / 新字段 / 新端点 | `workflows/feature.json` |
+| data-service 已知错误行为要修 | `workflows/bugfix.json` |
+| data-service 线上正在出事 | `workflows/hotfix.json` |
 | 只审不改 | `workflows/review-only.json` |
-| 没有 data-service 门禁的一次改动，或给任意仓库定架构 | `workflows/change.json` |
+| 任意仓库的一次改动，或给任意仓库定架构 | `workflows/change.json` |
 
 新业务场景是新的工作流模板，不是再装一个技能。
 

@@ -2,7 +2,7 @@
 
 这个仓库做两件事。一是拦住代理写错文件、以及没跑检查就说做完。二是让它知道一个词、一个字段、一个状态在这个业务里是什么意思。意思不写进技能，运行时从知识层读。
 
-data-service（Go / Kratos）的阶段链是高风险变更上的模板，不是所有改动的默认路径。安装是把 `skills/data-workflow/` 复制进工具目录。副本自包含，不软链回本仓库。
+feature 九步链（data-service Go / Kratos 实例）是高风险变更上的模板，不是所有改动的默认路径；任意仓库的一次改动或定架构默认走 change 三步。安装默认把技能放进 `$HOME`，项目里只留 4 个 `/` 命令——技能副本自包含，不软链回本仓库。要 Cursor 里的强制写入门禁，显式 `--project --with-hooks`。
 
 ## 你在什么状态，读什么
 
@@ -22,7 +22,7 @@ data-service（Go / Kratos）的阶段链是高风险变更上的模板，不是
 
 动手前读 `skills/data-workflow/references/scope.md`。先写用户真正要解决的问题和怎样算满足，再决定改多宽。L1 走 `change`。契约、持久化、权限、状态、回滚即使改动很小也升到 `feature` 或 `hotfix`。与这次无关的债不进这次 diff。
 
-任意仓库定架构也走 `change`。形状写在 `specs/<feature>/decision.md`：现有边界、这次不新增什么、下一刀落在哪。data-service 的九步是高风险模板，不是这套架构本身。别的仓库用自己的 `protected_paths`；两个保护键都写成空，才关掉默认的 Go 路径。
+任意仓库定架构也走 `change`。形状写在 `specs/<feature>/decision.md`：现有边界、这次不新增什么、下一刀落在哪。feature 九步是高风险模板（data-service Go 栈实例），不是这套架构本身。项目用自己的 `protected_paths` / `waiver_globs`；两个键都不出现时默认没有受保护路径（不拦），data-service 实例在其 config.yaml 里注入门禁路径。
 
 ## 分层
 
@@ -37,13 +37,13 @@ data-service（Go / Kratos）的阶段链是高风险变更上的模板，不是
 | L2 知识 | `$KNOW/**`、`$TEMPLATES/**` | 业务事实 | 一次一个域文件 |
 | L3 权威 | 代码、生成物、聚焦测试 | 取值 | 回这里核对 |
 
-仓库内 `docs/`、`docs/support/` 是降级区：只可当搜索线索。data-service 里 MQTT 推送链路和 Episode 终态以代码为准。
+仓库内 `docs/`、`docs/support/` 是降级区：只可当搜索线索。data-service 实例里 MQTT 推送链路和 Episode 终态以代码为准。
 
 ## 主链
 
 ![data-workflow 完整流程](assets/flow.png)
 
-`workflows/feature.json` 串行。每步一个产物。六道门的通过条件、以及未过时停在哪里，在 [`references/workflows.md`](skills/data-workflow/references/workflows.md)。
+`workflows/feature.json` 串行（data-service Go 栈实例的九步）。每步一个产物。六道门的通过条件、以及未过时停在哪里，在 [`references/workflows.md`](skills/data-workflow/references/workflows.md)。
 
 | 步 | 产出 | 门 |
 |---|---|---|
@@ -57,7 +57,7 @@ data-service（Go / Kratos）的阶段链是高风险变更上的模板，不是
 | 接口 | `specs/<feature>/interface-test.md` | 接口 |
 | 提交 | `specs/<feature>/change-note.md` | 文档审计 |
 
-`bugfix` / `hotfix` 的第一步是排查。`oncall` 和画图不插入这条链。没有 data-service 门禁时用 `workflows/change.json`，三步：`decision.md`、改文件、`check.md`。
+`bugfix` / `hotfix` 的第一步是排查（data-service Go 栈实例）。`oncall` 和画图不插入这条链。任意仓库的一次改动或定架构用 `workflows/change.json`，三步：`decision.md`、改文件、`check.md`。
 
 工件落点在 [`references/artifact-tree.md`](skills/data-workflow/references/artifact-tree.md)。写入放行在 [`references/edit-gate.md`](skills/data-workflow/references/edit-gate.md)。什么时候派子代理在 [`references/subagent-protocol.md`](skills/data-workflow/references/subagent-protocol.md)。
 
@@ -94,9 +94,12 @@ data-workflow/
 
 ```bash
 cd <目标仓库根>
-bash ~/skills/data-workflow/scripts/install.sh
+bash ~/skills/data-workflow/scripts/install.sh                      # 默认：技能进 $HOME，项目只加 4 个命令
+bash ~/skills/data-workflow/scripts/install.sh --project --with-hooks  # 副本进仓库 + Cursor 强制门禁
 ```
 
-三种模式、卸载和 Qoder 插件通道在 [`docs/install.md`](docs/install.md)。脚本清单在 [`docs/scripts.md`](docs/scripts.md)。
+技能能力在两种模式里都是完整的，差别只在门禁。为什么不能「副本被忽略、却提交 hooks.json」，以及三种落点各自往仓库里写什么，在 [`docs/install.md`](docs/install.md)。
+
+脚本清单在 [`docs/scripts.md`](docs/scripts.md)。
 
 评测在 [`evals/evals.json`](evals/evals.json)。每条有 `pass` / `fail`，对应一个已经踩过的缺陷。

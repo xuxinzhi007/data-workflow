@@ -1,0 +1,31 @@
+exit 0
+cmd python3 skills/data-workflow/scripts/check_runner.py
+PASS none stays RED
+PASS npm test advances
+PASS make test advances
+PASS go.mod only stays RED
+PASS explicit verify stops
+PASS pnpm test
+PASS yarn test
+PASS pytest
+PASS cargo test
+PASS reply is recorded
+PASS no run injects nothing
+PASS finished run injects nothing
+PASS abandon stops injection
+PASS open run injects a notice and next still prints the step
+PASS waiting notice does not resume or clear the run
+PASS foreign install copies the skill
+PASS copy stays in the foreign repo and keeps the other skill
+PASS foreign hooks point at the copy
+PASS foreign knowledge path stays empty
+PASS foreign repo defaults to no write gate until protected_paths declared
+PASS foreign repo write gate activates on declared protected_paths
+PASS foreign code step uses the copy and npm test
+PASS foreign session hook injects a notice and leaves the run
+PASS foreign copy still starts the feature chain
+PASS foreign review run blocks product writes
+PASS foreign install adds slash commands
+PASS reinstall keeps foreign config, the other skill, and other commands
+PASS unlink removes only the dw slash commands
+OK

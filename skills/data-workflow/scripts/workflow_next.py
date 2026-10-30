@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 """下一步只做一件事：读哪个阶段文件，或者停下来等一句可以原样粘贴的回复。
 
-不写 spec，不改业务代码，不派子代理。运行记录在产物目录的 specs/<feature>/run.json。
-装进别的仓库时，产物目录在技能来源仓库的 runs/<仓库名>/。
+不写 spec，不改业务代码，不派子代理。运行记录在 specs/<feature>/run.json。
+产物目录一律是当前工作仓的仓库根：谁 install，记录就跟着谁，不回到技能源仓库。
 """
 
 import glob
@@ -473,6 +473,13 @@ def cmd_start(root, workflow_name, feature):
     if existing and existing.get("status") not in ("done", "abandoned"):
         print("ALREADY %s %s" % (feature, existing.get("status")))
         return show(root, existing)
+    if workflow_name in ("feature", "bugfix", "hotfix"):
+        stack = config_value(root, "stack")
+        if stack != "go":
+            print(
+                "STACK 项目未声明 stack=go（当前：%s）。feature/bugfix/hotfix 是 Go 栈模板，其 Go 门（go-style、contract_diff、go test ./api/...）不适用。任意仓库的 L3 或定架构建议 start change；要用 Go 栈链请先在该项目 config.yaml 写 stack: go。"
+                % (stack or "未配置")
+            )
     first = workflow["stages"][0]
     run = {
         "workflow": workflow_name,

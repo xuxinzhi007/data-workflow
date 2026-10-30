@@ -48,7 +48,7 @@ $REPO/specs/<feature>/
 
 | 产出 | 落点 | 理由 |
 |---|---|---|
-| `specs/<feature>/**`（feature / bugfix / hotfix，以及审自己的分支） | 本仓库自己使用时：仓库根 `specs/`。装进别的仓库时：技能来源仓库的 `runs/<仓库名>/specs/` | 不把运行记录写进被测仓库 |
+| `specs/<feature>/**`（feature / bugfix / hotfix，以及审自己的分支） | 当前工作仓库根 `specs/`。install 到哪个仓库就写哪个，不回技能源仓库 | 记录跟着这一仓开发走；install.sh 已把它写进 `.gitignore` |
 | review-only 审别人的工作树 | `$CARDS/reviews/<feature>/` | 不改对方工作树。`$CARDS` 为空就问用户要一个该工作树之外的目录 |
 | 排查卡片 | `$CARDS/`（个人知识层） | 结论跨需求复用，按症状检索；**不进仓库** |
 | 已稳定的领域知识 | `$KNOW/<域>/` | 归档走 `references/feature-archive.md` |

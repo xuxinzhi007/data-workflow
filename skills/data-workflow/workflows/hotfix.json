@@ -1,7 +1,7 @@
 {
   "name": "hotfix",
   "kind": "execute",
-  "when": "线上正在出事，需要最短路径止血。用户说「线上炸了」「马上回滚」「先止血」时走这条。",
+  "when": "data-service（Go 栈）实例线上正在出事，需要最短路径止血。用户说「线上炸了」「马上回滚」「先止血」时走这条。",
   "principle": "止血优先，但**回滚预案与契约 diff 不能省**——这两件事恰好是事后最贵的。允许跳过技术方案与完整审核，跳过的每一项都要在 change-note 记账，事后补。",
   "artifacts_root": "specs/<feature>/",
   "stages": [
@@ -57,7 +57,7 @@
         "specs/<feature>/quality.md",
         "specs/<feature>/interface-test.md"
       ],
-      "gate": "构建通过 + 相关包单测通过 + 契约 ①（go test ./api/...）+ 契约 ②（contract_diff.sh）；③ 场景回放跑不了就如实 WAIVED",
+      "gate": "（仅当 stack=go）构建通过 + 相关包单测通过 + 契约 ①（go test ./api/...）+ 契约 ②（contract_diff.sh）；③ 场景回放跑不了就如实 WAIVED",
       "calls": [
         "stages/interface-test/SKILL.md"
       ],

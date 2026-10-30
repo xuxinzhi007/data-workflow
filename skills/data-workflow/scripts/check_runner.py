@@ -419,7 +419,7 @@ def case_foreign():
         with open(os.path.join(root, "package-lock.json"), "w", encoding="utf-8") as fh:
             fh.write("{}\n")
         installed = subprocess.run(
-            ["bash", INSTALL, root],
+            ["bash", INSTALL, "--project", "--with-hooks", root],
             cwd=root,
             capture_output=True,
             text=True,
@@ -468,10 +468,18 @@ def case_foreign():
         )
         gate = os.path.join(copy, "hooks", "gate-edit")
         expect(
-            gate_permission(gate, root, "api/foo.proto") == "deny"
-            and gate_permission(gate, root, "internal/x.go") == "deny"
+            gate_permission(gate, root, "api/foo.proto") == "allow"
+            and gate_permission(gate, root, "internal/x.go") == "allow"
             and gate_permission(gate, root, "README.md") == "allow",
-            "foreign repo keeps the default write gate",
+            "foreign repo defaults to no write gate until protected_paths declared",
+            "",
+        )
+        with open(config_path, "a", encoding="utf-8") as fh:
+            fh.write('protected_paths: "*.proto"\n')
+        expect(
+            gate_permission(gate, root, "api/foo.proto") == "deny"
+            and gate_permission(gate, root, "README.md") == "allow",
+            "foreign repo write gate activates on declared protected_paths",
             "",
         )
         runner = os.path.join(copy, "scripts", "workflow_next.py")
@@ -589,6 +597,111 @@ def case_foreign():
         shutil.rmtree(root, ignore_errors=True)
 
 
+def case_default_no_hooks():
+    """默认安装（不加 --with-hooks）不写 hooks.json，也不把副本写进项目。
+
+    原因：hooks.json 写的是相对路径，指向项目内副本。副本没提交时
+    hook 文件缺失，而 failClosed 会让每次写入被拒。宁可没有门禁，
+    也不要给团队一个坏门。
+    """
+    root = tempfile.mkdtemp(prefix="dw-defaulthooks-")
+    home = tempfile.mkdtemp(prefix="dw-home-")
+    try:
+        git_init(root)
+        os.makedirs(os.path.join(root, ".cursor"))
+        os.makedirs(os.path.join(home, ".cursor"))
+        env = clean_env()
+        env["HOME"] = home
+        proc = subprocess.run(
+            ["bash", INSTALL],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        expect(
+            proc.returncode == 0
+            and not os.path.exists(os.path.join(root, ".cursor", "hooks.json")),
+            "default install writes no hooks.json",
+            proc.stdout + proc.stderr,
+        )
+        expect(
+            not os.path.isdir(
+                os.path.join(root, ".cursor", "skills", "data-workflow")
+            ),
+            "default install leaves no skill copy in the project",
+            proc.stdout + proc.stderr,
+        )
+        expect(
+            os.path.isdir(
+                os.path.join(home, ".cursor", "skills", "data-workflow", "stages")
+            ),
+            "default install puts the full skill in HOME",
+            proc.stdout + proc.stderr,
+        )
+        expect(
+            os.path.isfile(
+                os.path.join(root, ".cursor", "commands", "dw-next.md")
+            ),
+            "default install still writes slash commands into the project",
+            proc.stdout + proc.stderr,
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(home, ignore_errors=True)
+
+
+def case_record_follows_install():
+    """装进哪个仓库，运行记录就写在那个仓库。
+
+    不回到技能源仓库的 runs/。这是用户要的：记录跟着 install 的地方走。
+    """
+    root = tempfile.mkdtemp(prefix="dw-record-")
+    home = tempfile.mkdtemp(prefix="dw-rechome-")
+    try:
+        git_init(root)
+        os.makedirs(os.path.join(root, ".cursor"))
+        os.makedirs(os.path.join(home, ".cursor"))
+        env = clean_env()
+        env["HOME"] = home
+        subprocess.run(
+            ["bash", INSTALL, "--project"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        runner = os.path.join(root, ".cursor", "skills", "data-workflow", "scripts", "workflow_next.py")
+        # 关键：不传 DATA_WORKFLOW_STORE，走默认推断。
+        proc = subprocess.run(
+            [runner, "start", "change", FEATURE, "--repo", root],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        expect(
+            os.path.isfile(os.path.join(root, "specs", FEATURE, "run.json")),
+            "record lands in the installed repo",
+            proc.stdout + proc.stderr,
+        )
+        expect(
+            not os.path.isdir(os.path.join(REPO_ROOT, "runs")),
+            "record does not leak back into the skill source repo",
+            lambda: "",
+        )
+        ignore = os.path.join(root, ".gitignore")
+        text = open(ignore, encoding="utf-8").read() if os.path.isfile(ignore) else ""
+        expect(
+            "specs/" in text,
+            "install keeps specs/ out of git status",
+            text,
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(home, ignore_errors=True)
+
+
 def main():
     case_none()
     case_npm()
@@ -602,6 +715,8 @@ def main():
     case_answer()
     case_hook_quiet()
     case_foreign()
+    case_default_no_hooks()
+    case_record_follows_install()
     print("OK")
 
 

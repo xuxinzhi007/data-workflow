@@ -1,6 +1,6 @@
 # 工作流与门禁
 
-`workflows/*.json` 是阶段顺序。本文件是 data-service 主链上、进具体阶段之前要知道的规则。`change` 不读这份。
+`workflows/*.json` 是阶段顺序。本文件是 data-service（Go 栈）主链上、进具体阶段之前要知道的规则。`change` 不读这份。
 
 ## 主链
 

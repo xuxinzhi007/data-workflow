@@ -6,7 +6,7 @@
 - 梳理一个词、字段或状态：读 `skills/data-workflow/stages/oncall/references/routing.md`。关键结论标已证实、推断、待确认或存在冲突。不编口径。
 - 动手前读 `skills/data-workflow/references/scope.md`。L1 走 `change`。无关的债不进这次 diff。受保护路径不能靠口头说「小改动」绕过。
 - 定架构走 `workflows/change.json`。形状写在 `decision.md`，不套 feature 九步。
-- 未做完的运行在产物目录的 `specs/<feature>/run.json`。本仓库自己使用时，产物目录就是仓库根。装进别的仓库时，写到这个仓库的 `runs/<仓库名>/`，不写进被测仓库。会话里的 NOTICE 只说明它还在。用户要继续那条时，`workflow_next.py next` 打出 NEED、WAIT、DO、OPEN 才只做那一件。新需求先做新需求，不把旧运行标成完成或放弃。
+- 未做完的运行在产物目录的 `specs/<feature>/run.json`。产物目录一律是**当前工作仓库的仓库根**——在哪个仓库 install、在哪干活，记录就落在哪里，不回到技能源仓库。`install.sh` 会把 `specs/` 写进该仓库的 `.gitignore`。会话里的 NOTICE 只说明它还在。用户要继续那条时，`workflow_next.py next` 打出 NEED、WAIT、DO、OPEN 才只做那一件。新需求先做新需求，不把旧运行标成完成或放弃。
 
 ## Agent skills
 

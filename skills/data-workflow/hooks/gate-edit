@@ -58,17 +58,16 @@ def rel_path(root, raw):
 
 
 def protected(rel):
-    if rel.startswith("api/") or rel == "api":
-        return True
-    if rel.endswith(".proto") or rel.endswith(".pb.go"):
-        return True
-    if rel == "internal/biz/status.go" or rel.endswith("/biz/status.go"):
-        return True
+    # 彻底解耦：默认不再硬编码 data-service / Go 路径。
+    # 受保护路径由该项目 config.yaml 的 protected_paths 声明。
+    # data-service 实例在其 config.yaml 里注入 api/、*.proto、*.pb.go、status.go 等。
+    # 未配置时默认不拦，交由 install 时 config.example.yaml 引导填写。
     return False
 
 
 def needs_waiver(rel):
-    return rel.endswith(".go")
+    # 同上：默认不按 *.go 要求 waiver。技术栈路径由 config.yaml 的 waiver_globs 声明。
+    return False
 
 
 def read_yaml_key(path, key):

@@ -2,6 +2,8 @@
 
 回答一个问题：**接口层面的改动，有没有可执行的证据证明它没破坏调用方。**
 
+> Go 栈阶段（data-service 实例）：本文件的 Go 门（`go test ./api/...`、`contract_diff.sh`）仅当项目声明 `stack: go` 时适用。未声明 Go 栈的项目走通用质量门，用该项目声明的测试与契约入口。
+
 判据与命令的完整清单在 [`references/contract-gates.md`](references/contract-gates.md)。本文件只给顺序与裁决规则。
 
 所有命令在 `$REPO` 下跑（`eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"`）。**每条门的结论必须贴命令与输出摘录**，不接受「测过了」。

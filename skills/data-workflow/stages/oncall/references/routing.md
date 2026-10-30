@@ -28,6 +28,22 @@ grep -rl "<症状词>|<状态值>|<RPC名>|<表名>" $CARDS/
 
 知识库按业务域拆分，先只读一个域。读错域比不读更糟。证据指向另一个域、出现 `CONFLICT`、或这条规则写明跨域时，再读那一个，并写明原因。不要把整个知识库读进来。
 
+先按**通用**问题类型，从 `$KNOW` 结构发现该项目对应的域文件；data-service 的域表见下方「示例」。
+
+| 通用问题类型 | 去哪发现 |
+|---|---|
+| 状态 / 枚举 / 迁移 / 终态 / 展示态 | `$KNOW` 里该项目声明状态/枚举的文件（data-service 是 `状态机.md`） |
+| 线上症状、卡住、看不到、进度不对 | 该项目的线上排查文件（data-service 是 `线上排查.md`） |
+| 项目全貌、分层与常用命令 | 该项目的速查文件（data-service 是 `data-service项目速查.md`） |
+| 构建、环境、本地启动 | 该项目的运行/构建文件（data-service 是 `运行与构建.md`） |
+| 具体业务域（建单、审批、分发、质检…） | 从 `config.yaml` 的 `domains` 键，或 `$KNOW` 下的域目录 / 索引发现，一次只读一个域 |
+
+> `$KNOW` 未配置，或该项目没写成文的域结构时 → 只用代码与仓库内 `docs/`（降级区），并在结论里声明知识源缺失，不猜域表。
+
+### data-service 实例的域表（示例）
+
+技能默认不再内置 data-service 业务域；下表是 data-service 实例通过其 `$KNOW` 呈现的取值，装进别的项目时替换为该项目自己的 `$KNOW` 结构。
+
 | 问题类型 | 加载这一个 |
 |---|---|
 | 状态数字 / 名称 / 迁移 / 终态 / 展示态 | `knowledge/状态机.md` |
@@ -54,6 +70,10 @@ grep -rl "<症状词>|<状态值>|<RPC名>|<表名>" $CARDS/
 信任级别与例外见 [knowledge-sources.md](./knowledge-sources.md)。**知识库文件只给线索和口径，取值一律回 L3 代码核对**——尤其是状态数字、字段名、SQL 条件。
 
 ## step 2 快速定位规则（纯流程，不随 commit 失效）
+
+**通用原则**：定位入口取决于该项目的技术栈与成文工程约束。data-service（Go 栈）用下方的定位规则；装进别的项目时，按该项目 `project-index` / 工程约束声明的结构定位（`internal/{service,biz,data}` 分层是 data-service 的，不套用）。
+
+### data-service（Go 栈）实例的定位规则
 
 - 已知 URL：先在 `api/**/*.proto` 搜 HTTP path，再找同名 Service 方法。
 - 已知 RPC：从 `internal/service` 同名方法进入，向 Biz 和 Data 追踪。

@@ -1,8 +1,7 @@
 """运行产物放在哪。
 
-本仓库自己使用时，写仓库根的 specs/。
-装进别的仓库时，写技能来源仓库的 runs/<仓库名>/，不写进被测仓库。
-DATA_WORKFLOW_STORE 或配置 artifacts_root 优先。
+一律写当前工作仓库自己的 specs/：谁 install 了技能，记录就跟着谁，
+不回到技能源仓库。DATA_WORKFLOW_STORE 或配置 artifacts_root 优先。
 """
 
 import os
@@ -60,17 +59,31 @@ def configured_store(repo):
 
 
 def store_root(repo, skill_root):
+    """运行产物写到哪。
+
+    一律写当前工作仓库自己的 specs/。谁 install 了技能，记录就跟着谁，
+    不回到技能源仓库。source repo 的 runs/ 不再使用。
+    artifacts_root / DATA_WORKFLOW_STORE 仍然优先。
+    """
     forced = configured_store(repo)
     if forced:
         return forced
     repo_real = os.path.realpath(repo)
+    os.makedirs(os.path.join(repo_real, "specs"), exist_ok=True)
+    return repo_real
+
+
+def _legacy_store_root(repo, skill_root):
+    """旧行为：写技能源仓库的 runs/<仓库名>/。保留未用，便于对照与回滚。"""
+    repo_real = os.path.realpath(repo)
     skill_real = os.path.realpath(skill_root)
     own = git_root(skill_real)
-    if own and own == repo_real:
-        return repo_real
     origin = os.path.join(skill_real, "origin")
+    installed_copy = os.path.isfile(origin)
+    if own and own == repo_real and not installed_copy:
+        return repo_real
     base = ""
-    if os.path.isfile(origin):
+    if installed_copy:
         try:
             with open(origin, encoding="utf-8") as fh:
                 base = fh.read().strip()
