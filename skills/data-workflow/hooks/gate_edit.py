@@ -164,6 +164,9 @@ def policy(root):
     return split_patterns(protected_val), split_patterns(waiver_val)
 
 
+STRICT_HINT = "gate_strict 开着时只认 approve 写的放行行（末尾带 approved）。"
+
+
 def strict(root):
     for key in ("gate_strict",):
         for path in (
@@ -269,9 +272,9 @@ def read_passes(store):
                 continue
             kind = parts[0]
             if kind == "design":
-                rows.append(("design", parts[1], parts[2]))
+                rows.append(("design", parts[1], parts[2], "approved" in line))
             elif kind == "waiver":
-                rows.append(("waiver", parts[1], " ".join(parts[2:])))
+                rows.append(("waiver", parts[1], " ".join(parts[2:]), "approved" in line))
     return rows
 
 
@@ -320,8 +323,11 @@ def decision(root, rel):
         )
     execute_features = {feature for feature, kind in runs if kind == "execute"}
     rows = read_passes(store)
+    strict_mode = strict(root)
     if is_protected(root, rel):
-        for kind, feature, prefix in rows:
+        for kind, feature, prefix, approved in rows:
+            if strict_mode and not approved:
+                continue
             if execute_features and feature not in execute_features:
                 continue
             if kind == "design" and covers(prefix, rel) and design_ok(store, feature):
@@ -329,16 +335,18 @@ def decision(root, rel):
         if execute_features:
             return (
                 "deny",
-                "拒绝写入 %s。design 行的 feature 要是当前运行 %s，并且 specs/<feature>/plan.md 与 gate 首行 plan pass 都在。"
-                % (rel, "、".join(sorted(execute_features))),
+                "拒绝写入 %s。design 行的 feature 要是当前运行 %s，并且 specs/<feature>/plan.md 与 gate 首行 plan pass 都在。%s"
+                % (rel, "、".join(sorted(execute_features)), STRICT_HINT),
             )
         return (
             "deny",
-            "拒绝写入 %s。先完成 specs/<feature>/plan.md，把 specs/<feature>/gate 首行写成 plan pass，再往 specs/passes.log 追加：design <feature> <覆盖该文件的前缀>"
-            % rel,
+            "拒绝写入 %s。先完成 specs/<feature>/plan.md，把 specs/<feature>/gate 首行写成 plan pass，再运行 workflow_next.py approve <feature> design <前缀>。%s"
+            % (rel, STRICT_HINT),
         )
     if is_waiver(root, rel):
-        for kind, a, b in rows:
+        for kind, a, b, approved in rows:
+            if strict_mode and not approved:
+                continue
             if kind == "waiver" and covers(a, rel):
                 return "allow", ""
             if execute_features and a not in execute_features:
@@ -347,8 +355,8 @@ def decision(root, rel):
                 return "allow", ""
         return (
             "deny",
-            "拒绝写入 %s。内部改动往 specs/passes.log 追加一行：waiver <前缀> <原因>。已有方案门时也可以追加 design <feature> <前缀>。"
-            % rel,
+            "拒绝写入 %s。内部改动运行 workflow_next.py approve <feature> waiver <前缀> <原因>（要已有一次拍板回话）。%s"
+            % (rel, STRICT_HINT),
         )
     return "allow", ""
 

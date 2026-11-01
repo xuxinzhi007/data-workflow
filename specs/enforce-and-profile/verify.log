@@ -1,0 +1,59 @@
+exit 0
+cmd bash scripts/verify.sh
+PASS none stays RED
+PASS npm test advances
+PASS make test advances
+PASS go.mod only stays RED
+PASS explicit verify stops
+PASS pnpm test
+PASS yarn test
+PASS pytest
+PASS cargo test
+PASS reply is recorded
+PASS no run injects nothing
+PASS finished run injects nothing
+PASS abandon stops injection
+PASS open run injects a notice and next still prints the step
+PASS waiting notice does not resume or clear the run
+PASS reading protected paths is allowed
+PASS writing protected paths is denied
+PASS unknown tool name fails open instead of silently blocking
+PASS unprotected paths stay writable
+PASS bad input fails open unless gate_strict is on
+PASS missing interpreter allows instead of blocking
+PASS runner prints readable utf-8
+PASS hotfix asks for triage.md, not a phantom stage file
+PASS review-only asks for review/verdict.md
+PASS start stores the raw request verbatim
+PASS missing 未知 stops at the gate
+PASS complete intake advances and echoes the raw request
+PASS paths.sh exposes the configured domains
+PASS paths.sh exposes the repo domain docs
+PASS drift grades the repo domain doc
+PASS approve refuses without an answered question
+PASS hand-written pass line is ignored under gate_strict
+PASS approve after a real reply unlocks the write
+PASS gate_check blocks a clean working tree
+PASS gate_check passes when the tree changed
+PASS foreign install copies the skill
+PASS copy stays in the foreign repo and keeps the other skill
+PASS foreign hooks point at the copy
+PASS hooks do not fail closed (strictness is gate_strict's job)
+PASS foreign knowledge path stays empty
+PASS foreign repo defaults to no write gate until protected_paths declared
+PASS foreign repo write gate activates on declared protected_paths
+PASS foreign code step uses the copy and npm test
+PASS foreign session hook injects a notice and leaves the run
+PASS foreign copy still starts the feature chain
+PASS foreign review run blocks product writes
+PASS foreign install adds slash commands
+PASS reinstall keeps foreign config, the other skill, and other commands
+PASS unlink removes only the dw slash commands
+PASS default install writes no hooks.json
+PASS default install leaves no skill copy in the project
+PASS default install puts the full skill in HOME
+PASS default install still writes slash commands into the project
+PASS record lands in the installed repo
+PASS record does not leak back into the skill source repo
+PASS install keeps specs/ out of git status
+OK

@@ -41,6 +41,6 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"   # → $KNOW / $TEMPLATES / $TEC
 方案门过了之后再写两份给编辑 hook 看的文件，格式见 `../../references/edit-gate.md`：
 
 - `$REPO/specs/<feature>/gate`，第一条非空行只有 `plan pass`
-- `$REPO/specs/passes.log` 追加 `design <feature> <前缀>`，前缀覆盖接下来要改的 `api/`、proto、`internal/biz/status.go` 和相关 Go 文件
+- `$REPO/specs/passes.log`：用 `workflow_next.py approve <feature> design <前缀>` 写，前缀覆盖接下来要改的 `api/`、proto、`internal/biz/status.go` 和相关 Go 文件。**不要手写那一行**：手写的行在 `gate_strict` 下不作数
 
 门没过就不要写 `plan pass`。`plan.md` 里的每一项技术动作都要对应 `spec.md` 里的一条明确需求。对应不上的删掉，或在 `spec.md` 里写明为什么现在就要。写不上的，不要写 `plan pass`。这次发现的存量债记下来，不在这份方案里顺手偿还。

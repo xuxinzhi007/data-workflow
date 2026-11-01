@@ -996,6 +996,79 @@ def case_domain_docs():
         shutil.rmtree(root, ignore_errors=True)
 
 
+def case_approve():
+    """放行行只由 approve 写；手写行在 gate_strict 下不作数。"""
+    root = tempfile.mkdtemp(prefix="dw-approve-")
+    try:
+        git_init(root)
+        os.makedirs(os.path.join(root, "api"))
+        write_config(root, 'protected_paths: "api/**"\ngate_strict: "true"\n')
+        run(root, "start", "change", FEATURE)
+        folder = os.path.join(root, "specs", FEATURE)
+        with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
+            fh.write("- 原话（一字不改）：探测\n- 本质：改一处\n- 未知：无\n")
+        blocked = run(root, "approve", FEATURE, "design", "api")
+        expect(
+            "NEED_ANSWER" in blocked.stdout,
+            "approve refuses without an answered question",
+            blocked.stdout,
+        )
+        with open(os.path.join(root, "specs", "passes.log"), "w", encoding="utf-8") as fh:
+            fh.write("design %s api\n" % FEATURE)
+        with open(os.path.join(folder, "plan.md"), "w", encoding="utf-8") as fh:
+            fh.write("plan\n")
+        with open(os.path.join(folder, "gate"), "w", encoding="utf-8") as fh:
+            fh.write("plan pass\n")
+        expect(
+            gate_permission(GATE, root, "api/a.proto") == "deny",
+            "hand-written pass line is ignored under gate_strict",
+            "",
+        )
+        run(root, "wait", FEATURE, "可以把 api/ 放行吗？", "可以")
+        run(root, "answer", FEATURE, "可以")
+        approved = run(root, "approve", FEATURE, "design", "api")
+        expect(
+            "APPROVED" in approved.stdout
+            and gate_permission(GATE, root, "api/a.proto") == "allow",
+            "approve after a real reply unlocks the write",
+            approved.stdout,
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def case_gate_check():
+    """gate_check 跑命令，退出码非 0 就停。"""
+    root = tempfile.mkdtemp(prefix="dw-gatecheck-")
+    try:
+        git_init(root)
+        write_config(root, 'verify: "true"\n')
+        run(root, "start", "change", FEATURE)
+        folder = os.path.join(root, "specs", FEATURE)
+        with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
+            fh.write("- 原话（一字不改）：探测\n- 本质：改一处\n- 未知：无\n")
+        run(root, "done", FEATURE)
+        git_commit_all(root)
+        blocked = run(root, "done", FEATURE)
+        expect(
+            "GATE" in blocked.stdout
+            and "CHECK" in blocked.stdout
+            and read_run(root).get("stage") == 2,
+            "gate_check blocks a clean working tree",
+            blocked.stdout,
+        )
+        with open(os.path.join(root, "app.txt"), "w", encoding="utf-8") as fh:
+            fh.write("x\n")
+        passed = run(root, "done", FEATURE)
+        expect(
+            passed.returncode == 0 and read_run(root).get("stage") == 3,
+            "gate_check passes when the tree changed",
+            passed.stdout,
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
 def main():
     case_none()
     case_npm()
@@ -1016,6 +1089,8 @@ def main():
     case_intake()
     case_domains()
     case_domain_docs()
+    case_approve()
+    case_gate_check()
     case_foreign()
     case_default_no_hooks()
     case_record_follows_install()

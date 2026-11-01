@@ -1,5 +1,7 @@
 # Change Review（改动审核）
 
+> **实例取值守卫**：`internal/{service,biz,data}` 与 `api/**` 是 Go/Kratos 实例的取值，在 `references/standards-spec.md` 里。未声明 `stack: go` 的项目按 `../../profiles/go-kratos/profile.md` 换成本项目成文的工程约束；没有成文约束就只审证据与一致性，不自造层级规则。
+
 判断类审核，不是验证类门禁。报告按 `../../references/doc-shape.md`：主活是判断，第一屏是 risk 和停还是可以走。只回答一个问题：**这次改动会不会把现有能力搞坏、会不会在线上出事。**
 
 与项目已有技能的分工（不重复它们的活）：

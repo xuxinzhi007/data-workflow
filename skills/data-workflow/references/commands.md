@@ -12,10 +12,11 @@ $py "$PLUGIN_ROOT/scripts/workflow_next.py" <子命令>
 
 | 子命令 | 何时 | 成功时看到 |
 |---|---|---|
-| `next` | 用户要继续那条未完成运行 | 只一件：`NEED`、`WAIT`、`DO`、`OPEN` 或 `DONE` |
+| `next` | 用户要继续那条未完成运行 | 只一件：`NEED`、`GATE`、`WAIT`、`DO`、`OPEN` 或 `DONE` |
 | `next` | 没有未完成运行 | `NO_RUN`，或 `LAST` 加记录路径 |
 | `start <workflow> <feature>` | 新开。workflow 为 feature、bugfix、hotfix、review-only、change | 停在第一阶段缺的文件 |
 | `wait <feature> "<问题>" "<一句回复>"` | `OPEN`，或还要问一句 | `run.json` 里有这句 reply |
 | `answer <feature> <回复原文>` | 对方回的就是 reply | 仍开着的产物末尾有 `已拍板：` |
-| `done <feature>` | `DO` 做完 | 编码步骤先跑该仓库的测试入口。非 0 则 `RED`，停在这一步。退出码 0 只说明这条命令通过 |
+| `done <feature>` | `DO` 做完 | 编码步骤先过 `gate_check`（工作树真动过），再跑该仓库的测试入口。任一不过就停。退出码 0 只说明命令通过 |
+| `approve <feature> <design|waiver> <前缀> [原因]` | 要放行受保护路径 | `specs/passes.log` 多一行带 `approved` 的记录。没有已答复的拍板时打 `NEED_ANSWER`，不写 |
 | `abandon <feature>` | 这轮不做了 | `status` 成为 `abandoned`。`next` 把它当已结束，钩子不再注入 |

@@ -9,8 +9,10 @@ import glob
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+from datetime import datetime
 
 import layout
 
@@ -25,6 +27,7 @@ SKILL_ROOT = os.path.dirname(os.path.dirname(ME))
 FEATURE_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 BUSINESS = ""
 STORE = ""
+BASH = shutil.which("bash") or ""
 
 
 def shown(rel):
@@ -142,6 +145,49 @@ def declared_verify(root):
     if os.path.isfile(os.path.join(root, "Cargo.toml")):
         return "cargo test"
     return ""
+
+
+def tail_lines(text, limit=8):
+    lines = [line for line in (text or "").splitlines() if line.strip()]
+    return lines[-limit:]
+
+
+def run_gate_check(root, stage, feature):
+    """stage.gate_check：一条命令，退出码就是门。
+
+    没声明就返回 (True, "", "")——不编一个默认门。
+    有 bash 时用 `bash -c` 跑，否则交给系统 shell（Windows 上就是 cmd，语法自理）。
+    """
+    cmd = (stage.get("gate_check") or "").strip()
+    if not cmd:
+        return True, "", ""
+    cmd = cmd.replace("<feature>", feature)
+    business = BUSINESS or root
+    try:
+        if BASH:
+            proc = subprocess.run(
+                [BASH, "-c", cmd],
+                cwd=business,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=120,
+            )
+        else:
+            proc = subprocess.run(
+                cmd,
+                shell=True,
+                cwd=business,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=120,
+            )
+    except subprocess.TimeoutExpired:
+        return False, cmd, "timeout 120s"
+    return proc.returncode == 0, cmd, (proc.stdout or "") + (proc.stderr or "")
 
 
 def run_verify(root, feature):
@@ -446,6 +492,16 @@ def show(root, run):
             print("补进本阶段产物后再运行：")
             print("%s next %s" % (ME, feature))
             return 0
+        ok, check_cmd, check_out = run_gate_check(root, stage, feature)
+        if not ok:
+            print_context(root, run)
+            print("GATE")
+            print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+            print("CHECK %s" % check_cmd)
+            for line in tail_lines(check_out):
+                print(line)
+            print("READ %s" % stage.get("file"))
+            return 0
         if stage.get("code"):
             print_context(root, run)
             print("DO")
@@ -579,6 +635,7 @@ def cmd_answer(root, feature, text):
     stage = stage_at(workflow, run.get("stage")) if workflow else None
     if stage is not None:
         close_decisions(root, stage_paths(stage, feature), reply)
+    run["last_reply"] = reply
     run["status"] = "working"
     run["question"] = ""
     run["reply"] = ""
@@ -630,12 +687,58 @@ def cmd_done(root, feature):
         print("缺：%s" % "、".join(unmet))
         print("READ %s" % stage.get("file"))
         return 1
+    ok, check_cmd, check_out = run_gate_check(root, stage, feature)
+    if not ok:
+        print_context(root, run)
+        print("GATE")
+        print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+        print("CHECK %s" % check_cmd)
+        for line in tail_lines(check_out):
+            print(line)
+        print("READ %s" % stage.get("file"))
+        return 1
     if stage.get("code") and not run_verify(root, feature):
         return 1
     if not advance(workflow, run):
         return 1
     save_run(root, run)
     return show(root, run)
+
+
+def cmd_approve(root, feature, kind, prefix, reason=""):
+    """写放行行。只有已经问过人、且人回过话（run.json 里 last_reply 非空）才写。
+
+    gate_edit 在 gate_strict 下只认末尾带 `approved` 标记的行；手写的行不带它。
+    """
+    run = load_run(root, feature)
+    if run is None:
+        print("NO_RUN %s" % feature)
+        return 1
+    if kind not in ("design", "waiver"):
+        print("BAD approve 需要 design 或 waiver")
+        return 1
+    prefix = (prefix or "").strip().strip("/")
+    if not prefix or " " in prefix or ".." in prefix.split("/"):
+        print("BAD 前缀要相对仓库根、不含空格")
+        return 1
+    reply = (run.get("last_reply") or "").strip()
+    if not reply:
+        print("NEED_ANSWER 没有已答复的拍板。先 wait，等对方回 REPLY 那一句并 answer，然后才能 approve。")
+        print("这一行没有写进 specs/passes.log。")
+        return 1
+    stamp = datetime.now().astimezone().isoformat(timespec="seconds")
+    trail = 'approved %s "%s"' % (stamp, reply.replace('"', "'"))
+    if kind == "design":
+        line = "design %s %s %s" % (feature, prefix, trail)
+    else:
+        line = "waiver %s %s %s" % (prefix, (reason or "内部改动").strip(), trail)
+    folder = os.path.join(root, "specs")
+    os.makedirs(folder, exist_ok=True)
+    with open(os.path.join(folder, "passes.log"), "a", encoding="utf-8") as fh:
+        fh.write(line + "\n")
+    print("APPROVED %s" % line)
+    print("RECORD %s" % shown("specs/passes.log"))
+    return 0
 
 
 def cmd_abandon(root, feature):
@@ -658,6 +761,7 @@ def usage():
     print("      workflow_next.py wait <feature> <问题> <一句回复> [--repo DIR]")
     print("      workflow_next.py answer <feature> <回复原文> [--repo DIR]")
     print("      workflow_next.py done <feature> [--repo DIR]")
+    print("      workflow_next.py approve <feature> <design|waiver> <前缀> [原因] [--repo DIR]")
     print("      workflow_next.py abandon <feature> [--repo DIR]")
     return 2
 
@@ -697,6 +801,8 @@ def main(argv):
         return cmd_answer(root, args[1], " ".join(args[2:]))
     if cmd == "done" and len(args) == 2:
         return cmd_done(root, args[1])
+    if cmd == "approve" and len(args) >= 4:
+        return cmd_approve(root, args[1], args[2], args[3], " ".join(args[4:]))
     if cmd == "abandon" and len(args) == 2:
         return cmd_abandon(root, args[1])
     return usage()

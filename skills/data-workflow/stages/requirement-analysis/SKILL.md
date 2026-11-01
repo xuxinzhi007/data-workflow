@@ -1,5 +1,7 @@
 # Requirement Analysis（需求 + 负债双评估）
 
+> **实例取值守卫**：下文的 `internal/{service,biz,data}`、`api/**/*.proto`、`make api-one` 与九项负债的具体口径是 Go/Kratos 实例（`config.yaml` 写 `stack: "go"`）的取值。未声明 `stack: go` 的项目按 `../../profiles/go-kratos/profile.md` 的「非 Go 项目怎么换」换成本项目自己的工程约束，不要照抄这些路径。
+
 编码前分析需求。落 `spec.md` 前读 `../../references/doc-shape.md`：这篇的主活是拍板，第一屏只有本质一句话和已拍板的决定。目标不是写长方案，而是回答两个问题：
 
 1. **现状是什么** —— 只能来自代码与知识层，不许来自记忆。

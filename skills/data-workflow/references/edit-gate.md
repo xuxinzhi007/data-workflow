@@ -53,11 +53,21 @@ shell 这条是尽力而为。挡不住 `python -c` 里打开文件、变量拼�
 
 ## 记录格式
 
-`specs/passes.log`，一行一条，`#` 开头是注释。
+`specs/passes.log`，一行一条，`#` 开头是注释。**只由 `workflow_next.py approve` 写**，不要手写：手写的行在 `gate_strict` 下不作数。
 
 ```text
-design <feature> <前缀>
-waiver <前缀> <原因>
+design <feature> <前缀> approved <时间> "<那次拍板的回复>"
+waiver <前缀> <原因> approved <时间> "<那次拍板的回复>"
+```
+
+为什么要带 `approved`：放行等于「有人同意改这个文件」。如果写代码的手可以自己追加一行就放行，那道门就只是“写一行字”。`approve` 要求 `run.json` 里已经有 `last_reply`（先 `wait`，对方回那句，再 `answer`），所以一行放行背后至少有一次真实的拍板对话。
+
+```bash
+# 先记下要问的一句，停下来等对方回原句
+workflow_next.py wait <feature> "可以把 api/ 放行吗？" "可以"
+workflow_next.py answer <feature> "可以"
+workflow_next.py approve <feature> design api
+workflow_next.py approve <feature> waiver internal/biz 只改一处判空
 ```
 
 `<feature>` 只含字母、数字、`.`、`_`、`-`，对应目录 `specs/<feature>/`。前缀是相对仓库根的文件或目录，不含空格。`api/order` 覆盖 `api/order/a.proto`，不覆盖 `api/order2`。
@@ -69,7 +79,9 @@ waiver <前缀> <原因>
 
 `plan pass` 只在技术方案门过了之后写。hook 只认这个文件，不重新给九项负债打分。
 
-内部小改动用 `waiver`，原因写在同一行前缀后面。先追加这一行，再改受保护文件。
+内部小改动用 `waiver`，原因写在同一行前缀后面。先 `approve` 这一行，再改受保护文件。
+
+**`gate_strict` 下的差别**：严格模式只认末尾带 `approved` 的行；审计模式（默认）兼容旧格式，但仍然建议只走 `approve`。
 
 ## 项目自己的路径
 

@@ -27,7 +27,8 @@
       "artifacts": [
         "按 decision.md 改文件"
       ],
-      "gate": "只改决定里写了的范围",
+      "gate_check": "git rev-parse --git-dir >/dev/null 2>&1 || exit 0; test -n \"$(git status --porcelain)\"",
+      "gate": "只改决定里写了的范围。gate_check 检查工作树真的动过：一个文件都没变就调 done 会被拦住。不是 git 仓时跳过这道检查（无法判定）；纯 gitignore 文件的改动是已知盲区",
       "file": "workflows/change.md"
     },
     {

@@ -1,6 +1,6 @@
 ---
 name: data-workflow
-description: 未完成的运行在 specs/<feature>/run.json，产物目录就是当前工作仓库根——在哪 install 就写哪，不回到技能源仓库。会话里的 NOTICE 只说明它还在，不代替当前这句话。用户要继续那条时再跑 scripts/workflow_next.py next，只做它打印的那一件。不要因为来了新需求就把它标成完成或放弃。编码步骤的 done 跑该仓库自己的测试入口，退出码不是 0 就停。任意仓库的一次改动或定架构走 start change <feature>：形状写在 decision.md，不套九步。梳理一个词、字段或状态的含义时，先查排查卡片再读一个域文件，取值回代码，不编口径。用户这次真正要的范围小于方案时，停在能复用的现有符号或最小改动上。技术债读负债门，不另开结构。写入门禁默认无受保护路径；data-service 实例通过 config.yaml 注入其门禁路径与 Go 栈。用户说 @data-workflow、开始开发、架构设计、梳理业务、这个词什么意思、需求分析、影响面、技术方案、编码实现、改动审核、审一下、质量检查、接口测试、排查、状态含义、提交、提 MR、画架构图时读取本文件，再只读点名的那一个阶段文件。不用于：纯 git 操作、解决合并冲突。
+description: 用户说 @data-workflow、开始开发、架构设计、梳理业务、这个词什么意思、需求分析、影响面、技术方案、编码实现、改动审核、审一下、质量检查、接口测试、排查、状态含义、提交、提 MR、画架构图时读本文件。它是选型入口：只决定读哪一个阶段文件；业务事实运行时从知识层读，产物落 specs/<feature>/。不用于：纯 git 操作、解决合并冲突。
 ---
 
 # 开发工作台（data-workflow）
@@ -8,6 +8,8 @@ description: 未完成的运行在 specs/<feature>/run.json，产物目录就是
 本文件只做选型。具体步骤在点名的那一个 `stages/` 文件里。业务事实运行时从知识层读。安装后工具目录里只有这一个 `data-workflow`。装进别的仓库后，那个仓库里的代理读这份副本。
 
 `$PLUGIN_ROOT` 是本文件所在目录。命令表在 `references/commands.md`。Agent 输入框输入 `/`，选 `dw-next`、`dw-done`、`dw-wait`、`dw-start`。
+
+Go/Kratos 实例的取值（分层目录、`api/**`、状态族、九项负债、契约门）集中在 `profiles/go-kratos/profile.md`；本文件与阶段正文不写实例取值，只在需要时指过去。
 
 会话开头解析一次路径。空值就问，或显式声明降级后继续。不猜绝对路径。
 
@@ -17,7 +19,7 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"
 
 ## 绑定
 
-Cursor 项目安装后，没有 `specs/passes.log` 里覆盖该路径的记录，hook 拒绝写入。路径表只维护在 `references/edit-gate.md`。`protected_paths` 和 `waiver_globs` 都没写时，**默认没有受保护路径**（技能不猜任何项目的核心文件）；data-service 实例通过它的 `config.yaml` 注入门禁路径。有未完成运行时，会话钩子注入一条 NOTICE：运行名、状态、一行摘要。NOTICE 不代替当前需求。用户要继续那条时，再跑 `next`，只做它打印的那一件。这次注入依赖 Cursor 加载了 `.cursor/hooks.json` 里的 `sessionStart`。新会话没有看到 NOTICE 时，先确认这份钩子文件被加载。
+Cursor 项目安装后，没有 `specs/passes.log` 里覆盖该路径的记录，hook 拒绝写入。放行记录**只由 `workflow_next.py approve` 写**（要求已有一次拍板回话），格式与判定在 `references/edit-gate.md`；`gate_strict` 开着时手写的行不作数。`protected_paths` 和 `waiver_globs` 都没写时，**默认没有受保护路径**（技能不猜任何项目的核心文件）；data-service 实例通过它的 `config.yaml` 注入门禁路径。有未完成运行时，会话钩子注入一条 NOTICE：运行名、状态、一行摘要。NOTICE 不代替当前需求。用户要继续那条时，再跑 `next`，只做它打印的那一件。这次注入依赖 Cursor 加载了 `.cursor/hooks.json` 里的 `sessionStart`。新会话没有看到 NOTICE 时，先确认这份钩子文件被加载。
 
 ## 继续一次运行
 

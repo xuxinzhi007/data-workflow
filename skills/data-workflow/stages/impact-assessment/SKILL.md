@@ -1,5 +1,7 @@
 # Impact Assessment（影响面与爆炸半径）
 
+> **实例取值守卫**：四轴里的 `api/**/*.proto`、`*.pb.go`、`internal/{service,biz,data}` 与 `references/blast-radius.md` 的 grep 配方是 Go/Kratos 实例的取值。未声明 `stack: go` 的项目按 `../../profiles/go-kratos/profile.md` 换成本项目的定位规则。
+
 回答一个问题：**这次改动会打到谁，打到了怎么收场。** 落 `impact.md` 前读 `../../references/doc-shape.md`：主活是速查，第一屏是四轴各一行。
 
 产出是可核对的清单，不是形容词。每一项要么带证据（`文件:符号`、grep 命中数、命令输出），要么显式写 `UNVERIFIED <原因>`。**没有第三态**——空白项和「应该没问题」都算未做评估。

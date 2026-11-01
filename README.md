@@ -88,6 +88,7 @@ data-workflow/
     ├── SKILL.md                  选型
     ├── commands/                 复制到目标仓库 .cursor/commands/ 的 / 命令
     ├── workflows/                feature · bugfix · hotfix · review-only · change
+    ├── profiles/                技术栈实例取值（go-kratos）；通用部分不写实例路径
     ├── references/               命令、门、工件、写入放行。点名再读
     ├── scripts/
     └── stages/                   阶段文件，不单独安装

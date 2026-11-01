@@ -50,7 +50,8 @@ personal_agents_md: ""
 # waiver_globs: "*.go"
 #
 # 门禁严格度。不写这个键 = fail-open：hook 崩溃、坏输入、找不到 python 时放行并说明。
-# 写 "true" = fail-closed：上述情况一律拒绝。代价是环境缺 python 时会把写入全拦掉。
+# 写 "true" = fail-closed：上述情况一律拒绝，且 specs/passes.log 只认 approve 写的行（末尾带 approved）。
+# 代价是环境缺 python 时会把写入全拦掉。
 # gate_strict: "true"
 
 # 解释器（可选）。留空时依次探测 py -3 / python3 / python / PATH 目录里的 python.exe，
