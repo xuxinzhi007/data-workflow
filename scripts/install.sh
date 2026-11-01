@@ -18,10 +18,15 @@
 #   --project          技能 100%，副本进项目。要提交才有效，升级时 diff 是整包。
 #   --project --with-hooks
 #                      技能 100% + 真门禁。hooks.json 指向项目内副本，
-#                      所以副本必须提交 —— 否则 hook 文件缺失，failClosed 会拦死所有写入。
+#                      所以副本必须提交 —— 否则 hook 文件缺失，写入不再被拦（fail-open）。
 set -uo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# 解释器不信任 `python3`：Windows 上它常是 Microsoft Store 的占位程序（exit 49）。
+# shellcheck source=../skills/data-workflow/scripts/find_python.sh
+. "$repo_root/skills/data-workflow/scripts/find_python.sh"
+PY="$(dw_python 2>/dev/null || true)"
 global=0
 unlink=0
 project=0
@@ -110,7 +115,11 @@ strip_gitignore_block() {
   [ -f "$file" ] || return 0
   # 没有标记块就不动文件：不忙改别人的行尾、不制造无意义的 diff。
   grep -qxF "$GITIGNORE_BEGIN" "$file" 2>/dev/null || return 0
-  python3 - "$file" "$GITIGNORE_BEGIN" "$GITIGNORE_END" << 'PY'
+  if [ -z "$PY" ]; then
+    printf 'SKIP  %s 没有可用的 python，无法摘掉 data-workflow 的 gitignore 块\n' "$file"
+    return 1
+  fi
+  "$PY" - "$file" "$GITIGNORE_BEGIN" "$GITIGNORE_END" << 'PY'
 import sys
 path, begin, end = sys.argv[1], sys.argv[2], sys.argv[3]
 with open(path, encoding="utf-8") as fh:
@@ -141,8 +150,12 @@ PY
 
 write_gitignore_block() {
   local file="$project_root/.gitignore"
+  if [ -z "$PY" ]; then
+    printf 'SKIP  %s 没有可用的 python（py -3 / python3 / python），没写 .gitignore 块\n' "$file"
+    return 1
+  fi
   strip_gitignore_block "$file"
-  python3 - "$file" "$GITIGNORE_BEGIN" "$GITIGNORE_END" "${1:-0}" << 'PY'
+  "$PY" - "$file" "$GITIGNORE_BEGIN" "$GITIGNORE_END" "${1:-0}" << 'PY'
 import sys
 path, begin, end, with_hooks = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "1"
 import os
@@ -175,6 +188,10 @@ merge_cursor_hooks() {
   local session_cmd gate_cmd
   [ "$global" = 1 ] && return 0
   [ -d "$base/.cursor" ] || return 0
+  if [ "$mode" != "remove" ] && [ -z "$PY" ]; then
+    printf 'SKIP  %s 没有可用的 python，没写 Cursor 钩子。\n' "$hooks_file"
+    return 1
+  fi
   if [ "$dogfood" = 1 ]; then
     session_cmd="skills/data-workflow/hooks/session-start"
     gate_cmd="skills/data-workflow/hooks/gate-edit"
@@ -182,7 +199,11 @@ merge_cursor_hooks() {
     session_cmd=".cursor/skills/data-workflow/hooks/session-start"
     gate_cmd=".cursor/skills/data-workflow/hooks/gate-edit"
   fi
-  python3 - "$hooks_file" "$mode" "$session_cmd" "$gate_cmd" << 'PY'
+  if [ "$mode" = "remove" ] && [ -z "$PY" ]; then
+    printf 'SKIP  %s 没有可用的 python，没改 Cursor 钩子。\n' "$hooks_file"
+    return 1
+  fi
+  "$PY" - "$hooks_file" "$mode" "$session_cmd" "$gate_cmd" << 'PY'
 import json, os, sys
 path, mode, session, gate = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 
@@ -225,12 +246,15 @@ if mode == "remove":
         print("HOOKS removed %s" % path)
         raise SystemExit(0)
 else:
+    # 命令带 bash 前缀：Cursor 直接执行无扩展名文件靠 shebang，Windows 上不可靠。
+    # failClosed 关掉：门禁的严格度由 config.yaml 的 gate_strict 决定，
+    # 不再让「hook 自己跑了但没输出」变成「拦住一切」。
     session_hooks = [e for e in entries("sessionStart") if not is_ours(e)]
-    session_hooks.append({"command": session})
+    session_hooks.append({"command": "bash " + session})
     hooks["sessionStart"] = session_hooks
     for event in ("preToolUse", "beforeShellExecution"):
         event_hooks = [e for e in entries(event) if not is_ours(e)]
-        event_hooks.append({"command": gate, "failClosed": True})
+        event_hooks.append({"command": "bash " + gate, "failClosed": False})
         hooks[event] = event_hooks
 
 os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -277,6 +301,19 @@ if [ "$unlink" = 1 ]; then
   fi
 fi
 
+# 拷贝技能正文。没有 rsync 时走 tar 管道（Windows 的 git-bash 通常没有 rsync）。
+# config.yaml 是本机配置，不是技能正文，两边都不动它。
+copy_skill() {
+  local from="$1" to="$2"
+  mkdir -p "$to"
+  find "$to" -mindepth 1 -maxdepth 1 ! -name config.yaml -exec rm -rf {} + 2>/dev/null || true
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --exclude config.yaml "$from/" "$to/"
+  else
+    ( cd "$from" && tar cf - --exclude=config.yaml . ) | ( cd "$to" && tar xf - )
+  fi
+}
+
 for sd in "${dirs[@]}"; do
   if [ "$dogfood" = 1 ] && [ "$unlink" != 1 ]; then
     printf 'SOURCE %s\n' "$src"
@@ -311,7 +348,7 @@ for sd in "${dirs[@]}"; do
     rm "$dest"
   fi
   mkdir -p "$dest"
-  rsync -a --delete --exclude config.yaml "$src/" "$dest/"
+  copy_skill "$src" "$dest"
   printf '%s\n' "$repo_root" > "$dest/origin"
   printf 'COPY   %s\n' "$dest"
 done

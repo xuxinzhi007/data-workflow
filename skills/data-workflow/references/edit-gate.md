@@ -4,11 +4,39 @@ Cursor 项目安装会把 hook 写进该仓库的 `.cursor/hooks.json`。会话�
 
 `--global` 不写这道 hook。Qoder、Claude、Codex 的副本没有这道拦截，那些环境里门禁仍只在技能被读到之后生效。
 
+## 只拦写，不拦读
+
+hook 按 `tool_name` 判断这次调用会不会写文件：`write`、`edit_file`、`multi_edit`、`apply_patch`、`delete_file` 一类才进门禁；`read_file`、`grep`、`list_dir` 和没见过的工具名一律放行。
+
+理由：业务分析要读的正是 `api/**`、`*.proto`、`status.go` 这些受保护路径。把读也当写拦，会让排查和需求分析一起哑掉。没见过的工具名选择放行而不是拒绝——把「新工具悄悄被绕过」记在文档里，比让模型每次看到一条看不懂的拒绝理由再重试要好。
+
+`apply_patch` 的目标路径在补丁正文里（`*** Update File: <path>`），脚本从正文抠。
+
+## 坏了让路：fail-open 与 `gate_strict`
+
+默认 fail-open：脚本出错、输入不是合法 JSON、找不到可用的 python 时，hook 输出合法 JSON 并 `permission: allow`，同时附一句说明。
+
+理由：门禁的价值是拦「已知危险的写」，不是拦「hook 自己崩了」。旧版靠 Cursor 的 `failClosed: true` 兜底，结果是 Windows 上 `python3` 解析到 Microsoft Store 的占位程序（exit 49）→ hook 没有 stdout → 所有写入被拒，连诊断都做不了。
+
+要恢复严格，在项目 `config.yaml` 写：
+
+```yaml
+gate_strict: "true"
+```
+
+此时坏输入一律拒绝。**注意代价**：解释器缺失、hook 崩溃也会变成拒绝写入。
+
+## 入口是壳，不是 python 文件
+
+`hooks/gate-edit`（POSIX / git-bash）与 `hooks/gate-edit.cmd`（原生 Windows）都是壳：先找一台机器上真正能跑的 python，再把 stdin 交给 `hooks/gate_edit.py`。探测逻辑在 `scripts/find_python.sh`：`$DATA_WORKFLOW_PYTHON` > `py -3` > `python3` > `python` > PATH 目录里的 `python.exe`，每个候选都实跑一次 `-c "import sys"`。
+
+`install.sh` 写进 `.cursor/hooks.json` 的命令因此带 `bash` 前缀，且不写 `failClosed: true`。代价：团队里有人没装 bash 或 python 时，门禁静默失效而不是拦死。这是有意的取舍，兜底仍是提交前看 diff。
+
 hook 看得见的是写入工具的目标路径（`path`、`file_path`、`filePath`），以及命令文本里带有路径的写入（重定向、`tee`、`sed -i`、`rm`、`mv`、`cp`）。从补丁文件间接写入时，命令文本里没有目标路径，hook 看不到。
 
 shell 这条是尽力而为。挡不住 `python -c` 里打开文件、变量拼出来的路径、heredoc，以及 `&&` 或管道后面的 `sed -i`。提交前和 CI 里的 diff 才是兜底。
 
-`failClosed: true` 时，钩子崩溃、超时或没有打出 JSON，Cursor 会阻止这次操作。并发调用偶尔会拿到空 stdout，界面只说 hook 没有输出。被拒绝且没有拒绝理由时，重试一次。
+`failClosed` 由本技能自己控制：`.cursor/hooks.json` 不写 `failClosed: true`，严格度看 `gate_strict`。并发调用偶尔会拿到空 stdout，界面只说 hook 没有输出；这不是拒绝。
 
 ## 谁要记录
 

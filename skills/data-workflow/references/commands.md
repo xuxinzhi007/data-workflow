@@ -2,10 +2,12 @@
 
 Agent 输入框里输入 `/`，选 `dw-next`、`dw-done`、`dw-wait`、`dw-start`。`install.sh` 把这四个文件写到**当前项目**的 `.cursor/commands/`，默认安装也一样——技能副本在 `$HOME`，命令在项目里，可提交给团队共享入口。
 
-脚本只有一份，相对技能根：
+脚本只有一份，相对技能根。不要直接执行 `.py`：Windows 上 shebang 指向的 `/usr/bin/python3` 常常不存在，要先用探测脚本拿一个真能跑的解释器：
 
 ```bash
-python3 "$PLUGIN_ROOT/scripts/workflow_next.py" <子命令>
+. "$PLUGIN_ROOT/scripts/find_python.sh"
+py="$(dw_python)"          # → py -3 / python3 / python / 绝对路径
+$py "$PLUGIN_ROOT/scripts/workflow_next.py" <子命令>
 ```
 
 | 子命令 | 何时 | 成功时看到 |

@@ -5,3 +5,5 @@ config.yaml
 !assets/*.png
 .idea
 .vscode
+# 跑 verify（check_runner）会生成
+__pycache__/

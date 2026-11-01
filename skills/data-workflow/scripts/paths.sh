@@ -3,7 +3,7 @@
 #
 # 用法（在技能里）:
 #   eval "$(bash "$PLUGIN/scripts/paths.sh")"
-#   → 得到 $KNOW $CARDS $TEMPLATES $REPO $TECH_DESIGN_TEMPLATE $MR_TEMPLATE $PERSONAL_AGENTS_MD
+#   → 得到 $KNOW $CARDS $TEMPLATES $REPO $DOMAINS $TECH_DESIGN_TEMPLATE $MR_TEMPLATE $PERSONAL_AGENTS_MD
 #
 # 未配置的键输出空串，并在 stderr 打印 MISSING，由调用方决定「问用户」还是「声明降级」。
 # 本脚本绝不猜绝对路径。
@@ -21,6 +21,7 @@ emit() { # emit <VAR> <key>
 emit KNOW knowledge_root
 emit TEMPLATES templates_root
 emit REPO repo
+emit DOMAINS domains
 emit TECH_DESIGN_TEMPLATE tech_design_template
 emit MR_TEMPLATE mr_template
 emit PERSONAL_AGENTS_MD personal_agents_md

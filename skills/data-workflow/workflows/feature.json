@@ -15,6 +15,10 @@
       "artifacts": [
         "specs/<feature>/spec.md"
       ],
+      "requires": [
+        "本质",
+        "怎样算满足"
+      ],
       "template": "templates/spec-template.md",
       "gate": "先按 references/scope.md 定级。L1 改走 change。L3 才留在这里：spec.md 含验收、非目标、相关债和最小改动；九项无阻塞；待拍板清零",
       "on_gate_fail": "停在需求阶段，报告缺什么信息，不进技术方案",

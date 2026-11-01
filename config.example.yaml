@@ -38,7 +38,8 @@ personal_agents_md: ""
 # 留空 = 通用项目，默认走 change 工作流 + 该项目声明的测试入口。data-service 实例填 go。
 # stack: "go"
 
-# 业务域清单（逗号分隔，相对 $KNOW）。oncall 业务梳理的域路由按它发现；留空时用 $KNOW 下目录 + routing.md 的 data-service 示例表。
+# 业务域清单（逗号分隔，相对 $KNOW）。`scripts/paths.sh` 把它输出成 `$DOMAINS`，oncall 业务梳理的域路由优先用这份；
+# 留空时看 $KNOW 下目录 + routing.md 的 data-service 示例表。
 # domains: "采集任务,审批流程,任务分发,采集批次,数据条目,设备管理,质检管理,标签管理,小组管理,多样性模板,任务配置,飞书配置"
 
 # 写入门。默认（两个键都不出现时）没有受保护路径，技能不猜任何项目的核心文件，specs/ 之外的写入直接放行。
@@ -47,6 +48,14 @@ personal_agents_md: ""
 # data-service 实例通过这里启用写入门禁（示例取值）：
 # protected_paths: "api/**,*.proto,*.pb.go,internal/biz/status.go,*/biz/status.go"
 # waiver_globs: "*.go"
+#
+# 门禁严格度。不写这个键 = fail-open：hook 崩溃、坏输入、找不到 python 时放行并说明。
+# 写 "true" = fail-closed：上述情况一律拒绝。代价是环境缺 python 时会把写入全拦掉。
+# gate_strict: "true"
+
+# 解释器（可选）。留空时依次探测 py -3 / python3 / python / PATH 目录里的 python.exe，
+# 每个都实跑一次 `-c "import sys"`。Windows 上 python3 常是 Store 占位程序，会被跳过。
+# DATA_WORKFLOW_PYTHON: ""
 
 # 运行记录写到这个目录（相对当前工作仓库，或绝对路径）。
 # 留空时一律写当前工作仓库自己的 specs/<feature>/：谁 install 了技能，记录就跟着谁，

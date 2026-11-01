@@ -23,13 +23,13 @@ bash ~/skills/data-workflow/scripts/install.sh --project --unlink   # 撤掉
 
 ## 为什么默认不装进项目
 
-`merge_cursor_hooks` 往 `.cursor/hooks.json` 写的是相对项目根的命令：
+`merge_cursor_hooks` 往 `.cursor/hooks.json` 写的是相对项目根的命令，带 `bash` 前缀：
 
 ```
-.cursor/skills/data-workflow/hooks/gate-edit
+bash .cursor/skills/data-workflow/hooks/gate-edit
 ```
 
-这条是硬绑定，没有回退。如果副本被 `.gitignore` 忽略、而 `hooks.json` 被提交，队友 clone 下来会拿到一个指向不存在文件的 hook。它的配置是 `failClosed: true`，结果是**每次写入都被拒**——不是少一个功能，是仓库对所有人只读。
+这条是硬绑定，没有回退。如果副本被 `.gitignore` 忽略、而 `hooks.json` 被提交，队友 clone 下来会拿到一个指向不存在文件的 hook。它现在不会把仓库变成只读：`failClosed` 不写 `true`，hook 跑不起来就等于没有门禁。
 
 所以只有两个自洽的选择：
 
@@ -113,4 +113,4 @@ Agent 输入框输入 `/`，可选 `dw-next`、`dw-done`、`dw-wait`、`dw-start
 2. 看它指向的脚本是否真的在：`ls .cursor/skills/data-workflow/hooks/`
 3. 若脚本缺失而 hook 存在——这就是上面说的坏门，跑 `--unlink` 然后改用默认模式
 
-写入被无故拒绝：同上第 3 条。`failClosed: true` 会把 hook 崩溃、超时、空输出都当拒绝；被拒且没有理由时重试一次。
+写入被无故拒绝：先看有没有开 `gate_strict`（项目 `config.yaml`）。不开时 hook 坏了自己让路，不会拦写入；开了才会把「解释器缺失 / 坏输入 / 脚本崩溃」都当拒绝。

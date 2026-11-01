@@ -71,10 +71,10 @@ hook 继续拦没有放行记录的写入。放行记录要和 `run.json` 对得
 
 ## 现在怎么跑
 
-`python3 skills/data-workflow/scripts/workflow_next.py next`。产物路径取工作流里已经写过的 `artifacts`：像路径的才检查，像「代码改动」这种句子不检查。`code: true` 的阶段要 `done` 才往下。没有路径产物、也不是改代码的阶段，改写成 `specs/<feature>/stage-<id>.md`。文件里还有「待拍板」就打印 `OPEN`，不进入下一阶段。
+`. {脚本根}/scripts/find_python.sh` 拿一个真能跑的解释器，再 `$py skills/data-workflow/scripts/workflow_next.py next`（不要直接执行 `.py`：Windows 上 shebang 不可用）。产物路径取工作流里已经写过的 `artifacts`：像路径的才检查，像「代码改动」这种句子不检查。`code: true` 的阶段要 `done` 才往下。没有可判定产物、也不是改代码的阶段，打印 `NO_ARTIFACT` 并要求 `done`，**不编一个 `stage-<id>.md`**。文件里还有「待拍板」就打印 `OPEN`，不进入下一阶段。
 
 会话开始会跑一次 `next`，注入的是 NOTICE，不是那段操作指令。做完的运行留在 `specs/<feature>/run.json`，不注入。用户要继续时再跑 `next`，才会看到 `WAIT` 或 `NEED`。技能仓库对自己安装时，hook 指向 `skills/data-workflow/hooks/`，不另拷一份。
 
-`config.yaml` 没写 `protected_paths` 时，hook 仍按原来的 api、proto、pb.go、status.go 拒绝。写了空值才放开。data-service 的配置不用改。
+`config.yaml` 没写 `protected_paths` 时，hook 不拦任何路径（技能不猜哪个文件是核心文件）。data-service 实例在它的 `config.yaml` 里声明 `api/**`、`*.proto`、`*.pb.go`、`internal/biz/status.go` 才启用拦截。**读不受影响**：受保护路径上的 `read_file` / `grep` 一律放行。
 
 不在这一步做的：把阶段正文改成空模板、并行子代理、git worktree、用脚本代替模型去写 spec。

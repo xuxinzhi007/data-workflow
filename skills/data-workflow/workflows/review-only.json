@@ -60,9 +60,9 @@
       "id": 4,
       "name": "合并裁决",
       "artifacts": [
-        "一份合并结论：风险等级 high/medium/low + 逐条问题（文件:行号 + 为什么 + 建议）"
+        "<artifacts_root>/review/verdict.md"
       ],
-      "gate": "high 或 medium 存在时明确写「不建议合入，除非…）」；不写「整体还行」这种不可判定的话",
+      "gate": "verdict.md 写：风险等级 high/medium/low + 逐条问题（文件:行号 + 为什么 + 建议）。high 或 medium 存在时明确写「不建议合入，除非…）」；不写「整体还行」这种不可判定的话",
       "subagents": {
         "allowed": false,
         "reason": "裁决必须由单一主体负责，不能把责任分散给子 agent"

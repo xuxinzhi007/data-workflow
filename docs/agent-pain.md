@@ -10,4 +10,4 @@
 
 因此会话钩子在有未完成运行时注入一条 NOTICE，不注入 `next` 的操作指令。没有未完成运行时不注入。AGENTS.md 写明 NOTICE 不代替当前需求。
 
-开发过程里的对应问题是：模型说改完了，但没有一条命令的退出码。编码阶段的 `done` 跑该仓库已经声明的测试入口。显式命令写在 `verify`。没写时依次看 `package.json` 的 `test`、`Makefile` 的 `test`、pytest、`cargo test`。都没有，或退出码不是 0，就停在 `RED`。不替某个服务选一套测试。结果在 `specs/<feature>/verify.log`。重复检查是 `python3 skills/data-workflow/scripts/check_runner.py`。它覆盖五种检查入口、pnpm、yarn、pytest、cargo、拍板回复，以及一次按别的仓库安装：副本自己的 runner 和钩子、空知识源、默认写入门禁、旁边的其他技能还在。
+开发过程里的对应问题是：模型说改完了，但没有一条命令的退出码。编码阶段的 `done` 跑该仓库已经声明的测试入口。显式命令写在 `verify`。没写时依次看 `package.json` 的 `test`、`Makefile` 的 `test`、pytest、`cargo test`。都没有，或退出码不是 0，就停在 `RED`。不替某个服务选一套测试。结果在 `specs/<feature>/verify.log`。重复检查是 `bash scripts/verify.sh`（它自己探测可用的 python；不要直接执行 `.py`）。它覆盖五种检查入口、pnpm、yarn、pytest、cargo、拍板回复，读写区分与 `gate_strict`，无解释器时 fail-open，UTF-8 输出，以及一次按别的仓库安装：副本自己的 runner 和钩子、空知识源、默认写入门禁、旁边的其他技能还在。

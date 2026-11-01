@@ -8,6 +8,10 @@ case "$0" in
 esac
 SKILL_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# 不直接执行 workflow_next.py：Windows 上 shebang 指向的 /usr/bin/python3 常常不存在。
+. "${SKILL_ROOT}/scripts/find_python.sh"
+PY="$(dw_python 2>/dev/null || true)"
+
 escape_for_json() {
   local s="$1"
   s="${s//\\/\\\\}"
@@ -27,8 +31,11 @@ fi
 
 next=""
 err=""
-if [ -n "$repo" ]; then
-  if ! next="$("${SKILL_ROOT}/scripts/workflow_next.py" next --repo "$repo" 2>"${TMPDIR:-/tmp}/data-workflow-next.err")"; then
+if [ -z "$PY" ]; then
+  err="没有找到可用的 python（试过 py -3 / python3 / python），没有读取 specs/*/run.json"
+elif [ -n "$repo" ]; then
+  # $PY 可能是 "py -3"，不要加引号。
+  if ! next="$($PY "${SKILL_ROOT}/scripts/workflow_next.py" next --repo "$repo" 2>"${TMPDIR:-/tmp}/data-workflow-next.err")"; then
     err="$(cat "${TMPDIR:-/tmp}/data-workflow-next.err" 2>/dev/null || true)"
   fi
 else

@@ -10,6 +10,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 
 ME = os.path.abspath(__file__)
@@ -17,8 +18,14 @@ SKILL_ROOT = os.path.dirname(os.path.dirname(ME))
 REPO_ROOT = os.path.dirname(os.path.dirname(SKILL_ROOT))
 RUNNER = os.path.join(SKILL_ROOT, "scripts", "workflow_next.py")
 HOOK = os.path.join(SKILL_ROOT, "hooks", "session-start")
+GATE = os.path.join(SKILL_ROOT, "hooks", "gate-edit")
 INSTALL = os.path.join(REPO_ROOT, "scripts", "install.sh")
 FEATURE = "probe"
+
+# 本套工具链的入口都是 bash 壳，python 由壳自己探测。
+# 不直接执行 .py：Windows 上 subprocess 会报 WinError 193（shebang 不可执行）。
+BASH = shutil.which("bash") or "bash"
+PY = sys.executable
 
 
 def with_store(root, env=None):
@@ -29,9 +36,10 @@ def with_store(root, env=None):
 
 def run(root, *args):
     return subprocess.run(
-        [RUNNER, *args, "--repo", root],
+        [PY, RUNNER, *args, "--repo", root],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         env=with_store(root),
     )
 
@@ -49,7 +57,7 @@ def reach_code(root):
     folder = os.path.join(root, "specs", FEATURE)
     os.makedirs(folder, exist_ok=True)
     with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
-        fh.write("改一处。\n")
+        fh.write("- 原话（一字不改）：探测用\n- 本质：改一处\n- 未知：无\n")
     done = run(root, "done", FEATURE)
     if done.returncode != 0 or read_run(root).get("stage") != 2:
         raise SystemExit(done.stdout + done.stderr)
@@ -179,10 +187,11 @@ def git_init(root):
 
 def hook_text(root):
     proc = subprocess.run(
-        [HOOK],
+        [BASH, HOOK],
         cwd=root,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         env=with_store(root),
         check=True,
     )
@@ -393,15 +402,18 @@ def clean_env():
     return env
 
 
-def gate_permission(hook, root, path):
-    payload = json.dumps({"cwd": root, "tool_input": {"path": path}})
+def gate_permission(hook, root, path, tool_name="edit_file", env=None, raw=None):
+    payload = raw if raw is not None else json.dumps(
+        {"cwd": root, "tool_name": tool_name, "tool_input": {"path": path}}
+    )
     proc = subprocess.run(
-        [hook],
+        [BASH, hook],
         input=payload,
         cwd=root,
         capture_output=True,
         text=True,
-        env=with_store(root),
+        encoding="utf-8",
+        env=env or with_store(root),
         check=True,
     )
     return json.loads(proc.stdout).get("permission")
@@ -419,10 +431,11 @@ def case_foreign():
         with open(os.path.join(root, "package-lock.json"), "w", encoding="utf-8") as fh:
             fh.write("{}\n")
         installed = subprocess.run(
-            ["bash", INSTALL, "--project", "--with-hooks", root],
+            [BASH, INSTALL, "--project", "--with-hooks", root],
             cwd=root,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             env=clean_env(),
         )
         copy = os.path.join(root, ".cursor", "skills", "data-workflow")
@@ -444,18 +457,24 @@ def case_foreign():
             for entry in entries:
                 commands.append(entry.get("command") or "")
         expect(
-            any(cmd == ".cursor/skills/data-workflow/hooks/session-start" for cmd in commands)
+            any(cmd.endswith("data-workflow/hooks/session-start") for cmd in commands)
             and all(REPO_ROOT not in cmd for cmd in commands),
             "foreign hooks point at the copy",
             "\n".join(commands),
         )
+        expect(
+            all(entry.get("failClosed") is not True for entries in (hooks.get("hooks") or {}).values() for entry in entries),
+            "hooks do not fail closed (strictness is gate_strict's job)",
+            json.dumps(hooks, ensure_ascii=False),
+        )
         config_path = os.path.join(copy, "config.yaml")
         config_text = open(config_path, encoding="utf-8").read()
         paths = subprocess.run(
-            ["bash", os.path.join(copy, "scripts", "paths.sh")],
+            [BASH, os.path.join(copy, "scripts", "paths.sh")],
             cwd=root,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             env=clean_env(),
         )
         expect(
@@ -486,10 +505,11 @@ def case_foreign():
 
         def copy_run(*args):
             return subprocess.run(
-                [runner, *args, "--repo", root],
+                [PY, runner, *args, "--repo", root],
                 cwd=root,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
                 env=with_store(root, clean_env()),
             )
 
@@ -497,7 +517,7 @@ def case_foreign():
         folder = os.path.join(root, "specs", FEATURE)
         os.makedirs(folder, exist_ok=True)
         with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
-            fh.write("改一处。\n")
+            fh.write("- 原话（一字不改）：改一处\n- 本质：改一处\n- 未知：无\n")
         stepped = copy_run("done", FEATURE)
         finished = copy_run("done", FEATURE)
         record = json.load(open(os.path.join(folder, "run.json"), encoding="utf-8"))
@@ -513,10 +533,11 @@ def case_foreign():
             started.stdout + stepped.stdout + finished.stdout + log,
         )
         hook = subprocess.run(
-            [os.path.join(copy, "hooks", "session-start")],
+            [BASH, os.path.join(copy, "hooks", "session-start")],
             cwd=root,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             env=with_store(root, clean_env()),
             check=True,
         )
@@ -560,10 +581,11 @@ def case_foreign():
         with open(config_path, "a", encoding="utf-8") as fh:
             fh.write('verify: "echo foreign-marker"\n')
         again = subprocess.run(
-            ["bash", INSTALL, root],
+            [BASH, INSTALL, root],
             cwd=root,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             env=clean_env(),
         )
         kept = open(config_path, encoding="utf-8").read()
@@ -579,10 +601,11 @@ def case_foreign():
             again.stdout + again.stderr + kept,
         )
         removed = subprocess.run(
-            ["bash", INSTALL, "--unlink", root],
+            [BASH, INSTALL, "--unlink", root],
             cwd=root,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             env=clean_env(),
         )
         expect(
@@ -600,9 +623,8 @@ def case_foreign():
 def case_default_no_hooks():
     """默认安装（不加 --with-hooks）不写 hooks.json，也不把副本写进项目。
 
-    原因：hooks.json 写的是相对路径，指向项目内副本。副本没提交时
-    hook 文件缺失，而 failClosed 会让每次写入被拒。宁可没有门禁，
-    也不要给团队一个坏门。
+    原因：hooks.json 写的是相对路径，指向项目内副本。副本没提交时 hook 文件缺失，
+    那套门禁实际上不存在。宁可没有门禁，也不要给团队一个坏门。
     """
     root = tempfile.mkdtemp(prefix="dw-defaulthooks-")
     home = tempfile.mkdtemp(prefix="dw-home-")
@@ -613,10 +635,11 @@ def case_default_no_hooks():
         env = clean_env()
         env["HOME"] = home
         proc = subprocess.run(
-            ["bash", INSTALL],
+            [BASH, INSTALL],
             cwd=root,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             env=env,
         )
         expect(
@@ -665,19 +688,21 @@ def case_record_follows_install():
         env = clean_env()
         env["HOME"] = home
         subprocess.run(
-            ["bash", INSTALL, "--project"],
+            [BASH, INSTALL, "--project"],
             cwd=root,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             env=env,
         )
         runner = os.path.join(root, ".cursor", "skills", "data-workflow", "scripts", "workflow_next.py")
         # 关键：不传 DATA_WORKFLOW_STORE，走默认推断。
         proc = subprocess.run(
-            [runner, "start", "change", FEATURE, "--repo", root],
+            [PY, runner, "start", "change", FEATURE, "--repo", root],
             cwd=root,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             env=env,
         )
         expect(
@@ -702,6 +727,205 @@ def case_record_follows_install():
         shutil.rmtree(home, ignore_errors=True)
 
 
+def write_config(root, text):
+    with open(os.path.join(root, "config.yaml"), "w", encoding="utf-8") as fh:
+        fh.write(text)
+
+
+def case_gate_read_write():
+    """读不能当写拦。
+
+    受保护路径上的 read_file / grep 必须放行：业务分析要读的正是这些文件。
+    旧版 destinations() 不看 tool_name，把这些读也当写拒了。
+    """
+    root = tempfile.mkdtemp(prefix="dw-gate-rw-")
+    try:
+        git_init(root)
+        os.makedirs(os.path.join(root, "api"))
+        with open(os.path.join(root, "api", "a.proto"), "w", encoding="utf-8") as fh:
+            fh.write("syntax = \"proto3\";\n")
+        write_config(root, 'protected_paths: "api/**"\nwaiver_globs: "*.go"\n')
+        expect(
+            gate_permission(GATE, root, "api/a.proto", "read_file") == "allow"
+            and gate_permission(GATE, root, "api/a.proto", "grep" ) == "allow"
+            and gate_permission(GATE, root, "api/a.proto", "list_dir") == "allow",
+            "reading protected paths is allowed",
+            "",
+        )
+        expect(
+            gate_permission(GATE, root, "api/a.proto", "edit_file") == "deny"
+            and gate_permission(GATE, root, "api/a.proto", "write") == "deny",
+            "writing protected paths is denied",
+            "",
+        )
+        expect(
+            gate_permission(GATE, root, "api/a.proto", "some_future_tool") == "allow",
+            "unknown tool name fails open instead of silently blocking",
+            "",
+        )
+        expect(
+            gate_permission(GATE, root, "README.md", "edit_file") == "allow",
+            "unprotected paths stay writable",
+            "",
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def case_gate_strict():
+    """坏输入默认放行；gate_strict 开着才拒绝。"""
+    root = tempfile.mkdtemp(prefix="dw-gate-strict-")
+    try:
+        git_init(root)
+        loose = gate_permission(GATE, root, "README.md", raw="{not json")
+        write_config(root, 'gate_strict: "true"\n')
+        tight = gate_permission(GATE, root, "README.md", raw="{not json")
+        expect(
+            loose == "allow" and tight == "deny",
+            "bad input fails open unless gate_strict is on",
+            "loose=%s tight=%s" % (loose, tight),
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def case_gate_no_python():
+    """解释器缺失时不制造坏门：输出合法 JSON 并放行。"""
+    root = tempfile.mkdtemp(prefix="dw-gate-nopy-")
+    empty = tempfile.mkdtemp(prefix="dw-nopath-")
+    try:
+        git_init(root)
+        env = with_store(root)
+        env["PATH"] = empty
+        proc = subprocess.run(
+            [BASH, GATE],
+            input="{}",
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=env,
+        )
+        data = json.loads(proc.stdout)
+        expect(
+            proc.returncode == 0
+            and data.get("permission") == "allow"
+            and "python" in (data.get("agent_message") or ""),
+            "missing interpreter allows instead of blocking",
+            proc.stdout + proc.stderr,
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(empty, ignore_errors=True)
+
+
+def case_utf8_output():
+    """中文输出在 UTF-8 下可读（Windows 默认 GBK 会变成乱码）。"""
+    root = tempfile.mkdtemp(prefix="dw-utf8-")
+    try:
+        git_init(root)
+        run(root, "start", "change", FEATURE)
+        nxt = run(root, "next")
+        expect(
+            "写完后运行" in nxt.stdout and "\ufffd" not in nxt.stdout,
+            "runner prints readable utf-8",
+            nxt.stdout + nxt.stderr,
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def case_no_phantom():
+    """不造 stage-N.md 幻影文件名。"""
+    root = tempfile.mkdtemp(prefix="dw-phantom-")
+    try:
+        git_init(root)
+        hot = run(root, "start", "hotfix", "h1")
+        expect(
+            "NEED specs/h1/triage.md" in hot.stdout and "stage-1.md" not in hot.stdout,
+            "hotfix asks for triage.md, not a phantom stage file",
+            hot.stdout,
+        )
+        run(root, "start", "review-only", "r1")
+        folder = os.path.join(root, "specs", "r1")
+        os.makedirs(os.path.join(folder, "review"), exist_ok=True)
+        with open(os.path.join(folder, "diff.patch"), "w", encoding="utf-8") as fh:
+            fh.write("diff\n")
+        for name in ("spec-compliance.md", "code-quality.md", "interface-impact.md"):
+            with open(os.path.join(folder, "review", name), "w", encoding="utf-8") as fh:
+                fh.write("x\n")
+        with open(os.path.join(folder, "interface-test.md"), "w", encoding="utf-8") as fh:
+            fh.write("x\n")
+        nxt = run(root, "next", "r1")
+        expect(
+            "NEED specs/r1/review/verdict.md" in nxt.stdout
+            and "stage-4.md" not in nxt.stdout,
+            "review-only asks for review/verdict.md",
+            nxt.stdout,
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def case_intake():
+    """原话进记录，缺「未知」停在内容门。"""
+    root = tempfile.mkdtemp(prefix="dw-intake-")
+    try:
+        git_init(root)
+        raw = "把导出的默认集改成三态，别再问我「根据项目规则」"
+        run(root, "start", "change", FEATURE, raw)
+        record = read_run(root)
+        expect(
+            record.get("raw_request") == raw,
+            "start stores the raw request verbatim",
+            json.dumps(record, ensure_ascii=False),
+        )
+        folder = os.path.join(root, "specs", FEATURE)
+        with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
+            fh.write("- 原话（一字不改）：%s\n- 本质：改默认集\n" % raw)
+        blocked = run(root, "next")
+        expect(
+            "GATE" in blocked.stdout
+            and "未知" in blocked.stdout
+            and read_run(root).get("stage") == 1,
+            "missing 未知 stops at the gate",
+            blocked.stdout,
+        )
+        with open(os.path.join(folder, "decision.md"), "a", encoding="utf-8") as fh:
+            fh.write("- 未知：无\n")
+        nxt = run(root, "next")
+        expect(
+            "DO" in nxt.stdout and "RAW %s" % raw in nxt.stdout,
+            "complete intake advances and echoes the raw request",
+            nxt.stdout,
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def case_domains():
+    """domains 配置键真的有读取方。"""
+    root = tempfile.mkdtemp(prefix="dw-domains-")
+    try:
+        git_init(root)
+        write_config(root, 'domains: "采集任务,质检管理"\n')
+        proc = subprocess.run(
+            [BASH, os.path.join(SKILL_ROOT, "scripts", "paths.sh")],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=clean_env(),
+        )
+        expect(
+            "DOMAINS='采集任务,质检管理'" in proc.stdout,
+            "paths.sh exposes the configured domains",
+            proc.stdout + proc.stderr,
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
 def main():
     case_none()
     case_npm()
@@ -714,6 +938,13 @@ def main():
     case_cargo()
     case_answer()
     case_hook_quiet()
+    case_gate_read_write()
+    case_gate_strict()
+    case_gate_no_python()
+    case_utf8_output()
+    case_no_phantom()
+    case_intake()
+    case_domains()
     case_foreign()
     case_default_no_hooks()
     case_record_follows_install()

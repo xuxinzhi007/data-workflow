@@ -11,6 +11,7 @@ feature 九步链（data-service Go / Kratos 实例）是高风险变更上的�
 - 要选工作流，或看卡在哪一道门 → [`skills/data-workflow/references/workflows.md`](skills/data-workflow/references/workflows.md)
 - 要查 `next` / `wait` / `done` → [`skills/data-workflow/references/commands.md`](skills/data-workflow/references/commands.md)。Agent 输入框输入 `/`，选 `dw-next`、`dw-done`、`dw-wait`、`dw-start`
 - 要知道一个词在业务里指什么 → 知识层。路径空就问。键在 [`config.example.yaml`](config.example.yaml)。留空时 drift 打印 `DEGRADED`，回退 `<repo>/docs`
+- 要判断这套东西值不值得用、和同类技能包差在哪 → [`docs/competitive.md`](docs/competitive.md)（每格标了已证实 / 已记录 / 推断）
 - 要改技能或新增阶段 → 下面的项目结构。阶段正文在 `skills/data-workflow/stages/`，选型在 `SKILL.md`
 - 要重画两张图 → [`docs/diagrams.md`](docs/diagrams.md)
 

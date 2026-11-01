@@ -9,6 +9,7 @@
 ```
 $REPO/specs/<feature>/
 ├── spec.md              需求规格：事实清单 + 决定表 + 九项评估      ← requirement-analysis
+├── triage.md            止血决策：症状 / 最可能链路 / 三个选项的代价  ← hotfix 第 1 步
 ├── impact.md            影响面：四轴 + 维护性三查                   ← impact-assessment
 ├── plan.md              技术方案：接口/数据/状态/权限/验证/回滚      ← tech-design
 ├── rollback.md          回滚预案：可逆性判定 + 步骤 + 触发条件       ← tech-design / impact-assessment
@@ -16,7 +17,8 @@ $REPO/specs/<feature>/
 ├── review/
 │   ├── spec-compliance.md    是否符合 spec 与需求口径              ← 子 agent
 │   ├── code-quality.md       规范与可维护性                        ← 子 agent
-│   └── interface-impact.md   契约与调用方影响                      ← 子 agent
+│   ├── interface-impact.md   契约与调用方影响                      ← 子 agent
+│   └── verdict.md            合并裁决：风险等级 + 逐条问题          ← 主 agent（review-only 第 4 步）
 ├── interface-test.md    三级门结论 + 四态裁决 + 补跑条件            ← interface-test
 ├── quality.md           构建/单测/覆盖率证据                        ← quality-gate
 ├── change-note.md       变更说明 + 文档审计门结果                    ← git-commit

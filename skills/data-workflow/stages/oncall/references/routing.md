@@ -5,8 +5,14 @@
 ## step 0 记忆检索（必做，在碰任何代码之前）
 
 ```bash
-grep -rl "<症状词>|<状态值>|<RPC名>|<表名>" $CARDS/
+if [ -z "${CARDS:-}" ]; then
+  echo "无卡片目录（config.yaml: cards_dir / knowledge_root 未配）——跳过 step 0，直接进 step 1"
+else
+  grep -rl "<症状词>|<状态值>|<RPC名>|<表名>" "$CARDS/"
+fi
 ```
+
+`$CARDS` 为空时必须走上面那个分支。**不要写裸的 `grep -rl … $CARDS/`**：空变量未加引号会变成 `grep -rl … /`，从文件系统根开始扫。
 
 命中就打开卡片，读 `verified_commit` / `watches` / `status`。然后跑新鲜度门禁：
 
@@ -28,7 +34,7 @@ grep -rl "<症状词>|<状态值>|<RPC名>|<表名>" $CARDS/
 
 知识库按业务域拆分，先只读一个域。读错域比不读更糟。证据指向另一个域、出现 `CONFLICT`、或这条规则写明跨域时，再读那一个，并写明原因。不要把整个知识库读进来。
 
-先按**通用**问题类型，从 `$KNOW` 结构发现该项目对应的域文件；data-service 的域表见下方「示例」。
+先按**通用**问题类型，从 `$KNOW` 结构发现该项目对应的域文件；`$DOMAINS` 非空时优先用它（`printf '%s\n' "$DOMAINS" | tr ',' '\n'` 拿到域名清单，挑一个读）。data-service 的域表见下方「示例」。
 
 | 通用问题类型 | 去哪发现 |
 |---|---|
@@ -36,7 +42,7 @@ grep -rl "<症状词>|<状态值>|<RPC名>|<表名>" $CARDS/
 | 线上症状、卡住、看不到、进度不对 | 该项目的线上排查文件（data-service 是 `线上排查.md`） |
 | 项目全貌、分层与常用命令 | 该项目的速查文件（data-service 是 `data-service项目速查.md`） |
 | 构建、环境、本地启动 | 该项目的运行/构建文件（data-service 是 `运行与构建.md`） |
-| 具体业务域（建单、审批、分发、质检…） | 从 `config.yaml` 的 `domains` 键，或 `$KNOW` 下的域目录 / 索引发现，一次只读一个域 |
+| 具体业务域（建单、审批、分发、质检…） | `$DOMAINS`（`paths.sh` 从 `config.yaml` 的 `domains` 解析，逗号分隔）；为空时看 `$KNOW` 下的域目录 / 索引。一次只读一个域 |
 
 > `$KNOW` 未配置，或该项目没写成文的域结构时 → 只用代码与仓库内 `docs/`（降级区），并在结论里声明知识源缺失，不猜域表。
 

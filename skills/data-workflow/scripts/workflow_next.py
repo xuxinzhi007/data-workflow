@@ -14,6 +14,12 @@ import sys
 
 import layout
 
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 ME = os.path.abspath(__file__)
 SKILL_ROOT = os.path.dirname(os.path.dirname(ME))
 FEATURE_RE = re.compile(r"^[A-Za-z0-9._-]+$")
@@ -208,12 +214,15 @@ def artifact_paths(artifact, feature):
 
 
 def stage_paths(stage, feature):
+    """本阶段可判定的产物路径。没有就返回空表。
+
+    不要兜底成 specs/<feature>/stage-<id>.md：那是 runner 自己造出来的文件名，
+    任何文档都没写过，模型只能凭空捏一个交差。没有可判定产物就直说没有。
+    """
     paths = []
     for item in stage.get("artifacts") or []:
         paths.extend(artifact_paths(item, feature))
-    if paths or stage.get("code"):
-        return paths
-    return ["specs/%s/stage-%s.md" % (feature, stage.get("id"))]
+    return paths
 
 
 def satisfied(root, pattern):
@@ -253,6 +262,24 @@ def open_decision(root, pattern):
         if file_is_open(read_text(path)):
             return True
     return False
+
+
+def unmet_requires(root, stage, paths):
+    """stage.requires 里的字面量必须出现在本阶段的产物里。
+
+    这是「内容门」：文件非空还不够，得写到点上（比如决定里必须有「未知」）。
+    没写 artifacts、或者产物还没落盘时不检查——那不是门该拦的时候。
+    """
+    needed = stage.get("requires") or []
+    if not needed or not paths:
+        return []
+    text = ""
+    for pattern in paths:
+        for path in concrete_files(root, pattern):
+            text += read_text(path) + "\n"
+    if not text:
+        return []
+    return [item for item in needed if item not in text]
 
 
 def close_decisions(root, paths, reply):
@@ -348,6 +375,9 @@ def print_context(root, run):
     print("RECORD %s" % shown("specs/%s/run.json" % feature))
     print("REPO %s" % root)
     print("SKILL %s" % SKILL_ROOT)
+    raw = run.get("raw_request") or ""
+    if raw:
+        print("RAW %s" % raw)
 
 
 def print_wait(root, run):
@@ -406,12 +436,29 @@ def show(root, run):
             print("文件里还有待拍板。先运行 wait，reply 写成对方能原样粘贴的一句，然后停止。")
             print("%s wait %s \"<问题>\" \"<一句回复>\"" % (ME, feature))
             return 0
+        unmet = unmet_requires(root, stage, paths)
+        if unmet:
+            print_context(root, run)
+            print("GATE")
+            print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+            print("缺：%s" % "、".join(unmet))
+            print("READ %s" % stage.get("file"))
+            print("补进本阶段产物后再运行：")
+            print("%s next %s" % (ME, feature))
+            return 0
         if stage.get("code"):
             print_context(root, run)
             print("DO")
             print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
             print("READ %s" % stage.get("file"))
             print("做完后运行：")
+            print("%s done %s" % (ME, feature))
+            return 0
+        if not paths:
+            print_context(root, run)
+            print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+            print("READ %s" % stage.get("file"))
+            print("NO_ARTIFACT 本阶段没有可判定的产物文件（不编一个文件名）。做完后运行：")
             print("%s done %s" % (ME, feature))
             return 0
         if not advance(workflow, run):
@@ -461,7 +508,7 @@ def cmd_next(root, feature):
     return 0
 
 
-def cmd_start(root, workflow_name, feature):
+def cmd_start(root, workflow_name, feature, raw_request=""):
     if not FEATURE_RE.fullmatch(feature or ""):
         print("BAD feature")
         return 1
@@ -488,6 +535,7 @@ def cmd_start(root, workflow_name, feature):
         "status": "working",
         "question": "",
         "reply": "",
+        "raw_request": (raw_request or "").strip(),
     }
     save_run(root, run)
     return show(root, run)
@@ -574,6 +622,14 @@ def cmd_done(root, feature):
         print("OPEN")
         print("文件里还有待拍板。先 wait，再 answer。")
         return 1
+    unmet = unmet_requires(root, stage, paths)
+    if unmet:
+        print_context(root, run)
+        print("GATE")
+        print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+        print("缺：%s" % "、".join(unmet))
+        print("READ %s" % stage.get("file"))
+        return 1
     if stage.get("code") and not run_verify(root, feature):
         return 1
     if not advance(workflow, run):
@@ -598,7 +654,7 @@ def cmd_abandon(root, feature):
 
 def usage():
     print("用法: workflow_next.py next [feature] [--repo DIR]")
-    print("      workflow_next.py start <workflow> <feature> [--repo DIR]")
+    print("      workflow_next.py start <workflow> <feature> [\"<用户原话>\"] [--repo DIR]")
     print("      workflow_next.py wait <feature> <问题> <一句回复> [--repo DIR]")
     print("      workflow_next.py answer <feature> <回复原文> [--repo DIR]")
     print("      workflow_next.py done <feature> [--repo DIR]")
@@ -632,8 +688,9 @@ def main(argv):
             print("BAD feature")
             return 1
         return cmd_next(root, feature)
-    if cmd == "start" and len(args) == 3:
-        return cmd_start(root, args[1], args[2])
+    if cmd == "start" and len(args) in (3, 4):
+        raw = args[3] if len(args) == 4 else ""
+        return cmd_start(root, args[1], args[2], raw)
     if cmd == "wait" and len(args) == 4:
         return cmd_wait(root, args[1], args[2], args[3])
     if cmd == "answer" and len(args) >= 3:
