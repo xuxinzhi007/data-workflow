@@ -29,6 +29,8 @@
 
 先查卡片，再读相关的一个域文件，再回代码。证据指向另一个域、出现 `CONFLICT`、或这条规则明确跨域时，再读那一个，并写明原因。不要把整个知识库塞进这次上下文。
 
+**域文件优先读仓库内的 `$DOMAIN_DOCS/<域>.md`**（`paths.sh` 解析；存在才用）。它随代码提交、能 review、能被 `knowledge_drift.sh` 判新鲜度。`$KNOW` 是补充源，引用时标「未核对」。看什么维度见 `references/business-model.md`。
+
 ## 把规则连到代码和旧决定
 
 命中卡片后，打开它的 `watches` 和 `source_paths`，对照当前代码。在 `decision.md` 或回答里写三样：卡片 id、`文件:符号`、现在是否仍符合。

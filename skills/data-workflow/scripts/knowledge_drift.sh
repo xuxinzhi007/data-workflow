@@ -178,11 +178,21 @@ else
   if [ -d "$VAULT_KNOWLEDGE" ]; then
     while IFS= read -r f; do targets+=("$f"); done < <(find "$VAULT_KNOWLEDGE" -type f -name '*.md' 2>/dev/null | sort)
   fi
+  # 仓库内域文档：团队共识、随代码提交。优先级高于 $KNOW，但两者都扫——冲突交给人看。
+  for f in "$repo_dir"/docs/domain/*.md; do
+    [ -f "$f" ] && targets+=("$f")
+  done
   [ -f "$repo_dir/CONTEXT.md" ] && targets+=("$repo_dir/CONTEXT.md")
+  [ -f "$repo_dir/GLOSSARY.md" ] && targets+=("$repo_dir/GLOSSARY.md")
+fi
+
+# 去重：knowledge_root 指向 <repo>/docs 时会把域文档再收一遍。
+if [ "${#targets[@]}" -gt 1 ]; then
+  mapfile -t targets < <(printf '%s\n' "${targets[@]}" | awk '!seen[$0]++')
 fi
 
 if [ "${#targets[@]}" -eq 0 ]; then
-  printf 'MISSING 没有可检查的文档（知识源路径: %s）\n' "$VAULT_KNOWLEDGE"
+  printf 'MISSING 没有可检查的文档（知识源路径: %s；仓库内：%s/docs/domain）\n' "$VAULT_KNOWLEDGE" "$repo_dir"
   exit 0
 fi
 

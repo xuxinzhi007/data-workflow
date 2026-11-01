@@ -71,7 +71,7 @@ Cursor 项目安装后，没有 `specs/passes.log` 里覆盖该路径的记录�
 | 改动审核 | `stages/change-review/SKILL.md` | `specs/<feature>/review/*.md` |
 | 质量检查 | `stages/quality-gate/SKILL.md` | `specs/<feature>/quality.md` |
 | 接口测试 | `stages/interface-test/SKILL.md` | `specs/<feature>/interface-test.md` |
-| 业务梳理 | `stages/oncall/references/routing.md` | 待确认，或一张卡 |
+| 业务梳理 | `stages/oncall/references/routing.md`（维度见 `references/business-model.md`） | 待确认，或一张卡，或 `docs/domain/<域>.md` |
 | 排查确认 | `stages/oncall/SKILL.md` | 只读结论 |
 | 提交 | `stages/git-commit/SKILL.md` | `specs/<feature>/change-note.md` |
 

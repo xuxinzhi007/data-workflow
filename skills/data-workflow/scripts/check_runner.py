@@ -185,6 +185,25 @@ def git_init(root):
     subprocess.run(["git", "init", "-q", root], check=True)
 
 
+def git_commit_all(root, message="probe"):
+    subprocess.run(["git", "-C", root, "add", "-A"], check=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            root,
+            "-c",
+            "user.name=probe",
+            "-c",
+            "user.email=probe@example.com",
+            "commit",
+            "-qm",
+            message,
+        ],
+        check=True,
+    )
+
+
 def hook_text(root):
     proc = subprocess.run(
         [BASH, HOOK],
@@ -926,6 +945,57 @@ def case_domains():
         shutil.rmtree(root, ignore_errors=True)
 
 
+def case_domain_docs():
+    """仓库内域文档：paths.sh 找得到，drift 能判级。"""
+    root = tempfile.mkdtemp(prefix="dw-domain-")
+    try:
+        git_init(root)
+        with open(os.path.join(root, "README.md"), "w", encoding="utf-8") as fh:
+            fh.write("probe\n")
+        os.makedirs(os.path.join(root, "docs", "domain"))
+        git_commit_all(root)
+        head = subprocess.run(
+            ["git", "-C", root, "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        ).stdout.strip()
+        with open(os.path.join(root, "docs", "domain", "order.md"), "w", encoding="utf-8") as fh:
+            fh.write(
+                "---\nid: domain-order\nobject: 订单\nverified_commit: %s\n"
+                "watches:\n  - README.md\n---\n\n# 订单\n" % head
+            )
+        git_commit_all(root, "doc")
+        paths = subprocess.run(
+            [BASH, os.path.join(SKILL_ROOT, "scripts", "paths.sh")],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=clean_env(),
+        )
+        drift = subprocess.run(
+            [BASH, os.path.join(SKILL_ROOT, "scripts", "knowledge_drift.sh")],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=clean_env(),
+        )
+        expect(
+            "DOMAIN_DOCS='" in paths.stdout and "docs/domain" in paths.stdout,
+            "paths.sh exposes the repo domain docs",
+            paths.stdout + paths.stderr,
+        )
+        expect(
+            "FRESH" in drift.stdout and "order.md" in drift.stdout,
+            "drift grades the repo domain doc",
+            drift.stdout + drift.stderr,
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
 def main():
     case_none()
     case_npm()
@@ -945,6 +1015,7 @@ def main():
     case_no_phantom()
     case_intake()
     case_domains()
+    case_domain_docs()
     case_foreign()
     case_default_no_hooks()
     case_record_follows_install()

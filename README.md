@@ -17,7 +17,11 @@ feature 九步链（data-service Go / Kratos 实例）是高风险变更上的�
 
 ## 知识层
 
-业务梳理用现在这套，不另建技能。顺序在 `stages/oncall/references/routing.md`：先 grep `$CARDS/`，再读相关的一个域文件，取值回代码。证据指向另一个域时再读那一个。卡片带 `verified_commit`、`watches`、`verified_at`。`knowledge_drift.sh` 标 `FRESH` / `STALE`，不停工。`status: superseded` 的卡跳过，留着查历史。代码证明的是现在的行为，不是「业务要求永远如此」。
+业务梳理用现在这套，不另建技能。**看什么维度**：`skills/data-workflow/references/business-model.md`（九个维度：对象与身份 / 状态族 / 迁移与守卫 / 读侧可见性 / 角色与数据范围 / 外部通道 / 幂等与重试 / 审计与通知 / 契约）。**去哪找**：`stages/oncall/references/routing.md`（先 grep `$CARDS/`，再读相关的一个域文件，取值回代码）。
+
+**落在哪**：仓库内 `docs/domain/<域>.md` 优先（`paths.sh` 的 `$DOMAIN_DOCS`；按 `templates/domain-doc-template.md` 写，frontmatter 带 `verified_commit` + `watches`，随代码提交，`knowledge_drift.sh` 会判它新鲜度）；`$KNOW` 是补充源，引用时标「未核对」；一次事件的现象与个人线索才写卡片。
+
+卡片带 `verified_commit`、`watches`、`verified_at`。`knowledge_drift.sh` 标 `FRESH` / `STALE`，不停工。`status: superseded` 的卡跳过，留着查历史。代码证明的是现在的行为，不是「业务要求永远如此」。
 
 没有出处的词进待确认，用 `wait` 停，不编一个看起来合理的含义。命中卡片后对照它的 `watches`：代码仍符合才当现行规则；已经不符合就标冲突，旧卡标 `superseded`。用户要留下这条，按 `stages/oncall/references/capture.md` 写一张卡，带上 `kind`、`object`、`applies_to`。一次运行结束时，只回写这次证实或推翻的那一条。不先写领域百科。
 
