@@ -38,7 +38,7 @@ feature 九步链（data-service Go / Kratos 实例）是高风险变更上的�
 | 层 | 位置 | 内容 | 加载方式 |
 |---|---|---|---|
 | L0 编排 | `skills/data-workflow/SKILL.md` | 选型。零事实 | 入口触发 |
-| L1 阶段 | `skills/data-workflow/stages/` | 每个阶段的步骤 | 选型表点名才读 |
+| L1 阶段 | `skills/data-workflow/stages/` | 每个阶段的步骤 | `next` 打印的 `READ` 点名才读 |
 | L2 知识 | `$KNOW/**`、`$TEMPLATES/**` | 业务事实 | 一次一个域文件 |
 | L3 权威 | 代码、生成物、聚焦测试 | 取值 | 回这里核对 |
 
@@ -94,7 +94,7 @@ data-workflow/
     └── stages/                   阶段文件，不单独安装
 ```
 
-常驻的只有技能的名称和描述。触发后读 `SKILL.md`。选型表点名后，只读那一个 `stages/<name>/SKILL.md`。
+常驻的只有技能的名称和描述。触发后读 `SKILL.md`。之后读哪个阶段文件**只由 `next` 打印的 `READ` 决定**（SKILL.md 不维护阶段→文件的映射）；不经工作流的只有四个入口：业务梳理、排查、提交、画图。
 
 ## 安装与验证
 

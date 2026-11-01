@@ -1069,6 +1069,73 @@ def case_gate_check():
         shutil.rmtree(root, ignore_errors=True)
 
 
+def case_evidence_log():
+    """推进时落一行证据（含 head）；HEAD 变了 next 要提醒。"""
+    root = tempfile.mkdtemp(prefix="dw-evidence-")
+    try:
+        git_init(root)
+        write_config(root, 'verify: "true"\n')
+        git_commit_all(root)
+        run(root, "start", "change", FEATURE)
+        folder = os.path.join(root, "specs", FEATURE)
+        with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
+            fh.write("- 原话（一字不改）：探测\n- 本质：改一处\n- 未知：无\n")
+        run(root, "next")
+        log = open(os.path.join(folder, "evidence.log"), encoding="utf-8").read()
+        expect(
+            "stage=1" in log and "head=" in log and "by=runner" in log,
+            "advancing appends an evidence line",
+            log,
+        )
+        git_commit_all(root)
+        with open(os.path.join(root, "later.txt"), "w", encoding="utf-8") as fh:
+            fh.write("x\n")
+        git_commit_all(root, "later")
+        nxt = run(root, "next")
+        expect(
+            "NOTE 工作树已变" in nxt.stdout,
+            "head drift shows up as a note",
+            nxt.stdout,
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def case_decided():
+    """拍板过的话由 next 带出来（不另存一份）。"""
+    root = tempfile.mkdtemp(prefix="dw-decided-")
+    try:
+        git_init(root)
+        write_config(root, 'verify: "true"\n')
+        run(root, "start", "change", FEATURE)
+        folder = os.path.join(root, "specs", FEATURE)
+        with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
+            fh.write("- 原话（一字不改）：探测\n- 本质：改一处\n- 未知：无\n范围待拍板\n")
+        run(root, "next")
+        run(root, "wait", FEATURE, "用全量还是三态？", "只改判定那一行")
+        run(root, "answer", FEATURE, "只改判定那一行")
+        nxt = run(root, "next")
+        expect(
+            "DECIDED 只改判定那一行" in nxt.stdout,
+            "next echoes the last decision",
+            nxt.stdout,
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def case_skill_routing():
+    """阶段→文件只留一份（next）；SKILL.md 不再维护那张表。"""
+    text = open(os.path.join(SKILL_ROOT, "SKILL.md"), encoding="utf-8").read()
+    expect(
+        "| 需求分析 |" not in text
+        and "| 业务梳理 |" in text
+        and "| 画图 |" in text,
+        "SKILL.md keeps only the four non-workflow entries",
+        text,
+    )
+
+
 def main():
     case_none()
     case_npm()
@@ -1091,6 +1158,9 @@ def main():
     case_domain_docs()
     case_approve()
     case_gate_check()
+    case_evidence_log()
+    case_decided()
+    case_skill_routing()
     case_foreign()
     case_default_no_hooks()
     case_record_follows_install()

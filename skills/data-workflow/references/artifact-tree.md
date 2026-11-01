@@ -22,6 +22,10 @@ $REPO/specs/<feature>/
 ├── interface-test.md    三级门结论 + 四态裁决 + 补跑条件            ← interface-test
 ├── quality.md           构建/单测/覆盖率证据                        ← quality-gate
 ├── change-note.md       变更说明 + 文档审计门结果                    ← git-commit
+├── run.json             当前停在第几步（进度，不存理由）            ← workflow_next.py
+├── evidence.log         每次推进一行：stage/门/退出码/head/时间   ← workflow_next.py（只由 runner 写）
+├── verify.log           测试入口的原始输出（第一行是 exit）        ← workflow_next.py
+├── gate                 方案门：第一条非空行是 plan pass              ← 人 / tech-design
 └── agents/
     ├── ledger.md             子 agent 台账（唯一可靠状态源）
     ├── brief-<axis>.md       派活书

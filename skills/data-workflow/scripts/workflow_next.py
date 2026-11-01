@@ -191,12 +191,16 @@ def run_gate_check(root, stage, feature):
 
 
 def run_verify(root, feature):
+    """跑仓库声明的 verify。返回退出码：0 通过、非 0 失败、-1 未配置。
+
+    返回码而不是布尔：证据行要写真的退出码（`verify=exit0` / `verify=exit1` / `verify=none`）。
+    """
     business = BUSINESS or root
     cmd = declared_verify(business)
     if not cmd:
         print("RED")
         print("verify 未配置")
-        return False
+        return -1
     try:
         proc = subprocess.run(
             cmd,
@@ -212,7 +216,7 @@ def run_verify(root, feature):
         print("RED")
         print("VERIFY exit 124")
         print("LOG %s" % shown("specs/%s/verify.log" % feature))
-        return False
+        return 124
     output = "cmd %s\n" % cmd + (proc.stdout or "") + (proc.stderr or "")
     write_verify_log(root, feature, proc.returncode, output)
     print("VERIFY exit %s" % proc.returncode)
@@ -222,8 +226,8 @@ def run_verify(root, feature):
         lines = [line for line in output.splitlines() if line.strip()]
         for line in lines[-8:]:
             print(line)
-        return False
-    return True
+        return proc.returncode
+    return 0
 
 
 def load_workflow(name):
@@ -424,6 +428,75 @@ def print_context(root, run):
     raw = run.get("raw_request") or ""
     if raw:
         print("RAW %s" % raw)
+    decided = last_decision(root, feature)
+    if decided:
+        print("DECIDED %s" % decided)
+    note = head_note(root, feature)
+    if note:
+        print("NOTE %s" % note)
+
+
+def last_decision(root, feature):
+    """最近一次拍板。从产物里读，不另存一份——避免两处真相。"""
+    folder = os.path.join(root, "specs", feature)
+    found = []
+    for pattern in ("*.md", "*/*.md"):
+        for path in sorted(glob.glob(os.path.join(folder, pattern))):
+            for line in read_text(path).splitlines():
+                line = line.strip()
+                if line.startswith("已拍板："):
+                    found.append(line[len("已拍板："):].strip())
+    return found[-1] if found else ""
+
+
+def git_head(root):
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", root, "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+        return "nogit"
+    return out or "nogit"
+
+
+def last_evidence_head(root, feature):
+    text = read_text(os.path.join(root, "specs", feature, "evidence.log"))
+    head = ""
+    for line in text.splitlines():
+        for part in line.split():
+            if part.startswith("head="):
+                head = part[len("head="):]
+    return head
+
+
+def head_note(root, feature):
+    """记录里的 head 与当前 HEAD 不一致时提醒。不阻塞，只提示。"""
+    recorded = last_evidence_head(root, feature)
+    if not recorded or recorded == "nogit":
+        return ""
+    now = git_head(BUSINESS or root)
+    if not now or now == "nogit" or now == recorded:
+        return ""
+    return "工作树已变（记录 %s → 现在 %s）。已过的阶段按旧代码成立；改过的地方重新核对。" % (recorded, now)
+
+
+def record_evidence(root, run, stage, verify_code=None):
+    """推进成功时追加一行。只由 runner 写；行尾带 by=runner，手写的行没有。"""
+    feature = run.get("feature") or ""
+    folder = os.path.join(root, "specs", feature)
+    os.makedirs(folder, exist_ok=True)
+    row = "stage=%s requires=ok gate_check=%s verify=%s head=%s at=%s by=runner" % (
+        stage.get("id"),
+        "ok" if (stage.get("gate_check") or "").strip() else "none",
+        "none" if verify_code is None else "exit%s" % verify_code,
+        git_head(BUSINESS or root),
+        datetime.now().astimezone().isoformat(timespec="seconds"),
+    )
+    with open(os.path.join(folder, "evidence.log"), "a", encoding="utf-8") as fh:
+        fh.write(row + "\n")
+    return row
 
 
 def print_wait(root, run):
@@ -492,6 +565,14 @@ def show(root, run):
             print("补进本阶段产物后再运行：")
             print("%s next %s" % (ME, feature))
             return 0
+        if stage.get("code"):
+            print_context(root, run)
+            print("DO")
+            print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+            print("READ %s" % stage.get("file"))
+            print("做完后运行：")
+            print("%s done %s" % (ME, feature))
+            return 0
         ok, check_cmd, check_out = run_gate_check(root, stage, feature)
         if not ok:
             print_context(root, run)
@@ -501,14 +582,6 @@ def show(root, run):
             for line in tail_lines(check_out):
                 print(line)
             print("READ %s" % stage.get("file"))
-            return 0
-        if stage.get("code"):
-            print_context(root, run)
-            print("DO")
-            print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
-            print("READ %s" % stage.get("file"))
-            print("做完后运行：")
-            print("%s done %s" % (ME, feature))
             return 0
         if not paths:
             print_context(root, run)
@@ -520,6 +593,7 @@ def show(root, run):
         if not advance(workflow, run):
             print("BAD stage %s" % run.get("stage"))
             return 1
+        record_evidence(root, run, stage)
         save_run(root, run)
     print_context(root, run)
     print("DONE %s" % feature)
@@ -697,10 +771,14 @@ def cmd_done(root, feature):
             print(line)
         print("READ %s" % stage.get("file"))
         return 1
-    if stage.get("code") and not run_verify(root, feature):
-        return 1
+    verify_code = None
+    if stage.get("code"):
+        verify_code = run_verify(root, feature)
+        if verify_code != 0:
+            return 1
     if not advance(workflow, run):
         return 1
+    record_evidence(root, run, stage, verify_code)
     save_run(root, run)
     return show(root, run)
 

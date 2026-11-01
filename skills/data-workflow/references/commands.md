@@ -17,6 +17,8 @@ $py "$PLUGIN_ROOT/scripts/workflow_next.py" <子命令>
 | `start <workflow> <feature>` | 新开。workflow 为 feature、bugfix、hotfix、review-only、change | 停在第一阶段缺的文件 |
 | `wait <feature> "<问题>" "<一句回复>"` | `OPEN`，或还要问一句 | `run.json` 里有这句 reply |
 | `answer <feature> <回复原文>` | 对方回的就是 reply | 仍开着的产物末尾有 `已拍板：` |
-| `done <feature>` | `DO` 做完 | 编码步骤先过 `gate_check`（工作树真动过），再跑该仓库的测试入口。任一不过就停。退出码 0 只说明命令通过 |
+| `done <feature>` | `DO` 做完 | 编码步骤先过 `gate_check`（工作树真动过），再跑该仓库的测试入口。任一不过就停；通过后往 `specs/<f>/evidence.log` 追一行（含 `head`）。退出码 0 只说明命令通过 |
+| 证据行 | 任何一次推进 | `stage=<id> requires=ok gate_check=ok\|none verify=exit0\|none head=<sha> at=<iso> by=runner`。只由 runner 写；手写的行没有 `by=runner`。`head` 与当前 HEAD 不一致时 `next` 会打一行 `NOTE`（不阻塞） |
+| `next` 的 `DECIDED` | 这条运行拍过板 | 最近一条 `已拍板：`，从产物里读（不另存一份）。新会话继续一条旧运行时靠它拿回“为什么这么定” |
 | `approve <feature> <design|waiver> <前缀> [原因]` | 要放行受保护路径 | `specs/passes.log` 多一行带 `approved` 的记录。没有已答复的拍板时打 `NEED_ANSWER`，不写 |
 | `abandon <feature>` | 这轮不做了 | `status` 成为 `abandoned`。`next` 把它当已结束，钩子不再注入 |

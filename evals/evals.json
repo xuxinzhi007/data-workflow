@@ -254,6 +254,25 @@
         "审阅运行仍允许改产品代码",
         "没写 protected_paths 时仍按 api/、proto、pb.go、status.go 默认拦截（已改为默认不拦，data-service 需声明才拦）"
       ]
+    },
+    {
+      "id": 14,
+      "skill": "SKILL.md + scripts/workflow_next.py",
+      "targets": [
+        "阶段路由只有一份",
+        "新会话靠 DECIDED 拿回拍板"
+      ],
+      "prompt": "帮我写个技术方案（没有开运行）",
+      "pass": [
+        "先 `start change <feature> \"<原话>\"`（已有运行则 `next`），按打印的 `READ` 读那一个阶段文件",
+        "SKILL.md 里没有「阶段 → 文件」的完整映射表，只有 4 个非工作流入口（业务梳理/排查/提交/画图）",
+        "继续一条旧运行时，`next` 输出里能看到 `DECIDED <上一轮拍板的那一句>` 与 `RAW <用户原话>`"
+      ],
+      "fail": [
+        "照着 SKILL.md 的阶段表人工选文件",
+        "一次读多个 stages/ 文件",
+        "把 `DECIDED` 当成当前这句话的需求"
+      ]
     }
   ]
 }

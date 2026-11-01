@@ -40,9 +40,9 @@ Cursor 项目安装后，没有 `specs/passes.log` 里覆盖该路径的记录�
 
 ## 选工作流
 
-用户这句话已经点明选型表某一行：直接读该行的阶段文件。用户只说开始干活：先读 `references/scope.md`，按 L1 / L2 / L3 定这一次的范围，再选工作流。不先弹出九步菜单。
+用户这句话已经点明某个阶段（例：「帮我写个技术方案」）：没开运行就先 `start`，然后按 `next` 打印的 `READ` 读那一个阶段文件；已有运行直接 `next`。用户只说开始干活：先读 `references/scope.md`，按 L1 / L2 / L3 定这一次的范围，再选工作流。不先弹出九步菜单。
 
-进入选型表里 feature / bugfix / hotfix（data-service Go 栈实例）的一行之前，先读 `references/workflows.md`，再读那一个阶段文件。
+进入 feature / bugfix / hotfix（data-service Go 栈实例）之前，先读 `references/workflows.md`；之后每一步读什么由 `next` 打印的 `READ` 决定。
 
 | 场景 | 工作流 |
 |---|---|
@@ -60,22 +60,20 @@ Cursor 项目安装后，没有 `specs/passes.log` 里覆盖该路径的记录�
 
 梳理和需求判断发给用户的第一份，按 `references/doc-shape.md` 的结论层：要不要改、现在能不能改、下一步。依据和实施细节等用户追问再写。
 
-## 选型表
+## 阶段文件从哪来
 
-一次只读表里点名的一个文件。`$KNOW` 一次只加载一个域文件。
+阶段 → 文件的映射**不在本文件维护**，三份描述会漂：`next` 会打印 `READ <文件>`，按它读那一个。没开运行时先 `start`，别照着记忆选文件。
 
-| 选择 | 读 | 产出 |
+不经任何工作流的只有四个入口（用户点名时才用）：
+
+| 入口 | 读 | 产出 |
 |---|---|---|
-| 需求分析 | `stages/requirement-analysis/SKILL.md` | `specs/<feature>/spec.md` |
-| 影响面评估 | `stages/impact-assessment/SKILL.md` | `specs/<feature>/impact.md` |
-| 技术方案 | `stages/tech-design/SKILL.md` | `plan.md`、`rollback.md` |
-| 编码实现 | `stages/implementation/SKILL.md` | 代码 |
-| 改动审核 | `stages/change-review/SKILL.md` | `specs/<feature>/review/*.md` |
-| 质量检查 | `stages/quality-gate/SKILL.md` | `specs/<feature>/quality.md` |
-| 接口测试 | `stages/interface-test/SKILL.md` | `specs/<feature>/interface-test.md` |
 | 业务梳理 | `stages/oncall/references/routing.md`（维度见 `references/business-model.md`） | 待确认，或一张卡，或 `docs/domain/<域>.md` |
 | 排查确认 | `stages/oncall/SKILL.md` | 只读结论 |
 | 提交 | `stages/git-commit/SKILL.md` | `specs/<feature>/change-note.md` |
+| 画图 | `stages/excalidraw-diagram/SKILL.md` | 图 |
+
+一次只读一个文件。`$KNOW` 一次只加载一个域文件。
 
 点名才读的全局技能：`grilling`、`diagnosing-bugs`、`ponytail-review`、`security-best-practices`、`security-threat-model`、`gh-fix-ci`、`gh-address-comments`、`domain-modeling`。阶段文件按路径读，不用技能名去调用。
 
