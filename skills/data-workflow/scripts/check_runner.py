@@ -1458,6 +1458,39 @@ def case_open_marker():
     )
 
 
+def case_evidence_first():
+    """查证义务必须在 scope.md 里，且带可判定边界与反例。
+
+    这条防的是：把能自己查的事实反问用户。一旦删掉，来回拉抷的成本就回来了。
+    """
+    scope = open(
+        os.path.join(SKILL_ROOT, "references", "scope.md"), encoding="utf-8"
+    ).read()
+    expect(
+        "查证义务" in scope,
+        "scope.md keeps the evidence-first section",
+        "",
+    )
+    # 边界必须可判定：列出「本机可查」与「该问人」两类，而不是一句劝告
+    for needle in ("本机文件", "业务口径", "卡在哪", "谁去补"):
+        expect(
+            needle in scope,
+            "scope.md names the boundary marker %r" % needle,
+            "",
+        )
+    expect(
+        "不通过的样子" in scope,
+        "scope.md carries a failing example",
+        "",
+    )
+    agents = open(os.path.join(REPO_ROOT, "AGENTS.md"), encoding="utf-8").read()
+    expect(
+        "先查完再给方案" in agents,
+        "AGENTS.md points at the evidence-first rule",
+        "",
+    )
+
+
 def main():
     case_none()
     case_npm()
@@ -1487,6 +1520,7 @@ def main():
     case_skill_routing()
     case_intent_confirm_wired()
     case_open_marker()
+    case_evidence_first()
     case_card_writeback()
     case_lazy_load()
     case_evals_are_runnable()
