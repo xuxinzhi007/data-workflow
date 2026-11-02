@@ -1275,6 +1275,75 @@ def case_decided():
         shutil.rmtree(root, ignore_errors=True)
 
 
+def case_docs_match_reality():
+    """文档里的脚本清单必须跟实现一致。
+
+    断言数量这类数字靠人记必失；但用「内层跑一遍 verify」来自检会递归、
+    而且内外层并发会互相干扰。所以只检查稳定的东西：脚本清单。
+    断言数量交给 README 一句话说明，不写死具体数字。
+    """
+    scripts_md = open(
+        os.path.join(REPO_ROOT, "docs", "scripts.md"), encoding="utf-8"
+    ).read()
+    script_dir = os.path.join(SKILL_ROOT, "scripts")
+    missing = [
+        name
+        for name in sorted(os.listdir(script_dir))
+        if not name.startswith(".") and name not in scripts_md
+    ]
+    expect(
+        not missing,
+        "docs/scripts.md lists every skill script (missing: %s)" % missing,
+        "",
+    )
+    # competitive.md 不应写死断言数量——那个数每加一条测试就过期
+    comp = open(
+        os.path.join(REPO_ROOT, "docs", "competitive.md"), encoding="utf-8"
+    ).read()
+    expect(
+        not re.search(r"verify\.sh\s+#\s*\d+\s*条", comp),
+        "competitive.md does not hardcode the assertion count",
+        "",
+    )
+
+
+def case_readme_matches_requires():
+    """README 里的流程示例必须与 change.json 的 requires 一致。
+
+    这类漂移最容易发生：改了 requires 忘了改 README，新人照 README 写产物
+    就会被 GATE 拦住，而且不知道是文档错还是自己错。实战里真的撞到过。
+    """
+    wf = json.load(
+        open(
+            os.path.join(SKILL_ROOT, "workflows", "change.json"), encoding="utf-8"
+        )
+    )
+    req = wf["stages"][0].get("requires") or []
+    readme = open(os.path.join(REPO_ROOT, "README.md"), encoding="utf-8").read()
+    # 第一屏可能在 README 里跨行，逐行收集以「# 写 decision.md 第一屏」开头的注释
+    first_screen = []
+    for line in readme.splitlines():
+        stripped = line[line.find("#"):] if "#" in line else ""
+        if "写 decision.md 第一屏" in stripped or first_screen:
+            if stripped.startswith("#"):
+                first_screen.append(stripped)
+            elif first_screen:
+                break
+    block_text = "\n".join(first_screen)
+    expect(
+        bool(block_text),
+        "README documents the decision.md first screen",
+        "",
+    )
+    text = block_text
+    missing = [k for k in req if k not in text]
+    expect(
+        not missing,
+        "README first-screen matches change.json requires (missing: %s)" % missing,
+        text,
+    )
+
+
 def case_intent_confirm_wired():
     """两个工作流的第 1 步都要求理解确认，且模板措辞与 requires 逐字一致。
 
@@ -1571,6 +1640,8 @@ def main():
     case_decided()
     case_skill_routing()
     case_intent_confirm_wired()
+    case_readme_matches_requires()
+    case_docs_match_reality()
     case_open_marker()
     case_evidence_first()
     case_card_writeback()

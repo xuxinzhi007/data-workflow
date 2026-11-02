@@ -11,6 +11,9 @@
 | `scripts/contract_diff.sh <base>` | 以 merge-base 的 proto 为基线，输出七类 breaking。恒 exit 0，裁决归技能 |
 | `scripts/proto_contract.py` | 把 proto 归一成事实行，供 contract_diff 比对 |
 | `scripts/svg_to_png.sh` | 把 SVG 转成 PNG |
+| `scripts/find_python.sh` | 逐个实跑 `py -3` / `python3` / `python` 选可用的一个。Windows 上 `python3` 常是 Store 占位程序 |
+| `scripts/layout.py` | 运行产物落到哪。一律当前工作仓库根，不回技能源仓库 |
+| `scripts/check_runner.py` | 回归集。`bash scripts/verify.sh` 会调它 |
 
 `knowledge_drift.sh` 恒 exit 0。exit 2 只表示文档无法解析。缺 frontmatter 算 STALE。知识源为空时打印 `DEGRADED`，回退 `<repo>/docs`。
 

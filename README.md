@@ -25,8 +25,10 @@
 ```bash
 start change <feature> "<用户原话>"   # 记账 + 原话一字不改写进 run.json（next 会打 RAW）
 next                                  # → READ <阶段文件> + NEED <产物>
-# 写 decision.md：原话 / 本质 / 验收 / 未知 / 这次不做
-next                                  # → GATE 缺：未知（内容门），补完才往下
+# 写 decision.md 第一屏：原话（一字不改）/ 我理解你要的是 / 可能理解错的地方 /
+#                        本质 / 怎样算满足 / 未知 / 这次不做
+next                                  # → GATE 缺哪行（内容门），补完才往下
+#   含糊时把歧义写进「可能理解错的地方」再 wait，不要先猜
 # 改代码
 done                                  # → GATE(工作树没动就停) → verify → evidence.log
 # 写 check.md（首行是 verify.log 的 exit 那一行）

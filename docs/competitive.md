@@ -99,6 +99,6 @@
 复核命令：
 
 ```bash
-bash scripts/verify.sh                        # 47 条回归
+bash scripts/verify.sh                        # 回归集，末行打印 OK
 bash skills/data-workflow/hooks/session-start # 会话注入
 ```
