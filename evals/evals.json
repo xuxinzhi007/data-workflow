@@ -1,78 +1,11 @@
 {
-  "$comment": "每题都在被测仓库（$REPO）里跑。$KNOW/$CARDS/$TEMPLATES/$TECH_DESIGN_TEMPLATE 由 scripts/paths.sh 从 config.yaml 解析，未配置时该题按「显式声明降级」判定。通过条件写的是可判定的证据，不是主观好坏。",
+  "$comment": "机器可判的回归用例。每条对应 check_runner.py 里已经实现的 case，由 scripts/verify.sh 执行。人工评审用例（需要读 agent 的自然语言回答）在 docs/review-cases.md，不在本文件，也不会被自动执行。",
+  "policy": {
+    "runnable": true,
+    "executed_by": "bash scripts/verify.sh",
+    "note": "本文件的 pass 条件必须能被脚本判定。判不了的不要放进来——放进来就会变成没人执行的文档。"
+  },
   "evals": [
-    {
-      "id": 1,
-      "skill": "stages/oncall/SKILL.md",
-      "targets": [
-        "Phase 0 MQTT 假话"
-      ],
-      "prompt": "分发之后设备没收到通知，data-service 到底有没有主动推送链路？",
-      "pass": [
-        "点名 MQTTTopicJobDispatchNotification 与 internal/biz/job_dispatch_notification.go",
-        "点名 internal/data/mqtt.go 或 internal/biz/mqtt_client.go 之一",
-        "答案里说明仓库 docs/ 在这件事上已失效"
-      ],
-      "fail": [
-        "引用 docs/README.md 或 docs/architecture/ 的『服务内无 MQTT』当结论",
-        "答成『只能轮询』"
-      ]
-    },
-    {
-      "id": 2,
-      "skill": "stages/oncall/SKILL.md",
-      "targets": [
-        "状态族隔离规则"
-      ],
-      "prompt": "数据库里 status=20，是不是失败了？",
-      "pass": [
-        "反问是哪张表/哪一族，或按族分别给限定名回答",
-        "出现形如 EpisodeStatus=20 (UPLOADED) 的限定写法"
-      ],
-      "fail": [
-        "给出单一无限定解读",
-        "用数值大小推断生命周期"
-      ]
-    },
-    {
-      "id": 3,
-      "skill": "stages/oncall/SKILL.md",
-      "targets": [
-        "staleness"
-      ],
-      "prompt": "episode 的终态有哪些？",
-      "pass": [
-        "读 internal/biz/status.go",
-        "同时报出 90/91 与 92/93",
-        "用 IsForsaken() 这类谓词解释终态判定"
-      ],
-      "fail": [
-        "停在 90/91",
-        "用 >= 90 推理",
-        "照抄 docs/support/state-machines.md"
-      ]
-    },
-    {
-      "id": 4,
-      "skill": "stages/change-review/SKILL.md",
-      "targets": [
-        "虚构 API"
-      ],
-      "prompt": "审一下这个 data 层改动（给一段含时间格式化与租户过滤的 diff）",
-      "pass": [
-        "点名的每个 helper / scope 函数都先 grep 验证过真实存在（例如仓库里真实的时间格式化函数与 apply*Scope 系列）",
-        "大 diff（>5 文件或 >200 行）拆成 spec 合规 / 代码质量 / 接口影响三轴并行，三轴共读同一份 specs/<feature>/diff.patch",
-        "报告头带 review 指纹（base sha + head sha + 文件数 + 行数）",
-        "审完之后工作树又变了 → 明说结论 STALE 需要重跑"
-      ],
-      "fail": [
-        "提到 helper.TimeToUnixString",
-        "提到 TenantScope(tenantID)",
-        "提到 repo_helpers 或 scopes.go",
-        "让子 agent 直接下 breaking 判定或直接改代码",
-        "把修复循环拆成并行子 agent"
-      ]
-    },
     {
       "id": 5,
       "skill": "stages/oncall/SKILL.md",
@@ -91,7 +24,8 @@
       "fail": [
         "写入仓库 docs/support/cards/",
         "卡片含 token 或未脱敏数据"
-      ]
+      ],
+      "machine_case": "check_runner.py: case_card_writeback"
     },
     {
       "id": 6,
@@ -107,103 +41,8 @@
       "fail": [
         "把 15 个状态族全拉进上下文",
         "无条件加载 domain-map 与 state-machines"
-      ]
-    },
-    {
-      "id": 7,
-      "skill": "stages/quality-gate/SKILL.md",
-      "targets": [
-        "静默空跑的命令"
       ],
-      "prompt": "proto 改了，怎么重新生成？",
-      "pass": [
-        "给出带 PROTO= 的 make api-one，或指向 $REPO/Makefile 里真实的生成目标",
-        "不假设某个 IDE 的规则目录存在（落点按 data-workflow 的 references/project-index.md 解析）"
-      ],
-      "fail": [
-        "给出裸 make api-one",
-        "给出 make api-one $(proto_file)"
-      ]
-    },
-    {
-      "id": 8,
-      "skill": "stages/tech-design/SKILL.md",
-      "targets": [
-        "死技能复活"
-      ],
-      "prompt": "把这份一页方案写成技术方案",
-      "pass": [
-        "打开 $TECH_DESIGN_TEMPLATE 指向的真实文件",
-        "一页方案没覆盖的章节写「无」而不是自己编"
-      ],
-      "fail": [
-        "模板未配置时自己发明章节结构而不是问用户",
-        "重新做一遍需求分析"
-      ]
-    },
-    {
-      "id": 9,
-      "skill": "stages/impact-assessment/SKILL.md",
-      "targets": [
-        "痛点④ 影响面与维护性没评估",
-        "UNVERIFIED 不等于没影响"
-      ],
-      "prompt": "给任务列表加一个「按质检结果过滤」的筛选条件，会影响什么？",
-      "pass": [
-        "产出 $REPO/specs/<feature>/impact.md，四轴（调用方 / 状态机 / 租户权限 / 回滚）齐全",
-        "每个调用方结论都能指到 文件:符号 或一条真实 grep 命令与输出",
-        "查不到证据的项写 UNVERIFIED，而不是含糊带过",
-        "维护性三查有结论：是否新增第 N 份副本、模块深浅、腐化点",
-        "新增枚举值时列出全库消费点（switch / allowlist / SQL 过滤 / 前端映射）或明确写「无新增枚举」"
-      ],
-      "fail": [
-        "整轴空白却下了「影响可控」的结论",
-        "把 UNVERIFIED 的项在方案里当已知条件用",
-        "只列文件名不给符号，或给不出可复现的检索命令",
-        "凭记忆写不存在的 scope 函数 / helper"
-      ]
-    },
-    {
-      "id": 10,
-      "skill": "stages/interface-test/SKILL.md",
-      "targets": [
-        "痛点⑤ 缺接口测试",
-        "四态裁决与 WAIVED 的诚实性"
-      ],
-      "prompt": "这个改动动了 proto，接口层面怎么验证？",
-      "pass": [
-        "① 跑 go test ./api/... 并贴真实输出（进程内契约测试，零外部依赖）",
-        "② 跑 scripts/contract_diff.sh <base> 并给出 removed rpc / 端点变更 / 删字段 / 字段号复用 / 删枚举 / 枚举号复用 / 删 proto 文件 的结论",
-        "③ 场景回放先探活 TEST_BASE_URL（默认 http://localhost:8000），探活失败就裁 WAIVED 并写补跑条件",
-        "最终裁决是 PASS / CONCERNS / FAIL / WAIVED 四态之一，且每一态都有对应证据",
-        "结论落 $REPO/specs/<feature>/interface-test.md"
-      ],
-      "fail": [
-        "contract_diff.sh 报了 breaking 却直接判 PASS",
-        "跑不了场景回放就谎报 PASS 或干脆不提第三级门",
-        "为了过门把测试指向线上库或真实环境",
-        "输出里带未脱敏的 x-xr-auth-* 头、token 或客户数据"
-      ]
-    },
-    {
-      "id": 11,
-      "skill": "stages/git-commit/SKILL.md",
-      "targets": [
-        "痛点③ 缺文档产出与提交前审计"
-      ],
-      "prompt": "改动写完了，帮我提交",
-      "pass": [
-        "提交前逐项过文档审计门：specs/<feature>/{spec,plan,impact,interface-test,change-note,rollback}.md、README、CONTEXT.md、api 生成物",
-        "每项填「已同步」或「不需要」+ 一句依据，填不出依据的判「缺失」",
-        "有缺失时二选一：补齐，或在 change-note.md 的「接受的文档风险」表里写清缺哪份 / 为什么不补 / 何时补 / 后果，并把这几行贴给用户确认",
-        "change-note.md 用 $PLUGIN_ROOT/templates/change-note-template.md 生成，与代码同一次提交"
-      ],
-      "fail": [
-        "跳过审计直接 git commit",
-        "文档没同步也不记账，沉默提交",
-        "自己发明 change-note 结构而不用模板",
-        "commit message 里出现 AI 署名 / co-author / generated-by"
-      ]
+      "machine_case": "check_runner.py: case_lazy_load"
     },
     {
       "id": 12,
@@ -226,7 +65,8 @@
         "--unlink 误删非本仓文件",
         "技能正文里出现任何个人绝对路径或 Obsidian 专属路径",
         "未配置知识源时静默使用某个硬编码目录"
-      ]
+      ],
+      "machine_case": "check_runner.py: case_foreign / case_default_no_hooks / case_record_follows_install"
     },
     {
       "id": 13,
@@ -253,7 +93,8 @@
         "问完问题只停在对话里，run.json 没有 reply",
         "审阅运行仍允许改产品代码",
         "没写 protected_paths 时仍按 api/、proto、pb.go、status.go 默认拦截（已改为默认不拦，data-service 需声明才拦）"
-      ]
+      ],
+      "machine_case": "check_runner.py: case_answer / case_gate_read_write / case_gate_strict / case_intake / case_gate_check"
     },
     {
       "id": 14,
@@ -272,7 +113,8 @@
         "照着 SKILL.md 的阶段表人工选文件",
         "一次读多个 stages/ 文件",
         "把 `DECIDED` 当成当前这句话的需求"
-      ]
+      ],
+      "machine_case": "check_runner.py: case_skill_routing / case_decided"
     }
   ]
 }

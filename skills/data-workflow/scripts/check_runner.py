@@ -8,6 +8,7 @@
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -1136,6 +1137,158 @@ def case_skill_routing():
     )
 
 
+def case_card_writeback():
+    """卡片回写：写下去的东西能被脚本验证，而不是只看起来像。
+
+    对应人工样例 #5：卡片出现、verified_commit 等于 HEAD、检索面可 grep、drift 报 FRESH。
+    """
+    root = tempfile.mkdtemp(prefix="dw-card-")
+    cards = tempfile.mkdtemp(prefix="dw-cards-")
+    try:
+        git_init(root)
+        with open(os.path.join(root, "README.md"), "w", encoding="utf-8") as fh:
+            fh.write("probe\n")
+        git_commit_all(root)
+        head = subprocess.run(
+            ["git", "-C", root, "rev-parse", "HEAD"],
+            capture_output=True, text=True, encoding="utf-8",
+        ).stdout.strip()
+        env = clean_env()
+        env["DATA_WORKFLOW_CARDS_DIR"] = cards
+        # 模拟按 capture.md 写的一张卡
+        body = (
+            "---\n"
+            "id: support-20260101-mqtt-false\n"
+            "title: MQTT \u63a8\u9001\u88ab\u8bef\u8ba4\u4e3a\u4e0d\u5b58\u5728\n"
+            "kind: fact\n"
+            "status: verified-static\n"
+            "domains: [job]\n"
+            "object: job\n"
+            "symptoms: [mqtt, \u6ca1\u6536\u5230\u901a\u77e5, push]\n"
+            "source_paths: [internal/biz/job_dispatch_notification.go]\n"
+            "invalidates_when: \u8be5\u6587\u4ef6\u88ab\u5220\u9664\u6216\u91cd\u547d\u540d\n"
+            "verified_branch: main\n"
+            "verified_commit: %s\n"
+            "verified_at: 2026-01-01T00:00:00+08:00\n"
+            "verification: static\n"
+            "---\n\n# MQTT\n\u7684\u786e\u6709\u63a8\u9001\u3002\n" % head
+        )
+        path = os.path.join(cards, "2026-01-01-mqtt.md")
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(body)
+        text = open(path, encoding="utf-8").read()
+        expect(
+            ("verified_commit: %s" % head) in text,
+            "card pins verified_commit to current HEAD",
+            text,
+        )
+        for field in ("source_paths", "invalidates_when", "symptoms"):
+            expect(
+                re.search(r"^%s:\s*\S" % field, text, re.M) is not None,
+                "card has non-empty %s" % field,
+                text,
+            )
+        hit = subprocess.run(
+            ["grep", "-rl", "mqtt", cards],
+            capture_output=True, text=True, encoding="utf-8",
+        )
+        expect(
+            hit.returncode == 0 and "2026-01-01-mqtt.md" in hit.stdout,
+            "card is findable by symptom keyword",
+            hit.stdout,
+        )
+        drift = subprocess.run(
+            [BASH, os.path.join(SKILL_ROOT, "scripts", "knowledge_drift.sh"), path],
+            cwd=root, capture_output=True, text=True, encoding="utf-8", env=env,
+        )
+        expect(
+            "FRESH" in drift.stdout,
+            "drift grades the freshly written card as FRESH",
+            drift.stdout + drift.stderr,
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(cards, ignore_errors=True)
+
+
+def case_lazy_load():
+    """常驻成本：SKILL.md 短，references 不被无条件加载。
+
+    对应人工样例 #6。只要有人把内容往 SKILL.md 里塞，或者让阶段正文互相
+    import 全部 reference，这条会碎。
+    """
+    skill = open(os.path.join(SKILL_ROOT, "SKILL.md"), encoding="utf-8").read()
+    lines = len(skill.splitlines())
+    expect(
+        lines <= 200,
+        "SKILL.md stays under 200 lines (got %d)" % lines,
+        "",
+    )
+    # SKILL.md 里不能出现「无条件读全部 references」这类指令
+    expect(
+        not re.search(r"references/\*", skill),
+        "SKILL.md does not glob-load references",
+        "",
+    )
+    # description 是常驻成本，不许回流成长段规则
+    m = re.search(r"^description:\s*(.*)$", skill, re.M)
+    desc = m.group(1) if m else ""
+    expect(
+        len(desc) <= 260,
+        "description stays short (got %d chars)" % len(desc),
+        desc,
+    )
+
+
+def case_evals_are_runnable():
+    """evals.json 里只许放能被脚本判定的用例。
+
+    判不了的（要读 agent 自然语言回答的）应该去 docs/review-cases.md。
+    把它们塞回这里，就会变成一份没人执行的文档——而 README 又把它当质量证明。
+    """
+    path = os.path.join(REPO_ROOT, "evals", "evals.json")
+    data = json.load(open(path, encoding="utf-8"))
+    evals = data.get("evals") or []
+    expect(
+        bool(evals),
+        "evals.json is not empty",
+        "",
+    )
+    expect(
+        data.get("policy", {}).get("executed_by"),
+        "evals.json declares who executes it",
+        "",
+    )
+    missing = [
+        e.get("id") for e in evals if not (e.get("machine_case") or "").strip()
+    ]
+    expect(
+        not missing,
+        "every eval names the check_runner case that covers it (missing: %s)" % missing,
+        "",
+    )
+    src = open(
+        os.path.join(SKILL_ROOT, "scripts", "check_runner.py"), encoding="utf-8"
+    ).read()
+    unbacked = []
+    for e in evals:
+        names = re.findall(r"\bcase_[a-z_]+", e.get("machine_case") or "")
+        for n in names:
+            if "def %s(" % n not in src:
+                unbacked.append(n)
+    expect(
+        not unbacked,
+        "every named case actually exists in check_runner.py (missing: %s)" % unbacked,
+        "",
+    )
+    # 人工用例必须有落点，不能凭空消失
+    expect(
+        os.path.isfile(os.path.join(REPO_ROOT, "docs", "review-cases.md")),
+        "human review cases live in docs/review-cases.md",
+        "",
+    )
+
+
 def main():
     case_none()
     case_npm()
@@ -1161,6 +1314,9 @@ def main():
     case_evidence_log()
     case_decided()
     case_skill_routing()
+    case_card_writeback()
+    case_lazy_load()
+    case_evals_are_runnable()
     case_foreign()
     case_default_no_hooks()
     case_record_follows_install()

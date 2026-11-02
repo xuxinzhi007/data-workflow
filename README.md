@@ -132,7 +132,7 @@ data-workflow/
 ├── AGENTS.md                     薄指路牌
 ├── config.example.yaml           配置键。副本里的 config.yaml 不进本仓库
 ├── docs/                         安装、脚本、竞品对照、可执行工作流、重画图
-├── evals/evals.json              每条钉住一个已经踩过的缺陷
+├── evals/evals.json              机器可判的回归用例（由 verify.sh 执行）
 ├── scripts/
 │   ├── install.sh                分发（默认 / --project / --with-hooks / --unlink）
 │   └── verify.sh                 本仓库声明的测试入口（自己探测 python）
@@ -166,6 +166,15 @@ bash ~/skills/data-workflow/scripts/install.sh --unlink              # 撤掉本
 bash scripts/verify.sh      # 60 条回归，末行打印 OK；不需要预先配 python
 ```
 
-脚本清单在 [`docs/scripts.md`](docs/scripts.md)。评测在 [`evals/evals.json`](evals/evals.json)，每条有 `pass` / `fail`，对应一个已经踩过的缺陷。
+脚本清单在 [`docs/scripts.md`](docs/scripts.md)。
+
+**用例分两处，别混：**
+
+| 位置 | 判什么 | 谁执行 |
+|---|---|---|
+| [`evals/evals.json`](evals/evals.json) | 行为对不对（安装幂等、门禁拒绝、退出码、文件落点） | `bash scripts/verify.sh`，进 CI |
+| [`docs/review-cases.md`](docs/review-cases.md) | 答得对不对（是否点名真实文件、是否编造 API） | 人。需要 data-service 实例，**无自动执行** |
+
+后一类至今没有执行记录——那是期望行为，不是已验证行为。判不了的用例不要放进 `evals.json`，放进去就会变成没人执行的文档。
 
 **平台**：hook 与脚本不依赖 `python3` 这个名字（Windows 上它常是 Microsoft Store 的占位程序），而是逐个实跑 `py -3` / `python3` / `python` / PATH 里的 `python.exe`，选第一个真能跑的；入口是 bash 壳，Windows 另带 `gate-edit.cmd`。安装不依赖 `rsync`。
