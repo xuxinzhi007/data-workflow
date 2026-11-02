@@ -391,7 +391,7 @@ def case_answer():
         folder = os.path.join(root, "specs", "ask")
         os.makedirs(folder, exist_ok=True)
         with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
-            fh.write("范围待拍板\n")
+            fh.write("- 待拍板：用全量还是三态？\n")
         nxt = run(root, "next", "ask")
         waited = run(root, "wait", "ask", "用全量还是三态？", "全量")
         record = json.load(open(os.path.join(folder, "run.json"), encoding="utf-8"))
@@ -1173,7 +1173,7 @@ def case_decided():
         run(root, "start", "change", FEATURE)
         folder = os.path.join(root, "specs", FEATURE)
         with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
-            fh.write("- 原话（一字不改）：探测\n- 本质：改一处\n- 未知：无\n范围待拍板\n")
+            fh.write("- 原话（一字不改）：探测\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 未知：无\n- 待拍板：范围多大？\n")
         run(root, "next")
         run(root, "wait", FEATURE, "用全量还是三态？", "只改判定那一行")
         run(root, "answer", FEATURE, "只改判定那一行")
@@ -1389,6 +1389,38 @@ def case_evals_are_runnable():
     )
 
 
+def case_open_marker():
+    """待拍板只认行首标记；正文里提到不算。"""
+    sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
+    import workflow_next as w
+
+    cases = [
+        ("正文提到就不算:\n- 现有能力：`open_decision` 检「待拍板」标记后打 OPEN", False),
+        ("待拍板", True),
+        ("- 待拍板", True),
+        ("- 待拍板：用全量还是三态？", True),
+        ("> 待拍板", True),
+        ("# 决定\n\n- 原话：改一处\n- 待拍板\n", True),
+        ("- 待拍板\n已拍板：用全量\n", False),
+        ("- 待拍板", True),
+        ("没有这个标记\n", False),
+    ]
+    for text, want in cases:
+        got = w.file_is_open(text)
+        expect(
+            got == want,
+            "file_is_open(%r) should be %s" % (text[:30], want),
+            "got %s" % got,
+        )
+    # 回复关闭后不能再被同一行打开
+    text = "- 待拍板\n已拍板：A\n- 待拍板\n已拍板：B\n"
+    expect(
+        w.file_is_open(text) is False,
+        "closed markers do not reopen the file",
+        text,
+    )
+
+
 def main():
     case_none()
     case_npm()
@@ -1416,6 +1448,7 @@ def main():
     case_decided()
     case_skill_routing()
     case_intent_confirm_wired()
+    case_open_marker()
     case_card_writeback()
     case_lazy_load()
     case_evals_are_runnable()

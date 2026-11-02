@@ -1,0 +1,9 @@
+{
+  "workflow": "change",
+  "feature": "open-marker",
+  "stage": 3,
+  "status": "done",
+  "question": "",
+  "reply": "",
+  "raw_request": "待拍板只认行首标记，正文提到不再误判 OPEN"
+}

@@ -284,10 +284,24 @@ def satisfied(root, pattern):
 
 
 def file_is_open(text):
-    last_open = text.rfind("待拍板")
-    if last_open < 0:
+    """文件里还有未拍板的选择吗。
+
+    只看**行首标记**：一行以「待拍板」开头（允许 - * > 空格等前缀）。
+    正文里提到这个词不算——否的话写文档时引用一下就误打 OPEN，
+    而那个误报会让人不再相信这个信号。
+
+    行首标记之后的内容就是未决问题本身；没有内容也算开着的。
+    最后一个标记之后出现过「已拍板：」行就算已关闭。
+    """
+    open_at = -1
+    closed_at = -1
+    for match in re.finditer(r"^\s*(?:[-*>]\s*)?待拍板", text, re.M):
+        open_at = match.start()
+    for match in re.finditer(r"^\s*(?:[-*>]\s*)?已拍板[：:]", text, re.M):
+        closed_at = match.start()
+    if open_at < 0:
         return False
-    return last_open > text.rfind("已拍板：")
+    return open_at > closed_at
 
 
 def concrete_files(root, pattern):
