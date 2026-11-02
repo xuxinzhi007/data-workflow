@@ -144,6 +144,10 @@ def declared_verify(root):
             return "python3 -m pytest -q"
     if os.path.isfile(os.path.join(root, "Cargo.toml")):
         return "cargo test"
+    # Go：go.mod 即声明的入口。go test 在无 *_test.go 时也能跑（ok / no test files），
+    # 且退出码可信，不会把「没有测试」伪装成失败。
+    if os.path.isfile(os.path.join(root, "go.mod")):
+        return "go test ./..."
     return ""
 
 
@@ -199,7 +203,10 @@ def run_verify(root, feature):
     cmd = declared_verify(business)
     if not cmd:
         print("RED")
-        print("verify 未配置")
+        print("这个仓库没有可判定的测试入口。")
+        print("在 config.yaml 写一行 verify，或在该目录放 package.json / Makefile(test:) / go.mod / Cargo.toml / pytest 配置。")
+        print("例：verify: \"go build ./... && go test ./...\"")
+        print("没有命令可跑就写明原因，不要写成通过。")
         return -1
     try:
         proc = subprocess.run(

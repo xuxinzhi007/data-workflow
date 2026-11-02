@@ -85,17 +85,28 @@ def expect(ok, label, detail):
 
 
 def case_none():
+    """完全没测试入口时：RED + 说清怎么补。"""
     root = tempfile.mkdtemp(prefix="dw-none-")
     try:
         reach_code(root)
         done = finish_code(root)
+        out = done.stdout + done.stderr
         expect(
             done.returncode != 0
             and read_run(root).get("stage") == 2
-            and "RED" in done.stdout
-            and "verify 未配置" in done.stdout,
+            and "RED" in done.stdout,
             "none stays RED",
-            done.stdout + done.stderr,
+            out,
+        )
+        expect(
+            "config.yaml" in out and "verify:" in out,
+            "RED names where to configure verify",
+            out,
+        )
+        expect(
+            "go.mod" in out and "package.json" in out,
+            "RED lists the auto-detected entry files",
+            out,
         )
     finally:
         shutil.rmtree(root, ignore_errors=True)
@@ -142,22 +153,62 @@ def case_make():
 
 
 def case_gomod():
+    """go.mod 就是 Go 项目的声明入口，不再要求手配 verify。"""
     root = tempfile.mkdtemp(prefix="dw-go-")
     try:
         with open(os.path.join(root, "go.mod"), "w", encoding="utf-8") as fh:
             fh.write("module example.com/probe\n\ngo 1.22\n")
+        with open(os.path.join(root, "probe.go"), "w", encoding="utf-8") as fh:
+            fh.write("package probe\n")
         reach_code(root)
         done = finish_code(root)
+        # 不能只看 exit 0：没探测到时会停在 RED、根本没跑测试。
+        # 必须确认真的走了 go test 且产生 verify.log。
+        log = (
+            log_text(root)
+            if os.path.isfile(os.path.join(root, "specs", FEATURE, "verify.log"))
+            else ""
+        )
         expect(
-            done.returncode != 0
-            and read_run(root).get("stage") == 2
-            and "RED" in done.stdout
-            and "verify 未配置" in done.stdout,
-            "go.mod only stays RED",
-            done.stdout + done.stderr,
+            "go test" in log and "verify.log" not in log.split("\n")[0],
+            "go.mod discovered as the verify entry",
+            done.stdout + done.stderr + "\n--- verify.log ---\n" + log,
         )
     finally:
         shutil.rmtree(root, ignore_errors=True)
+
+
+def case_install_makes_tool_dir():
+    """新仓库连 .cursor 都没有时，--project 应该自己建，而不是直接拒。"""
+    root = tempfile.mkdtemp(prefix="dw-nodir-")
+    home = tempfile.mkdtemp(prefix="dw-nodirhome-")
+    try:
+        git_init(root)
+        with open(os.path.join(root, "README.md"), "w", encoding="utf-8") as fh:
+            fh.write("probe\n")
+        env = clean_env()
+        env["HOME"] = home
+        proc = subprocess.run(
+            ["bash", INSTALL, "--project"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        out = proc.stdout + proc.stderr
+        expect(
+            proc.returncode == 0 and "NOTHING" not in out,
+            "--project on a repo without tool dirs does not refuse",
+            out,
+        )
+        expect(
+            os.path.isdir(os.path.join(root, ".cursor", "skills", "data-workflow")),
+            "--project creates the Cursor skill dir when none exists",
+            out,
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+        shutil.rmtree(home, ignore_errors=True)
 
 
 def case_verify_wins():
@@ -1496,6 +1547,7 @@ def main():
     case_npm()
     case_make()
     case_gomod()
+    case_install_makes_tool_dir()
     case_verify_wins()
     case_pnpm()
     case_yarn()

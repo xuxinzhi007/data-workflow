@@ -92,10 +92,13 @@ done
 src="$repo_root/skills/data-workflow"
 
 # 默认落点（$HOME）不需要事先有工具目录：没有就建一个 Cursor 的。
+# 同理：显式 --project / --with-hooks 时，目标仓库还没有工具目录也不能直接拒——
+# 新项目本来就可能连 .cursor 都还没建，拒了就只能让用户自己去 mkdir。
 if [ "${#dirs[@]}" -eq 0 ]; then
-  if [ "$global" = 1 ] && [ "$unlink" = 0 ] && [ -z "$target" ]; then
+  if [ "$unlink" = 0 ] && { [ "$global" = 1 ] || [ "$project" = 1 ] || [ "$with_hooks" = 1 ]; }; then
     mkdir -p "$base/.cursor/skills"
     dirs+=("$base/.cursor/skills")
+    printf 'CREATE %s （目标仓库还没有工具目录，建了一个 Cursor 的）\n' "$base/.cursor/skills"
   else
     printf 'NOTHING %s 下没有 .claude/.cursor/.qoder/.codex/.agents 任何一个。\n' "$base"
     printf '        先初始化目标工具，或显式传 --project / target_dir。\n'
