@@ -752,6 +752,43 @@ def write_config(root, text):
         fh.write(text)
 
 
+def case_gate_tool_case():
+    """各宿主给的工具名大小写不一，门禁必须都认得。
+
+    Cursor 给 Write，Claude Code 给 Write，有的宿主给 write / multiEdit。
+    不归一化的话受保护路径会默默失效——不报错，只是放行。这是我们
+t    在五个平台上实测到的真问题。
+    """
+    root = tempfile.mkdtemp(prefix="dw-gate-case-")
+    try:
+        git_init(root)
+        os.makedirs(os.path.join(root, "api"))
+        with open(os.path.join(root, "api", "a.proto"), "w", encoding="utf-8") as fh:
+            fh.write("syntax = \"proto3\";\n")
+        with open(os.path.join(root, "README.md"), "w", encoding="utf-8") as fh:
+            fh.write("probe\n")
+        write_config(root, 'protected_paths: "api/**"\n')
+        for tool in ("Write", "write", "Edit", "edit_file", "MultiEdit", "multiEdit", "apply_patch"):
+            expect(
+                gate_permission(GATE, root, "api/a.proto", tool) == "deny",
+                "protected write is denied for tool name %r" % tool,
+                "",
+            )
+        for tool in ("Read", "read_file", "grep", "list_dir", "Grep"):
+            expect(
+                gate_permission(GATE, root, "api/a.proto", tool) == "allow",
+                "reading stays allowed for tool name %r" % tool,
+                "",
+            )
+        expect(
+            gate_permission(GATE, root, "README.md", "Write") == "allow",
+            "unprotected write is still allowed",
+            "",
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
 def case_gate_read_write():
     """读不能当写拦。
 
@@ -1434,6 +1471,7 @@ def main():
     case_answer()
     case_hook_quiet()
     case_gate_read_write()
+    case_gate_tool_case()
     case_gate_strict()
     case_gate_no_python()
     case_utf8_output()

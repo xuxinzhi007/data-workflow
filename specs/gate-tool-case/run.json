@@ -1,0 +1,9 @@
+{
+  "workflow": "change",
+  "feature": "gate-tool-case",
+  "stage": 3,
+  "status": "done",
+  "question": "",
+  "reply": "",
+  "raw_request": "门禁在多个平台上因为工具名大小写失效了"
+}

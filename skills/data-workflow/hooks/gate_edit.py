@@ -41,8 +41,9 @@ WRITE_TOOLS = {
     "edit",
     "edit_file",
     "multi_edit",
-    "multiEdit",
+    "multiedit",
     "str_replace_editor",
+    "strreplaceeditor",
     "str_replace",
     "apply_patch",
     "search_replace",
@@ -417,13 +418,18 @@ def shell_destinations(command, root):
 
 
 def targets(data, root):
-    """只返回这次调用可能写入的仓库内路径。读工具返回 None。"""
-    tool = (data.get("tool_name") or data.get("toolName") or "").strip()
+    """只返回这次调用可能写入的仓库内路径。读工具返回 None。
+
+    工具名大小写不一：Cursor 给 Write，Claude Code 给 Write，有的宿主给 write、
+    multiEdit。集合是小写的，所以先归一化再比。不归一化的话受保护路径在
+    多种宿主上直接失效——它不会报错，只会默默放行。
+    """
+    tool = (data.get("tool_name") or data.get("toolName") or "").strip().lower()
     command = data.get("command")
     if isinstance(command, str) and command.strip():
         return shell_destinations(command, root)
     if tool in SHELL_TOOLS:
-        tool_input = data.get("tool_input") or {}
+        tool_input = data.get("tool_input") or data.get("toolInput") or {}
         cmd = tool_input.get("command") if isinstance(tool_input, dict) else ""
         return shell_destinations(cmd, root) if isinstance(cmd, str) else []
     if tool in WRITE_TOOLS:
