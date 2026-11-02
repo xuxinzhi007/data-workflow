@@ -1,0 +1,9 @@
+{
+  "workflow": "change",
+  "feature": "spec-intent",
+  "stage": 3,
+  "status": "done",
+  "question": "",
+  "reply": "",
+  "raw_request": "把理解确认也补到 feature 的 spec 阶段，L3 变更更需要确认"
+}

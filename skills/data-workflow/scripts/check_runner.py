@@ -1187,6 +1187,44 @@ def case_decided():
         shutil.rmtree(root, ignore_errors=True)
 
 
+def case_intent_confirm_wired():
+    """两个工作流的第 1 步都要求理解确认，且模板措辞与 requires 逐字一致。
+
+    措辞不一致 = 字面量门永远匹配不上。这条把它钉住。
+    """
+    pairs = [
+        ("change.json", "decision-template.md"),
+        ("feature.json", "spec-template.md"),
+    ]
+    lines = ["我理解你要的是", "可能理解错"]
+    for wf_name, tpl_name in pairs:
+        wf_path = os.path.join(SKILL_ROOT, "workflows", wf_name)
+        wf = json.load(open(wf_path, encoding="utf-8"))
+        first = wf["stages"][0]
+        req = first.get("requires") or []
+        for line in lines:
+            expect(
+                line in req,
+                "%s stage 1 requires %s" % (wf_name, line),
+                json.dumps(req, ensure_ascii=False),
+            )
+        tpl = open(
+            os.path.join(SKILL_ROOT, "templates", tpl_name), encoding="utf-8"
+        ).read()
+        for line in lines:
+            expect(
+                line in tpl,
+                "%s contains %s" % (tpl_name, line),
+                "",
+            )
+    # 模板里不能有“待拍板”以外的裸关键字干扰门；这里只查原话行还在
+    for _, tpl_name in pairs:
+        tpl = open(
+            os.path.join(SKILL_ROOT, "templates", tpl_name), encoding="utf-8"
+        ).read()
+        expect("原话（一字不改）" in tpl, "%s keeps the raw line" % tpl_name, "")
+
+
 def case_skill_routing():
     """阶段→文件只留一份（next）；SKILL.md 不再维护那张表。"""
     text = open(os.path.join(SKILL_ROOT, "SKILL.md"), encoding="utf-8").read()
@@ -1377,6 +1415,7 @@ def main():
     case_evidence_log()
     case_decided()
     case_skill_routing()
+    case_intent_confirm_wired()
     case_card_writeback()
     case_lazy_load()
     case_evals_are_runnable()
