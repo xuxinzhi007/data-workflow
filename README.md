@@ -72,19 +72,18 @@ done                                  # → DONE
 
 ![data-workflow 完整流程](assets/flow.png)
 
-`workflows/feature.json` 串行（data-service Go 栈实例）。机器阶段 7 个：下表把「质量」与「接口」分成两行讲，它们在 `feature.json` 里合并为 stage 6。每步一个产物。
+`workflows/feature.json` 串行（data-service Go 栈实例）。**机器阶段 7 个**：下表把 stage 6「质量与接口门」拆成两行讲，因为它有四道判据但只产一个 `quality.md`。第 1 行是启动动作，不是独立阶段。
 
 | 步 | 产出 | 门 |
 |---|---|---|
-| 1 环境探测 + 查重 | branch、commit、知识新鲜度 | 新鲜度 |
-| 2 需求分析 | `specs/<feature>/spec.md` | 负债 + `requires`（本质 / 怎样算满足） |
-| 3 影响面 | `specs/<feature>/impact.md` | 影响面四轴 |
-| 4 技术方案 | `plan.md`、`rollback.md` | 方案门（`gate` 首行 `plan pass`） |
-| 5 编码 | 代码 | `gate_check` + 仓库自己的 `verify` 退出码 |
-| 6 改动审核 | `specs/<feature>/review/*.md` | 审核指纹与工作树 |
-| 7 质量 | `quality.md` | 构建 / 单测证据 |
-| 8 接口 | `interface-test.md` | 三级门（Go 栈） |
-| 9 提交 | `specs/<feature>/change-note.md` | 文档审计 |
+| 启动 | branch、commit、知识新鲜度 | 查重与新鲜度（一次性，不进 stage 序列） |
+| 1 需求与负债评估 | `specs/<feature>/spec.md` | `requires` 五行字面量 + 九项负债 |
+| 2 影响面评估 | `specs/<feature>/impact.md` | 四轴 + 维护性三查 |
+| 3 技术方案 | `plan.md`、`rollback.md` | 方案门（`gate` 首行 `plan pass`） |
+| 4 编码实现 | 代码（Go 栈另可补 `*_contract_test.go`） | `gate_check` + 仓库自己的 `verify` 退出码 |
+| 5 改动审核 | `specs/<feature>/review/*.md` | 审核指纹与工作树 |
+| 6 质量与接口门 | `quality.md` | 构建 / 单测证据 ＋ 接口三级门：`go test ./api/...` → `contract_diff.sh` → 场景回放或如实 WAIVED |
+| 7 文档审计与提交 | `change-note.md`、commit、MR | 文档审计 |
 
 `bugfix` / `hotfix` 的第一步是排查。`oncall` 和画图不插入这条链。任意仓库的一次改动或定架构用 `workflows/change.json`，三步：`decision.md` → 改文件 → `check.md`。
 

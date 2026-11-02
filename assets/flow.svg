@@ -1,232 +1,167 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 1320" width="100%" height="100%">
-  <defs>
-    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.07"/>
-    </filter>
-    <filter id="red-shadow" x="-4%" y="-4%" width="108%" height="108%" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#e03131" flood-opacity="0.10"/>
-    </filter>
-    <marker id="arrow-gray" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
-      <path d="M 0 1.5 L 7.5 4.5 L 0 7.5 Z" fill="#495057" />
-    </marker>
-    <marker id="arrow-red" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
-      <path d="M 0 1.5 L 7.5 4.5 L 0 7.5 Z" fill="#e03131" />
-    </marker>
-    <style>
-      .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; font-weight: 800; fill: #1e1e1e; }
-      .subtitle { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 500; fill: #495057; }
-      .card-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-weight: 700; font-size: 19px; }
-      .card-sub { font-family: "SF Mono", "Consolas", Menlo, monospace; font-size: 13px; fill: #868e96; }
-      .card-item { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 14.5px; fill: #2b2b2b; }
-      .tag-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 13px; font-weight: 600; fill: #495057; text-anchor: middle; }
-      .cfg-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; font-size: 13px; font-weight: 700; fill: #c92a2a; text-anchor: middle; }
-    </style>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 1420" width="1180" height="1420" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', sans-serif">
+<defs>
+  <linearGradient id="hd" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#14324f"/><stop offset="100%" stop-color="#2b5a80"/>
+  </linearGradient>
+  <linearGradient id="rl" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#f6c9c4"/><stop offset="100%" stop-color="#f2d0cc"/>
+  </linearGradient>
+  <linearGradient id="gl" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#b8e0c4"/><stop offset="100%" stop-color="#cbe9d4"/>
+  </linearGradient>
+  <filter id="d1" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0b2545" flood-opacity="0.12"/>
+  </filter>
+  <filter id="d2" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="6" stdDeviation="11" flood-color="#0b2545" flood-opacity="0.3"/>
+  </filter>
+  <marker id="n" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#8296aa"/>
+  </marker>
+  <marker id="nr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#c2453f"/>
+  </marker>
+  <marker id="ng" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#3f8f60"/>
+  </marker>
+  <style>
+    .hd1{font-size:30px;font-weight:800;fill:#fff}
+    .hd2{font-size:14px;fill:#a9c5dc}
+    .st{font-size:15px;font-weight:800}
+    .cm{font-size:11px;fill:#7d8fa1;font-family:"SF Mono",Consolas,Menlo,monospace}
+    .it{font-size:12px;fill:#2f4d67}
+    .gt{font-size:11.5px;fill:#5b7286}
+    .lab{font-size:10.5px;font-weight:800;letter-spacing:1.6px;fill:#8ea3b6}
+    .cmd{font-size:11.5px;font-family:"SF Mono",Consolas,Menlo,monospace;fill:#1b4d73;font-weight:600}
+    .out{font-size:11.5px;font-family:"SF Mono",Consolas,Menlo,monospace;fill:#a8382f;font-weight:700}
+    .note{font-size:11px;fill:#8296aa}
+  </style>
+</defs>
 
-  <rect width="100%" height="100%" fill="#ffffff" rx="16"/>
+<rect width="1180" height="1420" fill="#f4f7fa"/>
 
-  <g transform="translate(560, 50)" text-anchor="middle">
-    <text class="title" font-size="30" y="0">data-workflow · 一次需求到提交 v0.2</text>
-    <text class="subtitle" font-size="16" y="32">workflows/feature.json 主链九步 · S 型串行 · 六道门贯穿 · 旁路不插队</text>
-  </g>
+<!-- HERO -->
+<rect x="48" y="36" width="1084" height="118" rx="16" fill="url(#hd)" filter="url(#d2)"/>
+<text x="80" y="80" class="hd1">一次改动 · 从原话到提交</text>
+<text x="80" y="106" class="hd2">每一步只做一件事 · 每次都先 next 看你卡在哪 · 门没过就停，不自行绕过</text>
+<text x="80" y="130" class="hd2" font-size="12.5">下面这条是 feature / hotfix 的九步；任意仓库的一次小改走 change 三步（图末）</text>
 
-  <!-- 卡片 -->
-  
-    <g transform="translate(30, 100)" filter="url(#shadow)">
-      <rect width="1060" height="160" rx="14" fill="#f1f3f5" stroke="#343a40" stroke-width="2"/>
-      <text class="card-title" x="530" y="36" text-anchor="middle" fill="#212529">① 启动 · data-workflow:data-workflow</text>
-      <text class="card-sub" x="530" y="56" text-anchor="middle">一次会话只跑一次，结果向下传递；所有步骤技能不再重复探测</text>
-      <line x1="25" y1="72" x2="1035" y2="72" stroke="#ced4da" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• paths.sh 解析 $KNOW/$CARDS/$TEMPLATES/$REPO → repo_snapshot.sh 记 branch/commit/dirty → knowledge_drift.sh 标 FRESH/STALE</text>
-        <text y="28">• grep specs/ 与 $CARDS/ 查重（命中就接着做，不重开）→ 选型表定要做的事 → workflows/*.json 定按哪条流程串</text>
-      </g>
-    </g>
+<!-- ===== STEP 1 ===== -->
+<path d="M590,154 L590,186" stroke="#8296aa" stroke-width="2.2" marker-end="url(#n)"/>
 
-    <g transform="translate(30, 296)" filter="url(#shadow)">
-      <rect width="330" height="190" rx="14" fill="#ebfbee" stroke="#0ca678" stroke-width="2"/>
-      <text class="card-title" x="165" y="36" text-anchor="middle" fill="#0ca678">② 需求分析</text>
-      <text class="card-sub" x="165" y="56" text-anchor="middle">requirement-analysis → spec.md</text>
-      <line x1="25" y1="72" x2="305" y2="72" stroke="#b2f2bb" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• 九项负债评估先于选方案</text>
-        <text y="28">• 方案 ≥2 且必含最小改动</text>
-        <text y="56">• 拍板走 grilling</text>
-      </g>
-    </g>
+<rect x="48" y="190" width="1084" height="96" rx="12" fill="#fff" stroke="#2d5a87" stroke-width="2.2" filter="url(#d1)"/>
+<circle cx="82" cy="216" r="15" fill="#2d5a87"/>
+<text x="82" y="221" text-anchor="middle" font-size="13" font-weight="800" fill="#fff">1</text>
+<text x="110" y="221" class="st" fill="#1b4d73">起一条运行</text>
+<text x="110" y="242" class="cm">start change &lt;feature&gt; "&lt;用户原话&gt;"</text>
+<rect x="470" y="196" width="286" height="24" rx="5" fill="#eef4f9"/>
+<text x="482" y="213" class="note" font-weight="700">原话一字不改写进 run.json</text>
+<text x="110" y="266" class="it">记下 branch / commit / dirty；知识层新鲜度标 FRESH 或 STALE（一次会话只跑一次）</text>
 
-    <g transform="translate(395, 296)" filter="url(#shadow)">
-      <rect width="330" height="190" rx="14" fill="#fff4e6" stroke="#e8590c" stroke-width="2"/>
-      <text class="card-title" x="165" y="36" text-anchor="middle" fill="#e8590c">③ 影响面评估</text>
-      <text class="card-sub" x="165" y="56" text-anchor="middle">impact-assessment → impact.md</text>
-      <line x1="25" y1="72" x2="305" y2="72" stroke="#ffc078" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• 四轴 + 维护性三查</text>
-        <text y="28">• 每项带证据或 UNVERIFIED</text>
-        <text y="56">• 四轴可并行取证</text>
-      </g>
-    </g>
+<path d="M590,290 L590,318" stroke="#8296aa" stroke-width="2.2" marker-end="url(#n)"/>
+<text x="604" y="309" class="note" font-weight="700">next → 打 RAW，把原话原样吐回来</text>
 
-    <g transform="translate(760, 296)" filter="url(#shadow)">
-      <rect width="330" height="190" rx="14" fill="#e7f5ff" stroke="#1971c2" stroke-width="2"/>
-      <text class="card-title" x="165" y="36" text-anchor="middle" fill="#1971c2">④ 技术方案 + 回滚预案</text>
-      <text class="card-sub" x="165" y="56" text-anchor="middle">tech-design → plan.md · rollback.md</text>
-      <line x1="25" y1="72" x2="305" y2="72" stroke="#a5d8ff" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• 套公司模板，空章节写「无」</text>
-        <text y="28">• 回滚必须是编号步骤</text>
-        <text y="56">• 单一作者视角，不拆子 agent</text>
-      </g>
-    </g>
+<!-- ===== STEP 2 ===== -->
+<rect x="48" y="322" width="1084" height="188" rx="12" fill="#fff" stroke="#5c9c6b" stroke-width="2.2" filter="url(#d1)"/>
+<circle cx="82" cy="348" r="15" fill="#5c9c6b"/>
+<text x="82" y="353" text-anchor="middle" font-size="13" font-weight="800" fill="#fff">2</text>
+<text x="110" y="353" class="st" fill="#2f6b3e">需求分析 · 先确认理解，再谈方案</text>
+<text x="110" y="375" class="cm">specs/&lt;feature&gt;/spec.md</text>
 
-    <g transform="translate(760, 538)" filter="url(#shadow)">
-      <rect width="330" height="190" rx="14" fill="#f3f0ff" stroke="#7048e8" stroke-width="2"/>
-      <text class="card-title" x="165" y="36" text-anchor="middle" fill="#7048e8">⑤ 实现</text>
-      <text class="card-sub" x="165" y="56" text-anchor="middle">implementation</text>
-      <line x1="25" y1="72" x2="305" y2="72" stroke="#d0bfff" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• 先搜再写，重复三次才抽象</text>
-        <text y="28">• 碰到端点补契约测试</text>
-        <text y="56">• 实现类子 agent 禁止并行</text>
-      </g>
-    </g>
+<rect x="110" y="388" width="1000" height="76" rx="8" fill="#f2f9f4" stroke="#c2dfcb" stroke-width="1.3"/>
+<text x="126" y="408" font-size="11" font-weight="800" fill="#2f6b3e" letter-spacing="1.2">第一屏七件事；其中这五行是硬门（requires），缺任一行 runner 打 GATE</text>
+<text x="126" y="431" class="it"><tspan font-weight="800" fill="#2f6b3e">① 原话（一字不改）　② 我理解你要的是　③ 可能理解错的地方　④ 本质　⑤ 怎样算满足</tspan></text>
+<text x="126" y="451" class="gt">另两行「未知」「这次不做」模板要求写满，但不是机器门——机器只看上面五行的字面量</text>
 
-    <g transform="translate(395, 538)" filter="url(#shadow)">
-      <rect width="330" height="190" rx="14" fill="#fff4e6" stroke="#e8590c" stroke-width="2"/>
-      <text class="card-title" x="165" y="36" text-anchor="middle" fill="#e8590c">⑥ 改动审核（三轴并行）</text>
-      <text class="card-sub" x="165" y="56" text-anchor="middle">change-review → diff.patch + review/*.md</text>
-      <line x1="25" y1="72" x2="305" y2="72" stroke="#ffc078" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• spec 合规 / 代码质量 / 接口影响</text>
-        <text y="28">• 三轴共读同一份 diff</text>
-        <text y="56">• 主 agent 合并裁决 risk 等级</text>
-      </g>
-    </g>
+<rect x="110" y="474" width="1000" height="26" rx="6" fill="#fff6e8" stroke="#e8cf9e" stroke-width="1.2"/>
+<text x="126" y="492" class="gt" font-weight="700" fill="#8a6414">含糊时：把歧义写进「可能理解错的地方」，再 wait 停住。不要先猜一个看起来合理的含义。</text>
 
-    <g transform="translate(30, 538)" filter="url(#shadow)">
-      <rect width="330" height="190" rx="14" fill="#fff5f5" stroke="#e03131" stroke-width="2"/>
-      <text class="card-title" x="165" y="36" text-anchor="middle" fill="#c92a2a">⑦ 质量门</text>
-      <text class="card-sub" x="165" y="56" text-anchor="middle">quality-gate → quality.md</text>
-      <line x1="25" y1="72" x2="305" y2="72" stroke="#ffc9c9" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• 构建 + 聚焦单测 + 覆盖率</text>
-        <text y="28">• 只跑受影响包，不顺手全量</text>
-        <text y="56">• 没跑过的检查不许标 ✓</text>
-      </g>
-    </g>
+<path d="M590,514 L590,542" stroke="#8296aa" stroke-width="2.2" marker-end="url(#n)"/>
+<text x="604" y="533" class="note" font-weight="700">内容门过了才往下；没过就停在这</text>
 
-    <g transform="translate(30, 780)" filter="url(#shadow)">
-      <rect width="330" height="190" rx="14" fill="#fff5f5" stroke="#e03131" stroke-width="2"/>
-      <text class="card-title" x="165" y="36" text-anchor="middle" fill="#c92a2a">⑧ 接口门（三级）</text>
-      <text class="card-sub" x="165" y="56" text-anchor="middle">interface-test → interface-test.md</text>
-      <line x1="25" y1="72" x2="305" y2="72" stroke="#ffc9c9" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• go test ./api/... 硬门</text>
-        <text y="28">• contract_diff.sh 判 breaking</text>
-        <text y="56">• 回放跑不了如实 WAIVED</text>
-      </g>
-    </g>
+<!-- ===== STEP 3 ===== -->
+<rect x="48" y="546" width="1084" height="118" rx="12" fill="#fff" stroke="#c9862f" stroke-width="2.2" filter="url(#d1)"/>
+<circle cx="82" cy="572" r="15" fill="#c9862f"/>
+<text x="82" y="577" text-anchor="middle" font-size="13" font-weight="800" fill="#fff">3</text>
+<text x="110" y="577" class="st" fill="#96590f">影响面</text>
+<text x="110" y="599" class="cm">specs/&lt;feature&gt;/impact.md</text>
+<text x="110" y="624" class="it">四轴：调用方 · 状态机 · 权限 · 回滚　　维护性三查：新增枚举全库消费点 · 数据可逆性 · 契约破坏性</text>
+<text x="110" y="646" class="it">每项要么带证据（文件:符号），要么显式写 UNVERIFIED。四轴整轴未验证就下结论 = 评估未做。</text>
 
-    <g transform="translate(395, 780)" filter="url(#shadow)">
-      <rect width="330" height="190" rx="14" fill="#f1f3f5" stroke="#343a40" stroke-width="2"/>
-      <text class="card-title" x="165" y="36" text-anchor="middle" fill="#212529">⑨ 文档审计 + 提交 / MR</text>
-      <text class="card-sub" x="165" y="56" text-anchor="middle">git-commit → change-note.md · commit</text>
-      <line x1="25" y1="72" x2="305" y2="72" stroke="#ced4da" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• 逐项核 specs/README/CONTEXT/生成物</text>
-        <text y="28">• 不同步 → 补齐 或 显式记账</text>
-        <text y="56">• MR 套 $MR_TEMPLATE</text>
-      </g>
-    </g>
+<path d="M590,668 L590,696" stroke="#8296aa" stroke-width="2.2" marker-end="url(#n)"/>
 
-    <g transform="translate(760, 780)" filter="url(#shadow)">
-      <rect width="330" height="190" rx="14" fill="#f3f0ff" stroke="#7048e8" stroke-width="2"/>
-      <text class="card-title" x="165" y="36" text-anchor="middle" fill="#7048e8">多 agent 怎么用</text>
-      <text class="card-sub" x="165" y="56" text-anchor="middle">references/subagent-protocol.md</text>
-      <line x1="25" y1="72" x2="305" y2="72" stroke="#d0bfff" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(24, 102)">
-        <text y="0">• 派：≥2 个独立、无共享写状态</text>
-        <text y="28">• 不派：实现、探索性 debug、裁决</text>
-        <text y="56">• fix loop ≤2 轮 → parked with ruling</text>
-      </g>
-    </g>
+<!-- ===== STEP 4 ===== -->
+<rect x="48" y="700" width="1084" height="132" rx="12" fill="#fff" stroke="#4a62b8" stroke-width="2.2" filter="url(#d1)"/>
+<circle cx="82" cy="726" r="15" fill="#4a62b8"/>
+<text x="82" y="731" text-anchor="middle" font-size="13" font-weight="800" fill="#fff">4</text>
+<text x="110" y="731" class="st" fill="#2f3f8a">技术方案 + 回滚预案</text>
+<text x="110" y="753" class="cm">plan.md · rollback.md</text>
+<text x="110" y="778" class="it">接口改什么 · 数据怎么变 · 状态怎么迁移 · 怎么验证　　DoD 每条都必须是可执行命令</text>
+<text x="110" y="800" class="it">回滚必须是编号步骤，不是「视情况回滚」。空章节写「无」，不许删段落。</text>
 
-  <!-- 连线与标签 -->
-  
-    <g>
-      <path d="M 560 260 L 560 296" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
-      
-      <rect x="577.5" y="264" width="165" height="22" rx="4" fill="#f1f3f5" />
-      <text class="tag-text" x="660" y="278" text-anchor="middle">选完工作流进主链</text>
-    </g>
+<rect x="110" y="812" width="330" height="24" rx="5" fill="#eef1fb"/>
+<text x="122" y="829" class="gt" font-weight="700" fill="#2f3f8a">方案门：gate 第一条非空行必须是 plan pass</text>
 
-    <g>
-      <path d="M 360 391 L 395 391" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
-      
-    </g>
+<!-- ===== STEP 5 ===== -->
+<path d="M590,858 L590,886" stroke="#3f8f60" stroke-width="2.4" marker-end="url(#ng)"/>
+<text x="604" y="877" class="note" font-weight="700" fill="#3f8f60">门过了，动手</text>
 
-    <g>
-      <path d="M 725 391 L 760 391" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
-      
-    </g>
+<rect x="48" y="890" width="1084" height="112" rx="12" fill="#fff" stroke="#7c4fb0" stroke-width="2.2" filter="url(#d1)"/>
+<circle cx="82" cy="916" r="15" fill="#7c4fb0"/>
+<text x="82" y="921" text-anchor="middle" font-size="13" font-weight="800" fill="#fff">5</text>
+<text x="110" y="921" class="st" fill="#5a2d8a">编码</text>
+<text x="110" y="943" class="cm">改文件 → 跑仓库自己的测试入口</text>
+<text x="110" y="968" class="it">先搜再写：internal/pkg/helper、当前 Usecase/Repo、apply*Scope。第 2 次出现同语义逻辑必须复用已有实现。</text>
+<text x="110" y="990" class="it">改完 done：先 gate_check 看工作树真动过，再跑 verify，然后往 evidence.log 追加一行（stage / 门 / 退出码 / head）</text>
 
-    <g>
-      <path d="M 925 486 L 925 538" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
-      
-      <rect x="955" y="498" width="90" height="22" rx="4" fill="#f1f3f5" />
-      <text class="tag-text" x="1000" y="512" text-anchor="middle">方案定稿</text>
-    </g>
+<rect x="820" y="898" width="300" height="26" rx="6" fill="#fdeaea" stroke="#e0a5a1" stroke-width="1.2"/>
+<text x="836" y="916" class="out" font-size="11">退出码非 0 → 停在 RED</text>
 
-    <g>
-      <path d="M 760 633 L 725 633" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
-      
-    </g>
+<!-- ===== STEP 6-7-8 ===== -->
+<path d="M590,1002 L590,1030" stroke="#8296aa" stroke-width="2.2" marker-end="url(#n)"/>
 
-    <g>
-      <path d="M 395 633 L 360 633" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
-      
-    </g>
+<rect x="48" y="1034" width="352" height="130" rx="12" fill="#fff" stroke="#b54a4a" stroke-width="2.2" filter="url(#d1)"/>
+<circle cx="80" cy="1060" r="14" fill="#b54a4a"/>
+<text x="80" y="1065" text-anchor="middle" font-size="12.5" font-weight="800" fill="#fff">6</text>
+<text x="106" y="1065" class="st" fill="#8f2f2f">改动审核</text>
+<text x="106" y="1085" class="cm">review/*.md</text>
+<text x="106" y="1108" class="it">三轴并行读同一份 diff：</text>
+<text x="106" y="1128" class="it">规范合规 · 代码质量 · 接口影响</text>
+<text x="106" y="1150" class="it">主 agent 合并裁 risk 等级</text>
 
-    <g>
-      <path d="M 195 728 L 195 780" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
-      
-      <rect x="157.5" y="740" width="105" height="22" rx="4" fill="#f1f3f5" />
-      <text class="tag-text" x="210" y="754" text-anchor="middle">审核可继续</text>
-    </g>
+<rect x="414" y="1034" width="352" height="130" rx="12" fill="#fff" stroke="#3f8f83" stroke-width="2.2" filter="url(#d1)"/>
+<circle cx="446" cy="1060" r="14" fill="#3f8f83"/>
+<text x="446" y="1065" text-anchor="middle" font-size="12.5" font-weight="800" fill="#fff">7</text>
+<text x="472" y="1065" class="st" fill="#256b60">质量</text>
+<text x="472" y="1085" class="cm">quality.md</text>
+<text x="472" y="1108" class="it">构建 + 聚焦单测 + 覆盖率</text>
+<text x="472" y="1128" class="it">只跑受影响的包，不顺手全量</text>
+<text x="472" y="1150" class="it">没跑过的检查不许标 ✓</text>
 
-    <g>
-      <path d="M 360 875 L 395 875" fill="none" stroke="#495057" stroke-width="2.2"  marker-end="url(#arrow-gray)"/>
-      
-    </g>
+<rect x="780" y="1034" width="352" height="130" rx="12" fill="#fff" stroke="#7c8a96" stroke-width="2.2" filter="url(#d1)"/>
+<circle cx="812" cy="1060" r="14" fill="#7c8a96"/>
+<text x="812" y="1065" text-anchor="middle" font-size="12.5" font-weight="800" fill="#fff">8</text>
+<text x="838" y="1065" class="st" fill="#4a5866">接口</text>
+<text x="838" y="1085" class="cm">interface-test.md</text>
+<text x="838" y="1108" class="it">三级门（Go 栈）：go test ./api/…</text>
+<text x="838" y="1128" class="it">→ contract_diff.sh 判 breaking</text>
+<text x="838" y="1150" class="it">→ 场景回放，跑不了如实 WAIVED</text>
 
-  <!-- 配置驱动底框 -->
-  
-    <g transform="translate(30, 1010)" filter="url(#red-shadow)">
-      <rect width="520" height="270" rx="16" fill="#fff5f5" stroke="#e03131" stroke-width="2.5"/>
-      <text class="card-title" x="260" y="36" text-anchor="middle" fill="#c92a2a" font-size="22">贯穿全程 · 六道门</text>
-      <text class="card-sub" x="260" y="58" text-anchor="middle" font-size="14">任一未过就停下等用户，不自行绕过</text>
-      <line x1="30" y1="74" x2="490" y2="74" stroke="#ffc9c9" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(35, 104)" font-size="15">
-        <text y="0">• <tspan font-weight="700">① 负债门</tspan> 九项评估有阻塞且无缓解 = 不进技术方案</text>
-        <text y="28">• <tspan font-weight="700">② 影响面门</tspan> 整轴 UNVERIFIED 就下结论 = 评估未做</text>
-        <text y="56">• <tspan font-weight="700">③ 审核门</tspan> high/medium 即停；指纹不符 = STALE 重跑</text>
-        <text y="84">• <tspan font-weight="700">④ 接口门</tspan> breaking 未逐行裁决 = FAIL；跑不了 WAIVED</text>
-        <text y="112">• <tspan font-weight="700">⑤ 文档审计门</tspan> 不同步又不记账 = 不许沉默提交</text>
-        <text y="140">• <tspan font-weight="700">⑥ 新鲜度</tspan> 引用 STALE 取值却没回代码推导 = 未过</text>
-      </g>
-    </g>
+<!-- ===== STEP 9 ===== -->
+<path d="M590,1164 L590,1192" stroke="#8296aa" stroke-width="2.2" marker-end="url(#n)"/>
 
-    <g transform="translate(570, 1010)" filter="url(#red-shadow)">
-      <rect width="520" height="270" rx="16" fill="#e7f5ff" stroke="#1971c2" stroke-width="2.5"/>
-      <text class="card-title" x="260" y="36" text-anchor="middle" fill="#1971c2" font-size="22">旁路与裁剪 · 不插进主链</text>
-      <text class="card-sub" x="260" y="58" text-anchor="middle" font-size="14">工作流是主链的裁剪版，缺的阶段要在 change-note 记账</text>
-      <line x1="30" y1="74" x2="490" y2="74" stroke="#a5d8ff" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <g class="card-item" transform="translate(35, 104)" font-size="15">
-        <text y="0">• oncall：仓库只读，诊断不授权修改</text>
-        <text y="28">• excalidraw-diagram：spec JSON → 图（本图即产出）</text>
-        <text y="56">• bugfix 先复现失败测试；hotfix 先回滚预案</text>
-        <text y="84">• review-only：只审不改，产物三轴报告 + 接口裁决</text>
-      </g>
-    </g>
+<rect x="48" y="1196" width="1084" height="96" rx="12" fill="#fff" stroke="#3d4d5c" stroke-width="2.2" filter="url(#d1)"/>
+<circle cx="82" cy="1222" r="15" fill="#3d4d5c"/>
+<text x="82" y="1227" text-anchor="middle" font-size="13" font-weight="800" fill="#fff">9</text>
+<text x="110" y="1227" class="st" fill="#22303c">提交</text>
+<text x="110" y="1249" class="cm">change-note.md → commit / MR</text>
+<text x="110" y="1272" class="it">文档审计门：需要同步的文档已同步，或显式记账「接受的文档风险」。不同步又不记账 = 不许沉默提交。</text>
+
+<!-- ===== side: change 三步 ===== -->
+<rect x="48" y="1314" width="1084" height="86" rx="12" fill="#fffaef" stroke="#c9a44e" stroke-width="2" filter="url(#d1)"/>
+<text x="72" y="1340" font-size="13" font-weight="800" fill="#8a6414">旁路：任意仓库的一次改动 → change 三步</text>
+<text x="72" y="1363" class="it">① decision.md（同样七行第一屏，硬门是前五行字面量）　② 只改决定里写了的范围（gate_check 查工作树真动过）　③ check.md 首行是 verify.log 的 exit 那一行</text>
+<text x="72" y="1384" class="gt">碰到契约、持久化、权限、状态或回滚 → 改走 feature 或 hotfix。纯 .gitignore 改动是 gate_check 的已知盲区。</text>
+
+<text x="48" y="1414" class="note" font-size="10.5">v0.3 · 阶段与门以 workflows/*.json 和 workflow_next.py 为准；本图只画顺序，不重复判据细节</text>
 </svg>
