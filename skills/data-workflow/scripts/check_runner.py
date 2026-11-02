@@ -58,7 +58,7 @@ def reach_code(root):
     folder = os.path.join(root, "specs", FEATURE)
     os.makedirs(folder, exist_ok=True)
     with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
-        fh.write("- 原话（一字不改）：探测用\n- 本质：改一处\n- 未知：无\n")
+        fh.write("- 原话（一字不改）：探测用\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 未知：无\n")
     done = run(root, "done", FEATURE)
     if done.returncode != 0 or read_run(root).get("stage") != 2:
         raise SystemExit(done.stdout + done.stderr)
@@ -537,7 +537,7 @@ def case_foreign():
         folder = os.path.join(root, "specs", FEATURE)
         os.makedirs(folder, exist_ok=True)
         with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
-            fh.write("- 原话（一字不改）：改一处\n- 本质：改一处\n- 未知：无\n")
+            fh.write("- 原话（一字不改）：探测用\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 未知：无\n")
         stepped = copy_run("done", FEATURE)
         finished = copy_run("done", FEATURE)
         record = json.load(open(os.path.join(folder, "run.json"), encoding="utf-8"))
@@ -911,13 +911,75 @@ def case_intake():
             "missing 未知 stops at the gate",
             blocked.stdout,
         )
+        expect(
+            "我理解你要的是" in blocked.stdout and "可能理解错" in blocked.stdout,
+            "gate also demands the understanding lines",
+            blocked.stdout,
+        )
         with open(os.path.join(folder, "decision.md"), "a", encoding="utf-8") as fh:
-            fh.write("- 未知：无\n")
+            fh.write("\n- 未知：无\n")
+        still = run(root, "next")
+        expect(
+            "GATE" in still.stdout and "我理解你要的是" in still.stdout,
+            "understanding lines alone do not slip past the gate",
+            still.stdout,
+        )
+        with open(os.path.join(folder, "decision.md"), "a", encoding="utf-8") as fh:
+            fh.write("- 我理解你要的是：把导出默认集改成三态，不再追问\n")
+            fh.write("- 可能理解错的地方：无歧义\n")
         nxt = run(root, "next")
         expect(
             "DO" in nxt.stdout and "RAW %s" % raw in nxt.stdout,
             "complete intake advances and echoes the raw request",
             nxt.stdout,
+        )
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
+def case_restated_raw():
+    """「我理解你要的是」照抄原话时给一句 NOTE，但不拦。
+
+    判断权在用户：写得对不对靠人看，不靠脚本算。这里只抓最低级的偷懒。
+    """
+    root = tempfile.mkdtemp(prefix="dw-restate-")
+    try:
+        git_init(root)
+        raw = "把导出的默认集改成三态，别再问我根据项目规则"
+        run(root, "start", "change", FEATURE, raw)
+        folder = os.path.join(root, "specs", FEATURE)
+        with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
+            fh.write(
+                "- 原话（一字不改）：%s\n"
+                "- 我理解你要的是：%s\n"
+                "- 可能理解错的地方：无歧义\n"
+                "- 本质：改默认集\n"
+                "- 未知：无\n" % (raw, raw)
+            )
+        copied = run(root, "next")
+        expect(
+            "NOTE" in copied.stdout and "原话的复制" in copied.stdout,
+            "copying the raw line raises a note",
+            copied.stdout,
+        )
+        expect(
+            "DO" in copied.stdout,
+            "the note does not block progress",
+            copied.stdout,
+        )
+        with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
+            fh.write(
+                "- 原话（一字不改）：%s\n"
+                "- 我理解你要的是：导出默认集固定三态，不再交互追问\n"
+                "- 可能理解错的地方：三态具体是哪三个尚未确认\n"
+                "- 本质：改默认集\n"
+                "- 未知：无\n" % raw
+            )
+        own = run(root, "next")
+        expect(
+            "NOTE" not in own.stdout and "DO" in own.stdout,
+            "rephrasing in own words raises no note",
+            own.stdout,
         )
     finally:
         shutil.rmtree(root, ignore_errors=True)
@@ -1007,7 +1069,7 @@ def case_approve():
         run(root, "start", "change", FEATURE)
         folder = os.path.join(root, "specs", FEATURE)
         with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
-            fh.write("- 原话（一字不改）：探测\n- 本质：改一处\n- 未知：无\n")
+            fh.write("- 原话（一字不改）：探测用\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 未知：无\n")
         blocked = run(root, "approve", FEATURE, "design", "api")
         expect(
             "NEED_ANSWER" in blocked.stdout,
@@ -1047,7 +1109,7 @@ def case_gate_check():
         run(root, "start", "change", FEATURE)
         folder = os.path.join(root, "specs", FEATURE)
         with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
-            fh.write("- 原话（一字不改）：探测\n- 本质：改一处\n- 未知：无\n")
+            fh.write("- 原话（一字不改）：探测用\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 未知：无\n")
         run(root, "done", FEATURE)
         git_commit_all(root)
         blocked = run(root, "done", FEATURE)
@@ -1080,7 +1142,7 @@ def case_evidence_log():
         run(root, "start", "change", FEATURE)
         folder = os.path.join(root, "specs", FEATURE)
         with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
-            fh.write("- 原话（一字不改）：探测\n- 本质：改一处\n- 未知：无\n")
+            fh.write("- 原话（一字不改）：探测用\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 未知：无\n")
         run(root, "next")
         log = open(os.path.join(folder, "evidence.log"), encoding="utf-8").read()
         expect(
@@ -1307,6 +1369,7 @@ def main():
     case_utf8_output()
     case_no_phantom()
     case_intake()
+    case_restated_raw()
     case_domains()
     case_domain_docs()
     case_approve()

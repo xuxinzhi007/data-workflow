@@ -332,6 +332,30 @@ def unmet_requires(root, stage, paths):
     return [item for item in needed if item not in text]
 
 
+def norm(text):
+    return " ".join((text or "").split())
+
+
+def restated_raw(root, paths):
+    """「我理解你要的是」如果只是原话的复制，提醒一句。
+
+    不拦。判断权在用户：写得对不对是人看出来的，不是脚本算出来的。
+    这里只抓一种最低级的偷懒——把原话粘一遍当理解。
+    """
+    for pattern in paths:
+        for path in concrete_files(root, pattern):
+            text = read_text(path)
+            raw = re.search(r"^\s*-?\s*原话[^：:]*[：:]\s*(.+)$", text, re.M)
+            mine = re.search(r"^\s*-?\s*我理解你要的是[：:]\s*(.+)$", text, re.M)
+            if not raw or not mine:
+                continue
+            a = norm(raw.group(1))
+            b = norm(mine.group(1))
+            if a and b and (a == b or (len(a) > 8 and a in b)):
+                return path
+    return ""
+
+
 def close_decisions(root, paths, reply):
     line = "已拍板：%s\n" % reply
     for pattern in paths:
@@ -565,6 +589,11 @@ def show(root, run):
             print("补进本阶段产物后再运行：")
             print("%s next %s" % (ME, feature))
             return 0
+        copied = restated_raw(root, paths)
+        if copied:
+            print_context(root, run)
+            print("NOTE 「我理解你要的是」看起来是原话的复制。换成你自己的话说一遍，或写「无歧义」。见 %s" % copied)
+            print()
         if stage.get("code"):
             print_context(root, run)
             print("DO")
@@ -687,10 +716,6 @@ def cmd_wait(root, feature, question, reply):
     save_run(root, run)
     print_wait(root, run)
     return 0
-
-
-def norm(text):
-    return " ".join((text or "").split())
 
 
 def cmd_answer(root, feature, text):
