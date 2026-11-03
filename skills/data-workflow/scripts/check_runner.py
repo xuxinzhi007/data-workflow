@@ -58,7 +58,7 @@ def reach_code(root):
     folder = os.path.join(root, "specs", FEATURE)
     os.makedirs(folder, exist_ok=True)
     with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
-        fh.write("- 原话（一字不改）：探测用\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 未知：无\n")
+        fh.write("- 原话（一字不改）：探测用\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 怎样算满足：跑 next 返回 DO\n- 未知：无\n")
     done = run(root, "done", FEATURE)
     if done.returncode != 0 or read_run(root).get("stage") != 2:
         raise SystemExit(done.stdout + done.stderr)
@@ -588,7 +588,7 @@ def case_foreign():
         folder = os.path.join(root, "specs", FEATURE)
         os.makedirs(folder, exist_ok=True)
         with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
-            fh.write("- 原话（一字不改）：探测用\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 未知：无\n")
+            fh.write("- 原话（一字不改）：探测用\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 怎样算满足：跑 next 返回 DO\n- 未知：无\n")
         stepped = copy_run("done", FEATURE)
         finished = copy_run("done", FEATURE)
         record = json.load(open(os.path.join(folder, "run.json"), encoding="utf-8"))
@@ -1015,6 +1015,7 @@ def case_intake():
         with open(os.path.join(folder, "decision.md"), "a", encoding="utf-8") as fh:
             fh.write("- 我理解你要的是：把导出默认集改成三态，不再追问\n")
             fh.write("- 可能理解错的地方：无歧义\n")
+            fh.write("- 怎样算满足：跑 next 返回 DO\n")
         nxt = run(root, "next")
         expect(
             "DO" in nxt.stdout and "RAW %s" % raw in nxt.stdout,
@@ -1042,6 +1043,7 @@ def case_restated_raw():
                 "- 我理解你要的是：%s\n"
                 "- 可能理解错的地方：无歧义\n"
                 "- 本质：改默认集\n"
+                "- 怎样算满足：跑 next 返回 DO\n"
                 "- 未知：无\n" % (raw, raw)
             )
         copied = run(root, "next")
@@ -1157,7 +1159,7 @@ def case_approve():
         run(root, "start", "change", FEATURE)
         folder = os.path.join(root, "specs", FEATURE)
         with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
-            fh.write("- 原话（一字不改）：探测用\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 未知：无\n")
+            fh.write("- 原话（一字不改）：探测用\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 怎样算满足：跑 next 返回 DO\n- 未知：无\n")
         blocked = run(root, "approve", FEATURE, "design", "api")
         expect(
             "NEED_ANSWER" in blocked.stdout,
@@ -1197,7 +1199,7 @@ def case_gate_check():
         run(root, "start", "change", FEATURE)
         folder = os.path.join(root, "specs", FEATURE)
         with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
-            fh.write("- 原话（一字不改）：探测用\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 未知：无\n")
+            fh.write("- 原话（一字不改）：探测用\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 怎样算满足：跑 next 返回 DO\n- 未知：无\n")
         run(root, "done", FEATURE)
         git_commit_all(root)
         blocked = run(root, "done", FEATURE)
@@ -1230,7 +1232,7 @@ def case_evidence_log():
         run(root, "start", "change", FEATURE)
         folder = os.path.join(root, "specs", FEATURE)
         with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
-            fh.write("- 原话（一字不改）：探测用\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 未知：无\n")
+            fh.write("- 原话（一字不改）：探测用\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 怎样算满足：跑 next 返回 DO\n- 未知：无\n")
         run(root, "next")
         log = open(os.path.join(folder, "evidence.log"), encoding="utf-8").read()
         expect(
@@ -1261,7 +1263,7 @@ def case_decided():
         run(root, "start", "change", FEATURE)
         folder = os.path.join(root, "specs", FEATURE)
         with open(os.path.join(folder, "decision.md"), "w", encoding="utf-8") as fh:
-            fh.write("- 原话（一字不改）：探测\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 未知：无\n- 待拍板：范围多大？\n")
+            fh.write("- 原话（一字不改）：探测\n- 我理解你要的是：改一处\n- 可能理解错的地方：无歧义\n- 本质：改一处\n- 怎样算满足：跑 next 返回 DO\n- 未知：无\n- 待拍板：范围多大？\n")
         run(root, "next")
         run(root, "wait", FEATURE, "用全量还是三态？", "只改判定那一行")
         run(root, "answer", FEATURE, "只改判定那一行")

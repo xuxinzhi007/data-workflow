@@ -16,6 +16,7 @@
         "我理解你要的是",
         "可能理解错",
         "本质",
+        "怎样算满足",
         "未知"
       ],
       "template": "templates/decision-template.md",
