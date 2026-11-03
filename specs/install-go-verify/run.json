@@ -1,9 +1,0 @@
-{
-  "workflow": "change",
-  "feature": "install-go-verify",
-  "stage": 3,
-  "status": "done",
-  "question": "",
-  "reply": "",
-  "raw_request": "新项目没工具目录装不上，Go 项目还要手配 verify"
-}

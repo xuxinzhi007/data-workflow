@@ -1,9 +1,0 @@
-{
-  "workflow": "change",
-  "feature": "intent-confirm",
-  "stage": 3,
-  "status": "done",
-  "question": "",
-  "reply": "",
-  "raw_request": "用户说得含糊时，先把我的理解写出来给他看，确认了才进入执行"
-}

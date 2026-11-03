@@ -1,9 +1,0 @@
-{
-  "workflow": "change",
-  "feature": "evals-split-runna",
-  "stage": 3,
-  "status": "done",
-  "question": "",
-  "reply": "",
-  "raw_request": "evals 里 14 条用例从来没被执行过，拆成机器可判和人工评审两处"
-}

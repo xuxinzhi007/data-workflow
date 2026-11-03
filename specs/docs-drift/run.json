@@ -1,9 +1,0 @@
-{
-  "workflow": "change",
-  "feature": "docs-drift",
-  "stage": 3,
-  "status": "done",
-  "question": "",
-  "reply": "",
-  "raw_request": "整理仓库，修文档与实现的漂移"
-}

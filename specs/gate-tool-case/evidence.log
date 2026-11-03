@@ -1,3 +1,0 @@
-stage=1 requires=ok gate_check=none verify=none head=f5b6d46 at=2026-11-02T14:33:25+08:00 by=runner
-stage=2 requires=ok gate_check=ok verify=exit0 head=f5b6d46 at=2026-11-02T14:33:32+08:00 by=runner
-stage=3 requires=ok gate_check=none verify=none head=f5b6d46 at=2026-11-02T14:33:49+08:00 by=runner
