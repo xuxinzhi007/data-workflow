@@ -49,6 +49,8 @@ done                                  # → DONE
 
 卡片带 `verified_commit`、`watches`、`verified_at`；`knowledge_drift.sh` 标 `FRESH` / `STALE`，不停工；`status: superseded` 的卡跳过。**代码证明的是现在会怎么做，不是「业务要求永远如此」。**
 
+这句话决定了知识层怎么回写：`quality-gate` 的 G7 在每次改动后比对 `watches`，命中就刷新指针类条目（`文件:符号`、`verified_commit`），**但业务口径一栏只标冲突、不改结论**——否则等于让代码给自己发合规证明。冲突交给人拍板。
+
 没有出处的词进「待确认」，用 `wait` 停，不编一个看起来合理的含义。命中卡片后对照它的 `watches`：代码仍符合才当现行规则；已不符合就标冲突，旧卡标 `superseded`。
 
 动手前读 [`references/scope.md`](skills/data-workflow/references/scope.md)。先写用户真正要解决的问题和怎样算满足，再决定改多宽。L1 走 `change`；契约、持久化、权限、状态、回滚即使改动很小也升到 `feature` 或 `hotfix`；与这次无关的债不进这次 diff。
@@ -82,7 +84,7 @@ done                                  # → DONE
 | 3 技术方案 | `plan.md`、`rollback.md` | 方案门（`gate` 首行 `plan pass`） |
 | 4 编码实现 | 代码（Go 栈另可补 `*_contract_test.go`） | `gate_check` + 仓库自己的 `verify` 退出码 |
 | 5 改动审核 | `specs/<feature>/review/*.md` | 审核指纹与工作树 |
-| 6 质量与接口门 | `quality.md` | 构建 / 单测证据 ＋ 接口三级门：`go test ./api/...` → `contract_diff.sh` → 场景回放或如实 WAIVED |
+| 6 质量与接口门 | `quality.md` | 构建 / 单测证据 ＋ 接口三级门：`go test ./api/...` → `contract_diff.sh` → 场景回放或如实 WAIVED ＋ G7 知识反哺（碰到的域自动刷新指针，口径冲突只标不改） |
 | 7 文档审计与提交 | `change-note.md`、commit、MR | 文档审计 |
 
 `bugfix` / `hotfix` 的第一步是排查。`oncall` 和画图不插入这条链。任意仓库的一次改动或定架构用 `workflows/change.json`，三步：`decision.md` → 改文件 → `check.md`。
@@ -91,7 +93,7 @@ done                                  # → DONE
 
 ## 门与证据
 
-四类门，判据都是机器可读的，不是中文形容词：
+门按**判据由谁执行**分四类，判据都是机器可读的，不是中文形容词。这是门的唯一分类：
 
 | 门 | 谁判 | 判什么 | 没过时 |
 |---|---|---|---|
@@ -99,6 +101,10 @@ done                                  # → DONE
 | 内容门 | `workflow_next.py` 的 `requires` | 产物里有没有那几行字面量（如「未知」） | `next`/`done` 打 `GATE` 并停 |
 | 命令门 | `workflow_next.py` 的 `gate_check` | 一条 shell 命令的退出码（`change` 的编码阶段查工作树真动过） | 打 `GATE` + 命令输出尾部 |
 | 完成门 | `workflow_next.py` 的 `run_verify` | 仓库自己声明的测试入口的退出码 | 停在 `RED`，输出进 `verify.log` |
+
+`workflows.md` 另有一张按**流程步位**分的表（负债 / 影响面 / 改动审核 / 接口 / 文档审计 / 新鲜度）。那不是第二套门，是上表四类在不同步位的**实例**：每一行都落到四类里的一类去判。要改判据改本表，要改顺序改那张。
+
+**`workflows/*.json` 里的 `self_check` 不是门。** 它是一段给 Agent 读的自评提示（如「四轴都填了吗」），没有裁判：机器只判 `requires` 字面量在不在和命令退出码。它以前叫 `gate`，容易被读成上面四类中的一员，所以改名。待确认断言记在 [`docs/claim-register.md`](docs/claim-register.md)。
 
 `specs/<feature>/` 里的证据链：
 

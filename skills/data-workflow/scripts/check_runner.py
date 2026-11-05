@@ -1470,6 +1470,143 @@ def case_card_writeback():
         shutil.rmtree(cards, ignore_errors=True)
 
 
+def case_knowledge_feedback():
+    """知识反哺（quality-gate G7）：指针可自动写，业务口径不许自动改。
+
+    这条守的是 G7 里最容易在后续编辑中丢掉的那一句：
+    允许刷新 verified_commit 与 §2/§4/§5/§6 的符号，
+    但不许用代码现状改 §3 状态族的业务语义。
+    """
+    qg = open(os.path.join(SKILL_ROOT, "stages/quality-gate/SKILL.md"), encoding="utf-8").read()
+
+    expect("G7" in qg, "quality-gate has the G7 step", "")
+    expect(
+        "knowledge_drift.sh" in qg,
+        "G7 finds drift with the existing script, not a new one",
+        "",
+    )
+    expect(
+        "verified_commit" in qg,
+        "G7 refreshes verified_commit",
+        "",
+    )
+    # 两半必须分开写：指针类可自动，口径类只标冲突
+    expect(
+        re.search(r"指针类", qg) and re.search(r"口径类", qg),
+        "G7 splits pointer entries from semantic entries",
+        "",
+    )
+    expect(
+        re.search(r"不[许允许].{0,12}(用代码|代码现状).{0,20}(口径|语义)", qg) is not None,
+        "G7 forbids rewriting business semantics from code",
+        "",
+    )
+    # 冲突不许自决
+    expect(
+        re.search(r"不自行决定以哪份为准", qg) is not None,
+        "G7 leaves conflicts to a human, does not self-resolve",
+        "",
+    )
+
+
+def case_gate_edit_coverage():
+    """gate-edit 的拦截面：写操作的覆盖边界必须被钉住。
+
+    这张探针表替代一次性的人工测试表格。hook 的实现一改，
+    这张表就会说话——要么新拦住（更新期望），要么退化成漏（测试红）。
+
+    代价：这是全线唯一不依赖 LLM 的增量，退化等于门失效。
+    """
+    sys.path.insert(0, os.path.join(SKILL_ROOT, "hooks"))
+    import gate_edit  # noqa: E402
+
+    root = os.path.abspath(os.sep + "tmp" + os.sep + "dw-cov")
+    target = "api/x.proto"
+
+    # 必须拦住：shell 重定向族 + shell 文件操作
+    must_block_shell = [
+        "echo hi > api/x.proto",
+        "echo hi >> api/x.proto",
+        "echo hi >api/x.proto",
+        "cat > api/x.proto <<EOF\nhi\nEOF",
+        "sed -i 's/a/b/' api/x.proto",
+        "echo hi | tee api/x.proto",
+        "cp /tmp/x api/x.proto",
+        "mv /tmp/x api/x.proto",
+        "rm api/x.proto",
+    ]
+    for cmd in must_block_shell:
+        dest = gate_edit.shell_destinations(cmd, root)
+        expect(
+            any(target in d for d in dest),
+            "gate-edit blocks shell write: %s" % cmd.split()[0],
+            str(dest),
+        )
+
+    # 已知漏网：这些今天拦不住。写成「已知缺口」而不是假装拦住，
+    # 缺口缩小（真拦住了）时这条会失败，提醒更新文档。
+    known_gaps = [
+        ("python -c open().write", "python3 -c \"open('api/x.proto','w').write('x')\""),
+        ("git apply", "git apply patch.diff"),
+        ("patch", "patch -p1 < /tmp/f.diff"),
+        ("dd of=", "dd if=/dev/zero of=api/x.proto"),
+        ("truncate", "truncate -s 0 api/x.proto"),
+    ]
+    for label, cmd in known_gaps:
+        dest = gate_edit.shell_destinations(cmd, root)
+        expect(
+            not any(target in d for d in dest),
+            "known gap still open (fix the doc if it closes): %s" % label,
+            str(dest),
+        )
+
+    # 写工具名覆盖
+    for tool in ("write", "edit", "multiedit", "write_file"):
+        dest = gate_edit.targets(
+            {"tool_name": tool, "tool_input": {"file_path": target, "path": target}}, root
+        )
+        expect(
+            dest is not None and any(target in (d or "") for d in dest),
+            "gate-edit sees writes from tool: %s" % tool,
+            str(dest),
+        )
+
+    # MCP 与未知工具：fail-open 是当前行为，钉住它，别让「看起来能拦」当事实
+    for tool in ("mcp__fs__write_file", "some_future_tool"):
+        dest = gate_edit.targets(
+            {"tool_name": tool, "tool_input": {"path": target}}, root
+        )
+        expect(
+            dest is None,
+            "unknown/MCP tool fails open (documented gap): %s" % tool,
+            str(dest),
+        )
+
+
+def case_self_check_not_a_gate():
+    """self_check 字段不许被任何代码当成门读。
+
+    gate -> self_check 的改名是为了让读者不再把它当机器判据。
+    这条测试替 grep 兜住另一种情况：有人写代码去读它。
+    """
+    # 曾用名不允许回流：改回 gate 会被读成四类门的一员。
+    import glob as _glob
+    leftover = []
+    for wf in sorted(_glob.glob(os.path.join(SKILL_ROOT, "workflows", "*.json"))):
+        if '"gate"' in open(wf, encoding="utf-8").read():
+            leftover.append(os.path.basename(wf))
+    expect(not leftover, "no workflow reintroduces the 'gate' key", str(leftover))
+
+    # 只查真正决定流程的脚本；测试文件本身会写出这些字符串。
+    path = os.path.join(SKILL_ROOT, "scripts", "workflow_next.py")
+    src = open(path, encoding="utf-8").read()
+    expect(
+        '["gate"]' not in src and "get(\"gate\")" not in src and "get('gate')" not in src,
+        "workflow_next.py never reads stage['gate'] as a gate",
+        "",
+    )
+
+
 def case_lazy_load():
     """常驻成本：SKILL.md 短，references 不被无条件加载。
 
@@ -1647,6 +1784,9 @@ def main():
     case_open_marker()
     case_evidence_first()
     case_card_writeback()
+    case_knowledge_feedback()
+    case_gate_edit_coverage()
+    case_self_check_not_a_gate()
     case_lazy_load()
     case_evals_are_runnable()
     case_foreign()

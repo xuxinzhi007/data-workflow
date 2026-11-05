@@ -15,7 +15,7 @@
       "artifacts": [
         "specs/<feature>/triage.md"
       ],
-      "gate": "triage.md 写清：症状 / 最可能链路 / 三个选项（回滚发布 / 关开关 / 打补丁）各自的代价。给出可执行的下一步，而不是「继续排查」；根因未明也能止血时，先止血再排根因",
+      "self_check": "triage.md 写清：症状 / 最可能链路 / 三个选项（回滚发布 / 关开关 / 打补丁）各自的代价。给出可执行的下一步，而不是「继续排查」；根因未明也能止血时，先止血再排根因",
       "subagents": {
         "allowed": false,
         "reason": "事故期不 fan-out：上下文共享成本高，且需要单一决策者"
@@ -32,7 +32,7 @@
         "specs/<feature>/rollback.md"
       ],
       "template": "templates/rollback-template.md",
-      "gate": "轴 4 填完：代码回滚步骤、数据可逆性、半回滚开关、触发条件与阈值",
+      "self_check": "轴 4 填完：代码回滚步骤、数据可逆性、半回滚开关、触发条件与阈值",
       "on_gate_fail": "不许上线没有回滚步骤的 hotfix",
       "file": "stages/impact-assessment/SKILL.md"
     },
@@ -43,7 +43,7 @@
       "artifacts": [
         "最小 diff（只改必要的那一处）"
       ],
-      "gate": "不顺手重构、不顺手改格式、不加开关以外的新能力——hotfix 的 diff 越小越好审",
+      "self_check": "不顺手重构、不顺手改格式、不加开关以外的新能力——hotfix 的 diff 越小越好审",
       "subagents": {
         "allowed": false,
         "reason": "实现类子 agent 禁止并行"
@@ -57,7 +57,7 @@
         "specs/<feature>/quality.md",
         "specs/<feature>/interface-test.md"
       ],
-      "gate": "（仅当 stack=go）构建通过 + 相关包单测通过 + 契约 ①（go test ./api/...）+ 契约 ②（contract_diff.sh）；③ 场景回放跑不了就如实 WAIVED",
+      "self_check": "（仅当 stack=go）构建通过 + 相关包单测通过 + 契约 ①（go test ./api/...）+ 契约 ②（contract_diff.sh）；③ 场景回放跑不了就如实 WAIVED",
       "calls": [
         "stages/interface-test/SKILL.md"
       ],
@@ -72,7 +72,7 @@
         "commit"
       ],
       "template": "templates/change-note-template.md",
-      "gate": "change-note 里显式列出**跳过了什么**（技术方案 / 三轴审核 / 场景回放）与**谁在什么时候补**",
+      "self_check": "change-note 里显式列出**跳过了什么**（技术方案 / 三轴审核 / 场景回放）与**谁在什么时候补**",
       "on_gate_fail": "记账不完整不许提交——事后没人知道欠了什么",
       "file": "stages/git-commit/SKILL.md"
     }

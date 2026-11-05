@@ -5,17 +5,21 @@ description: 用户说 @data-workflow、开始开发、架构设计、梳理业�
 
 # 开发工作台（data-workflow）
 
-本文件只做选型。具体步骤在点名的那一个 `stages/` 文件里。业务事实运行时从知识层读。安装后工具目录里只有这一个 `data-workflow`。装进别的仓库后，那个仓库里的代理读这份副本。
+**先跑 `next`。它打印一件事，做那一件，做完再跑一次。**
 
-`$PLUGIN_ROOT` 是本文件所在目录。命令表在 `references/commands.md`。Agent 输入框输入 `/`，选 `dw-next`、`dw-done`、`dw-wait`、`dw-start`。
-
-Go/Kratos 实例的取值（分层目录、`api/**`、状态族、九项负债、契约门）集中在 `profiles/go-kratos/profile.md`；本文件与阶段正文不写实例取值，只在需要时指过去。
+`next` 的六种输出各自对应一个动作，见下面的「继续一次运行」。没有未完成运行时，按用户这句话选工作流（「选工作流」一节）。
 
 会话开头解析一次路径。空值就问，或显式声明降级后继续。不猜绝对路径。
 
 ```bash
 eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"
 ```
+
+`$PLUGIN_ROOT` 是本文件所在目录。命令表在 `references/commands.md`。Agent 输入框输入 `/`，选 `dw-next`、`dw-done`、`dw-wait`、`dw-start`。
+
+本文件只做选型，不写步骤：具体步骤在 `next` 点名的那一个 `stages/` 文件里，业务事实运行时从知识层读。安装后工具目录里只有这一个 `data-workflow`，装进别的仓库后那个仓库的代理读这份副本。
+
+Go/Kratos 实例的取值（分层目录、`api/**`、状态族、九项负债、契约门）集中在 `profiles/go-kratos/profile.md`；本文件与阶段正文不写实例取值，只在需要时指过去。
 
 ## 绑定
 
@@ -75,7 +79,19 @@ Cursor 项目安装后，没有 `specs/passes.log` 里覆盖该路径的记录�
 
 一次只读一个文件。`$KNOW` 一次只加载一个域文件。
 
-点名才读的全局技能：`grilling`、`diagnosing-bugs`、`ponytail-review`、`security-best-practices`、`security-threat-model`、`gh-fix-ci`、`gh-address-comments`、`domain-modeling`。阶段文件按路径读，不用技能名去调用。
+点名才读的全局技能，按触发条件列（一个分支一行，不按名字平铺）：
+
+| 你碰到这个 | 调这个 |
+|---|---|
+| 要推翻一个方案、把想法棅到碎 | `grilling` |
+| 要挠清一个词、写领域模型或 ADR | `domain-modeling` |
+| 引入外部输入面（表单、上传、回调） | `security-threat-model`，定下的约束写进 `security-best-practices` |
+| CI 红了不知道从哪下手 | `gh-fix-ci` |
+| 收到别人对 PR 的评论，要逐条处理 | `gh-address-comments` |
+| 写完改动，想在人审之前先过一遍 | `ponytail-review` |
+| 一个有复现路径的 bug 或性能回退，要定因 | `diagnosing-bugs` |
+
+阶段文件按路径读，不用技能名去调用。上表里的一行只在你真碰到左边那件事时才调。
 
 写 spec、impact、plan、rollback、review、change-note 之前读 `references/doc-shape.md`。归档见 `references/feature-archive.md`。
 

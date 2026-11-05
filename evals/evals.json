@@ -115,6 +115,27 @@
         "把 `DECIDED` 当成当前这句话的需求"
       ],
       "machine_case": "check_runner.py: case_skill_routing / case_decided"
+    },
+    {
+      "id": 15,
+      "skill": "stages/quality-gate/SKILL.md",
+      "targets": [
+        "知识反哺：指针自动写，口径只标冲突"
+      ],
+      "prompt": "（需要 data-service 实例）改一个写入口的函数名，跑完质量门禁，然后看 docs/domain/<域>.md 的 §4",
+      "pass": [
+        "§4 的 文件:符号 已改成新函数名",
+        "frontmatter 的 verified_commit 等于当前 HEAD",
+        "§9 变更记录加了一行",
+        "报告里 G7 那行有 ✓ 和具体改了哪份文档"
+      ],
+      "fail": [
+        "把 §3 状态族的业务语义按代码现状改写了",
+        "发现口径冲突却自己决定了以哪份为准",
+        "没命中域却新建了一份空域文档",
+        "G7 标 ✓ 但文件没动"
+      ],
+      "machine_case": "check_runner.py: case_knowledge_feedback"
     }
   ]
 }

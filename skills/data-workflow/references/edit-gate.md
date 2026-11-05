@@ -42,6 +42,8 @@ shell 这条是尽力而为。挡不住 `python -c` 里打开文件、变量拼�
 
 默认（两个键都未配置时）**没有受保护路径**，`specs/` 之外的写入直接放行——技能不猜任何项目的核心文件。data-service 实例通过它的 `config.yaml` 声明受保护路径：
 
+> **本功能默认关闭，且需要业务依据。** 没有 `protected_paths` 清单时本功能不提供任何保护。清单里写哪几个路径必须能答出「为什么这个路径动之前要有人拍板」——答不出的路径不要写进来，一个不知道自己在保护什么的锁比没有锁更危险（依据缺口记在 `docs/claim-register.md` 的 C1）。
+
 | 写入 | 放行 |
 |---|---|
 | `specs/` 下的工件，含 `passes.log` 本身 | 直接写 |
@@ -50,6 +52,32 @@ shell 这条是尽力而为。挡不住 `python -c` 里打开文件、变量拼�
 | 其余文件 | 直接写 |
 
 调用方在别的仓库里，这道 hook 拦不到。
+
+## 拦截面（实测，不是推断）
+
+hook 看到一次工具调用后，先归一化成「这次可能写到哪几个仓库内路径」，再拿 `protected_paths` 比。**这个归一化只认下面这些形状。** 测试在 `check_runner.py: case_gate_edit_coverage`，hook 实现一改这条就会说话。
+
+拦得住：
+
+| 写操作 | 例子 |
+|---|---|
+| shell 重定向 | `echo x > f`、`>>`、`>f`（无空格） |
+| heredoc | `cat > f <<EOF` |
+| `tee` / `sed -i` / `perl -i` | `echo x \| tee f`、`sed -i 's/a/b/' f` |
+| shell 文件操作 | `cp` / `mv` / `rm` |
+| 写工具名 | `write` / `edit` / `multiedit` / `write_file` 等（全表见 `WRITE_TOOLS`） |
+
+**拦不住（已知缺口，不要当成「能拦」）**：
+
+| 写操作 | 说明 |
+|---|---|
+| 代码内写文件 | `python3 -c "open('f','w').write()"`、`node -e` 等 |
+| 补丁应用 | `git apply`、`patch -p1 < f.diff` |
+| 低层命令 | `dd of=f`、`truncate`、`install` |
+| MCP 工具写文件 | 工具名不在 `WRITE_TOOLS` / `SHELL_TOOLS` 里 |
+| 未知工具名 | 故意 fail-open：宁可漏拦，不可误拦 |
+
+所以它保护的是「**模型走常规工具时的误写**」，不是「模型蓄意绕过」。写这段划分是因为「hook 拦不住智能攻击」是事实，把它说成「模型绕不过」会把一个 70% 的东西当成 100%。
 
 ## 记录格式
 

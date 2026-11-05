@@ -16,7 +16,7 @@
       "artifacts": [
         "specs/<feature>/spec.md（精简版：症状 / 真实链路 / 根因 / 证据）"
       ],
-      "gate": "根因有代码证据（文件:符号）或运行时证据；区分 code-confirmed / hypothesis；偶发故障或性能回退另读全局技能 diagnosing-bugs",
+      "self_check": "根因有代码证据（文件:符号）或运行时证据；区分 code-confirmed / hypothesis；偶发故障或性能回退另读全局技能 diagnosing-bugs",
       "on_gate_fail": "停在假设，不许开始改代码",
       "subagents": {
         "allowed": true,
@@ -38,7 +38,7 @@
         "specs/<feature>/impact.md"
       ],
       "template": "templates/impact-template.md",
-      "gate": "轴 1（谁共用这段逻辑）+ 轴 2（状态修复是否影响其它消费面）+ 轴 4（已产生的脏数据怎么办）三项非空",
+      "self_check": "轴 1（谁共用这段逻辑）+ 轴 2（状态修复是否影响其它消费面）+ 轴 4（已产生的脏数据怎么办）三项非空",
       "on_gate_fail": "回阶段 1：说明根因还没找全",
       "note": "bugfix 最常漏的是轴 4：代码修好了，历史脏数据还在。",
       "file": "stages/impact-assessment/SKILL.md"
@@ -54,7 +54,7 @@
         "一条能复现该 bug 的失败测试（先红）",
         "修复代码（后绿）"
       ],
-      "gate": "没有复现测试就修 = 无法证明修好了；确实无法写测试时说明原因并在 change-note 记账",
+      "self_check": "没有复现测试就修 = 无法证明修好了；确实无法写测试时说明原因并在 change-note 记账",
       "on_gate_fail": "停下补测试",
       "subagents": {
         "allowed": false,
@@ -71,7 +71,7 @@
       "artifacts": [
         "specs/<feature>/review/*.md"
       ],
-      "gate": "三轴各出 PASS/CONCERNS/FAIL；high 或 medium 即停",
+      "self_check": "三轴各出 PASS/CONCERNS/FAIL；high 或 medium 即停",
       "on_gate_fail": "回阶段 3",
       "subagents": {
         "allowed": true,
@@ -86,7 +86,7 @@
         "specs/<feature>/quality.md",
         "specs/<feature>/interface-test.md"
       ],
-      "gate": "构建 + 单测 + 接口三级门；bugfix 特别看契约 ② 是否顺手改了 proto",
+      "self_check": "构建 + 单测 + 接口三级门；bugfix 特别看契约 ② 是否顺手改了 proto",
       "calls": [
         "stages/interface-test/SKILL.md"
       ],
@@ -100,7 +100,7 @@
         "specs/<feature>/change-note.md",
         "commit"
       ],
-      "gate": "文档审计门 + 卡片索引已更新 + knowledge_drift.sh 对新卡报 FRESH",
+      "self_check": "文档审计门 + 卡片索引已更新 + knowledge_drift.sh 对新卡报 FRESH",
       "on_gate_fail": "补文档或显式记账",
       "note": "排查结论回写知识层走 stages/oncall/SKILL.md 的 references/capture.md，只写个人知识层，不污染仓库 docs/。",
       "file": "stages/git-commit/SKILL.md"
