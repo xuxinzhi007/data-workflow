@@ -22,7 +22,7 @@
 | C5 | 「一次只读一个文件」优于一次性加载 | **中**：影响上下文供给策略；`business-model.md` 称合并会互相污染，但未测 | 待确认 | A/B 实验，需先固定 stage 划分（C6） |
 | C6 | 24 个 stage 的边界划得对 | **中**：前置于 C5；格子划错，测什么都不干净 | 待确认 | 边界重叠/合并分析，未做 |
 | C7 | `change` 三步对 L1 改动不过重 | **中低**：体验问题，不伤正确性 | 推断 | 无数据；仅「用户反馈偏重」 |
-| C8 | `quality-gate` G7 知识反哺跑得对 | **中低**：目前只有结构守卫（`case_knowledge_feedback`），删守卫会 FAIL（已实测），但**从未真跑过** | 待确认 | 拿真实域文件跑一次，看 §4 符号与 `verified_commit` 是否真刷新 |
+| C8 | `quality-gate` G7 知识反哺跑得对 | **已降级**：判据已存在且会拦（见「已证实」V10），但只判 `verified_commit` 是否 == HEAD，**不判内容对不对**；「口径冲突只标不改」仍只是文字，无用例 | 存在冲突 | 仍需：拿真实域文件跑一次，看 §4 符号是否真刷新 |
 
 ---
 
@@ -39,6 +39,7 @@
 | V7 | hook 漏 `python -c open().write`、`git apply`、`patch`、`dd of=`、`truncate`、`install`、MCP 工具、未知工具 | 同上，实测 5+2 项 |
 | V8 | 状态机无回退边（`abandon`/`bypass` 是终止边，非回退边） | 遍历 workflow JSON，无指向前序阶段的字段 |
 | V9 | `SKILL.md` 102 行，`stages/` 24 个文件，`references/` 10 个 | `wc -l` |
+| V10 | G7 知识反哺有可执行的判据，且三种状态都会拦/放行 | `check_runner: case_g7_gate_runs`（命中→拦、刷新→放行、无关→不命中）；实现 `workflow_next.knowledge_feedback()` |
 
 ---
 

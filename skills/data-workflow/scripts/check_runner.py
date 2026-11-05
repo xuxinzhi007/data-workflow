@@ -1607,6 +1607,57 @@ def case_self_check_not_a_gate():
     )
 
 
+def case_g7_gate_runs():
+    """G7 知识反哺的判据必须真的会拦，不只是 SKILL.md 里的一段话。
+
+    C8 记录的问题是「G7 从未真跑过」。这条用例让 workflow_next.knowledge_feedback
+    在一个临时仓库上跑三次：命中未刷新 -> 拦；刷新 -> 放行；无关 -> 不命中。
+    """
+    root = tempfile.mkdtemp(prefix="dw-g7-")
+    try:
+        git_init(root)
+        os.makedirs(os.path.join(root, "docs", "domain"))
+        os.makedirs(os.path.join(root, "src", "user"))
+        with open(os.path.join(root, "docs", "domain", "user.md"), "w", encoding="utf-8") as fh:
+            fh.write("---\nid: domain-user\nverified_commit: %s\nwatches:\n  - src/user\n---\n# user\n"
+                     % ("0" * 40))
+        with open(os.path.join(root, "src", "user", "api.go"), "w", encoding="utf-8") as fh:
+            fh.write("package user\n")
+        git_commit_all(root)
+        head = subprocess.run(["git", "-C", root, "rev-parse", "HEAD"],
+                              capture_output=True, text=True, encoding="utf-8").stdout.strip()
+
+        sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
+        import workflow_next as W  # noqa: E402
+
+        # 1) 改了被 watches 覆盖的文件，commit 没跟上 -> 拦
+        with open(os.path.join(root, "src", "user", "api.go"), "a", encoding="utf-8") as fh:
+            fh.write("// touched\n")
+        ok, hits, detail = W.knowledge_feedback(root, "x")
+        expect(not ok, "G7 blocks when watched file changed and commit not refreshed", detail)
+        expect(hits == ["docs/domain/user.md"], "G7 names the hit domain doc", str(hits))
+
+        # 2) 刷新 verified_commit -> 放行
+        doc = os.path.join(root, "docs", "domain", "user.md")
+        with open(doc, encoding="utf-8") as fh:
+            text = fh.read()
+        with open(doc, "w", encoding="utf-8") as fh:
+            fh.write(re.sub(r"^verified_commit:.*$", "verified_commit: %s" % head, text, flags=re.M))
+        ok, hits, _ = W.knowledge_feedback(root, "x")
+        expect(ok, "G7 passes once verified_commit is refreshed", str(hits))
+
+        # 3) 改动不碰任何 watches -> 不命中，也不拦
+        with open(doc, "w", encoding="utf-8") as fh:
+            fh.write(re.sub(r"^verified_commit:.*$", "verified_commit: %s" % ("0" * 40), text, flags=re.M))
+        subprocess.run(["git", "-C", root, "checkout", "--", "src/user/api.go"], check=False)
+        with open(os.path.join(root, "unrelated.txt"), "w", encoding="utf-8") as fh:
+            fh.write("x\n")
+        ok, hits, _ = W.knowledge_feedback(root, "x")
+        expect(ok and hits == [], "G7 does not touch unrelated domains", str(hits))
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
 def case_lazy_load():
     """常驻成本：SKILL.md 短，references 不被无条件加载。
 
@@ -1787,6 +1838,7 @@ def main():
     case_knowledge_feedback()
     case_gate_edit_coverage()
     case_self_check_not_a_gate()
+    case_g7_gate_runs()
     case_lazy_load()
     case_evals_are_runnable()
     case_foreign()

@@ -133,6 +133,7 @@
         "specs/<feature>/quality.md"
       ],
       "self_check": "构建 + 单测 + 接口三级门（① go test ./api/...（Go 栈）② contract_diff.sh（Go 栈）③ 场景回放或如实 WAIVED）",
+      "knowledge_feedback": true,
       "on_gate_fail": "停在失败项；WAIVED 必须写补跑条件",
       "calls": [
         "stages/interface-test/SKILL.md"

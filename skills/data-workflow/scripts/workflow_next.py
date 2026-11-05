@@ -156,6 +156,100 @@ def tail_lines(text, limit=8):
     return lines[-limit:]
 
 
+def fm_list_of(text, key):
+    """取 frontmatter 里某个列表键的值。只读首个 --- 块。"""
+    lines = text.splitlines()
+    infm = False
+    started = False
+    inlist = False
+    out = []
+    for ln in lines:
+        if not started and ln.strip() == "---":
+            started = True
+            infm = True
+            continue
+        if infm and ln.strip() == "---":
+            break
+        if not infm:
+            continue
+        if re.match(r"^%s\s*:" % re.escape(key), ln):
+            inlist = True
+            continue
+        if inlist:
+            m = re.match(r"^\s*-\s*(.+?)\s*$", ln)
+            if m:
+                out.append(m.group(1).strip("\"'"))
+                continue
+            if ln.strip():
+                break
+    return out
+
+
+def knowledge_feedback(root, feature):
+    """G7 判据：这次改动命中的域，其 verified_commit 必须等于 HEAD。
+
+    返回 (ok, hits, detail)。hits 是命中的域文档相对路径。
+    doc-watches 与这次 diff 求交；没有域文档或没有交集时返回 ok=True。
+    """
+    run = load_run(root, feature) or {}
+    rows = run.get("stages") or []
+    changed = []
+    for row in rows:
+        changed.extend(row.get("changed_files") or [])
+    # run.json 不记 changed_files 时，退回 stage1 的 decision 里写的范围不靠谱，
+    # 直接问 git：最后一次 commit 与工作树合计的改动文件。
+    if not changed:
+        for args in (["diff", "--name-only", "HEAD"], ["status", "--porcelain"]):
+            p = subprocess.run(["git", "-C", root] + args,
+                               capture_output=True, text=True, encoding="utf-8")
+            if p.returncode != 0:
+                continue
+            for ln in p.stdout.splitlines():
+                ln = ln.strip()
+                if args[0] == "status":
+                    ln = ln[3:] if len(ln) > 3 else ""
+                if ln:
+                    changed.append(ln)
+    changed = set(c for c in changed if c)
+
+    docs_dir = os.path.join(root, "docs", "domain")
+    if not os.path.isdir(docs_dir):
+        return True, [], "no docs/domain/"
+    head = subprocess.run(["git", "-C", root, "rev-parse", "HEAD"],
+                          capture_output=True, text=True, encoding="utf-8").stdout.strip()
+
+    hits, stale = [], []
+    for name in sorted(os.listdir(docs_dir)):
+        if not name.endswith(".md"):
+            continue
+        path = os.path.join(docs_dir, name)
+        text = read_text(path)
+        watches = fm_list_of(text, "watches")
+        if not watches:
+            continue
+        touched = False
+        for w in watches:
+            w = w.rstrip("/")
+            for c in changed:
+                if c == w or c.startswith(w + "/"):
+                    touched = True
+                    break
+            if touched:
+                break
+        if not touched:
+            continue
+        rel = os.path.join("docs", "domain", name)
+        hits.append(rel)
+        m = re.search(r"^verified_commit\s*:\s*(\S+)", text, re.M)
+        got = m.group(1).strip("\"'") if m else ""
+        if not head or got != head:
+            stale.append("%s（verified_commit=%s，HEAD=%s）"
+                         % (rel, got[:8] or "无", head[:8] or "?"))
+    if stale:
+        return False, hits, "；".join(stale)
+    return True, hits, ""
+
+
 def run_gate_check(root, stage, feature):
     """stage.gate_check：一条命令，退出码就是门。
 
@@ -817,6 +911,19 @@ def cmd_done(root, feature):
             print(line)
         print("READ %s" % stage.get("file"))
         return 1
+    if stage.get("knowledge_feedback"):
+        kf_ok, kf_hits, kf_detail = knowledge_feedback(root, feature)
+        if not kf_ok:
+            print_context(root, run)
+            print("GATE")
+            print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+            print("G7 知识反哺：这次改动命中了域文档，但 verified_commit 没跟上")
+            for line in kf_hits:
+                print("HIT %s" % line)
+            print("DETAIL %s" % kf_detail)
+            print("按 references/edit-gate.md 的口径：指针类可自动刷新，口径类只标冲突不改结论。")
+            print("READ %s" % stage.get("file"))
+            return 1
     verify_code = None
     if stage.get("code"):
         verify_code = run_verify(root, feature)
