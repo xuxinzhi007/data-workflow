@@ -42,9 +42,11 @@
       ],
       "requires": [
         "exit",
-        "verify.log"
+        "verify.log",
+        "验的用例",
+        "对应 decision"
       ],
-      "self_check": "check.md 第一屏是 verify.log 的 exit 那一行，然后写验收条件是否达到、diff 有没有超出 decision.md",
+      "self_check": "check.md 第一屏是 verify.log 的 exit 那一行，然后写验收条件是否达到、diff 有没有超出 decision.md。按 references/acceptance.md 写：点名验的是哪个用例、期望关键输出、对应 decision 的哪条条件。exit 0 是通过的下界不是充分条件；环境没起导致用例没跑到被测逻辑时，判「没验成」，不许写成通过。未覆盖的条件要么写明，要么挪进 decision 的「这次不做」",
       "file": "workflows/change.md"
     }
   ]
