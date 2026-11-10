@@ -1,12 +1,36 @@
 # data-workflow
 
-这个仓库做三件事。
+## 用起来是什么样的
+
+装上之后，你基本不用敲命令。**新会话 AI 自动读这套东西，自己推进**：
+
+- 你说"给订单加个过滤字段" → AI 自己开工作流、写决策、改代码、跑测试、过门禁
+- 中途换话题、关窗口、第二天回来 → AI 看到未完成的运行，继续从上次停的地方接着做
+- 你想精确控制（恢复中断、调一步的细节）→ 手动跑命令。命令是**你可选的遥控器**，不是必须学的东西
+
+强制门禁只在 Cursor + `--with-hooks` 模式下生效：改 `api/`、proto、`status.go` 这些路径前必须有放行记录，没有就拒绝写入。其他环境（Qoder、Claude、Codex）里只有技能副本，没有硬拦截——AI 自觉跑流程，不拦裸改。
+
+这套技能做三件事：
 
 1. **写入门禁**：改受保护路径前，要有一条「有人同意」的放行记录；这条记录只能由 `approve` 签发，而 `approve` 要求先有过一次拍板对话。
 2. **完成证据**：说"做完了"必须有退出码。编码阶段先过 `gate_check`（工作树真动过），再跑仓库自己的测试入口，然后往 `evidence.log` 追加一行，含 `head`。
 3. **业务口径**：一个词、一个字段、一个状态在这个业务里是什么意思 —— 看哪九个维度、去哪读、落在哪。事实不写进技能，运行时从知识层读，取值回代码。
 
 高风险变更用 `feature` 九步链（data-service Go / Kratos **实例**，取值在 `profiles/go-kratos/`）；任意仓库的一次改动或定架构默认走 `change` 三步。安装默认把技能放进 `$HOME`，项目里只留 4 个 `/` 命令——技能副本自包含，不软链回本仓库。要 Cursor 里的强制写入门禁，显式 `--project --with-hooks`。
+
+## AI 自动推进 vs 手动命令
+
+AI 自觉跑命令是**默认行为**。会话钩子会注入未完成运行的 NOTICE，AI 读到之后自己决定要不要 `next`。你几乎不用管它。
+
+手动命令只在三种情况用：
+
+| 什么时候 | 做什么 |
+|---|---|
+| 旧会话没注入 hook（Cursor 只给新会话注入） | 手动跑 `next` 看当前状态 |
+| 你想恢复一条中断很久的运行 | `next` 打印 NEED/DO/OPEN 后，你自己决定要不要继续 |
+| 你在调试这套技能本身 | 直接跑 `python3 .../workflow_next.py next` 看原始输出 |
+
+命令清单在 `references/commands.md` 里，不需要提前记住。
 
 ## 你在什么状态，读什么
 
@@ -16,7 +40,7 @@
 - 要选工作流，或看卡在哪一道门 → [`skills/data-workflow/references/workflows.md`](skills/data-workflow/references/workflows.md)
 - 命令表 → [`references/commands.md`](skills/data-workflow/references/commands.md)。Agent 输入框输入 `/`，选 `dw-next`、`dw-done`、`dw-wait`、`dw-start`
 - 要知道一个词在业务里指什么 → `business-model.md`（看什么）× `routing.md`（去哪读）。路径空就问。键在 [`config.example.yaml`](config.example.yaml)
-- 要判断这套东西值不值得用、和同类技能包差在哪 → [`docs/competitive.md`](docs/competitive.md)（每格标了已证实 / 已记录 / 推断）
+- 竞品对照、设计笔记、研究记录（维护者用）→ [`docs/dev/`](docs/dev/)
 - 要改技能或新增阶段 → 下面的项目结构。阶段正文在 `stages/`，选型在 `SKILL.md`
 - 要重画两张图 → [`docs/diagrams.md`](docs/diagrams.md)
 
@@ -104,7 +128,7 @@ done                                  # → DONE
 
 `workflows.md` 另有一张按**流程步位**分的表（负债 / 影响面 / 改动审核 / 接口 / 文档审计 / 新鲜度）。那不是第二套门，是上表四类在不同步位的**实例**：每一行都落到四类里的一类去判。要改判据改本表，要改顺序改那张。
 
-**`workflows/*.json` 里的 `self_check` 不是门。** 它是一段给 Agent 读的自评提示（如「四轴都填了吗」），没有裁判：机器只判 `requires` 字面量在不在和命令退出码。它以前叫 `gate`，容易被读成上面四类中的一员，所以改名。待确认断言记在 [`docs/claim-register.md`](docs/claim-register.md)。
+**`workflows/*.json` 里的 `self_check` 不是门。** 它是一段给 Agent 读的自评提示（如「四轴都填了吗」），没有裁判：机器只判 `requires` 字面量在不在和命令退出码。它以前叫 `gate`，容易被读成上面四类中的一员，所以改名。待确认断言记在 [`docs/dev/claim-register.md`](docs/dev/claim-register.md)。
 
 `specs/<feature>/` 里的证据链：
 

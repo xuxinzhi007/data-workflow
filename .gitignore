@@ -11,3 +11,10 @@ __pycache__/
 # data-workflow 一次运行的产物：run.json / decision.md / check.md / verify.log。
 # 本机工作记忆，不进版本库（与 install.sh 给业务仓库写的规则一致）。
 specs/
+
+# 安装产物：.cursor/commands/ 是 install.sh 从 skills/commands/ 复制过去的运行时副本。
+# 源在 skills/data-workflow/commands/，目标仓库里那份不需要提交。
+.cursor/commands/
+
+# 开发期的一次性探测脚本、临时验证、旧运行残留。全是 .py/.sh，不写源码。
+.scratch/
