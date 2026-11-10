@@ -638,6 +638,48 @@ def record_evidence(root, run, stage, verify_code=None):
     return row
 
 
+def print_stage_hints(stage):
+    """Print AI-facing hints from workflow JSON fields that the runner itself
+    does not consume but the model should see. Only prints fields with a value."""
+    hints = []
+    sc = stage.get("self_check")
+    if sc:
+        hints.append(("SELF_CHECK", sc))
+    reads = stage.get("reads")
+    if reads:
+        if isinstance(reads, list):
+            hints.append(("READS", ", ".join(str(r) for r in reads)))
+        else:
+            hints.append(("READS", str(reads)))
+    note = stage.get("note")
+    if note:
+        hints.append(("NOTE", note))
+    ogf = stage.get("on_gate_fail")
+    if ogf:
+        hints.append(("ON_GATE_FAIL", ogf))
+    calls = stage.get("calls")
+    if calls:
+        if isinstance(calls, list):
+            hints.append(("CALLS", ", ".join(str(c) for c in calls)))
+        else:
+            hints.append(("CALLS", str(calls)))
+    sa = stage.get("subagents")
+    if sa and isinstance(sa, dict):
+        parts = []
+        if sa.get("allowed") is not None:
+            parts.append("allowed=%s" % sa["allowed"])
+        if sa.get("criteria"):
+            parts.append("criteria: %s" % sa["criteria"])
+        if sa.get("forbidden"):
+            parts.append("forbidden: %s" % ", ".join(sa["forbidden"]))
+        if sa.get("reason"):
+            parts.append("reason: %s" % sa["reason"])
+        if parts:
+            hints.append(("SUBAGENTS", "; ".join(parts)))
+    for label, text in hints:
+        print("%s: %s" % (label, text))
+
+
 def print_wait(root, run):
     print_context(root, run)
     print("WAIT")
@@ -682,6 +724,7 @@ def show(root, run):
             print_context(root, run)
             print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
             print("READ %s" % stage.get("file"))
+            print_stage_hints(stage)
             for path in missing:
                 print("NEED %s" % shown(path))
             print("写完后运行：")
@@ -691,6 +734,7 @@ def show(root, run):
             print_context(root, run)
             print("OPEN")
             print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+            print_stage_hints(stage)
             print("文件里还有待拍板。先运行 wait，reply 写成对方能原样粘贴的一句，然后停止。")
             print("%s wait %s \"<问题>\" \"<一句回复>\"" % (ME, feature))
             return 0
@@ -699,6 +743,7 @@ def show(root, run):
             print_context(root, run)
             print("GATE")
             print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+            print_stage_hints(stage)
             print("缺：%s" % "、".join(unmet))
             print("READ %s" % stage.get("file"))
             print("补进本阶段产物后再运行：")
@@ -714,6 +759,7 @@ def show(root, run):
             print("DO")
             print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
             print("READ %s" % stage.get("file"))
+            print_stage_hints(stage)
             print("做完后运行：")
             print("%s done %s" % (ME, feature))
             return 0
@@ -722,6 +768,7 @@ def show(root, run):
             print_context(root, run)
             print("GATE")
             print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+            print_stage_hints(stage)
             print("CHECK %s" % check_cmd)
             for line in tail_lines(check_out):
                 print(line)
@@ -731,6 +778,7 @@ def show(root, run):
             print_context(root, run)
             print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
             print("READ %s" % stage.get("file"))
+            print_stage_hints(stage)
             print("NO_ARTIFACT 本阶段没有可判定的产物文件（不编一个文件名）。做完后运行：")
             print("%s done %s" % (ME, feature))
             return 0
@@ -883,6 +931,7 @@ def cmd_done(root, feature):
         print_context(root, run)
         print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
         print("READ %s" % stage.get("file"))
+        print_stage_hints(stage)
         for path in missing:
             print("NEED %s" % shown(path))
         print("写完后运行：")
@@ -898,6 +947,7 @@ def cmd_done(root, feature):
         print_context(root, run)
         print("GATE")
         print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+        print_stage_hints(stage)
         print("缺：%s" % "、".join(unmet))
         print("READ %s" % stage.get("file"))
         return 1
@@ -906,6 +956,7 @@ def cmd_done(root, feature):
         print_context(root, run)
         print("GATE")
         print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+        print_stage_hints(stage)
         print("CHECK %s" % check_cmd)
         for line in tail_lines(check_out):
             print(line)
@@ -917,6 +968,7 @@ def cmd_done(root, feature):
             print_context(root, run)
             print("GATE")
             print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+            print_stage_hints(stage)
             print("G7 知识反哺：这次改动命中了域文档，但 verified_commit 没跟上")
             for line in kf_hits:
                 print("HIT %s" % line)
