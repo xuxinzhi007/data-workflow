@@ -384,6 +384,105 @@ def case_install_makes_tool_dir():
         )
 
 
+def case_commands_path_is_resolvable():
+    """命令文件里的脚本路径，在真实安装方式下必须能解析到。
+
+    曾经的 bug：四个 commands/*.md 都写死「装进别的仓库后在
+    `.cursor/skills/data-workflow/scripts/workflow_next.py`」，但默认安装（$HOME）
+    根本不往项目里放技能。照这行找文件，必然 ENOENT。
+    """
+    names = ("dw-next.md", "dw-done.md", "dw-wait.md", "dw-start.md")
+
+    # 1. 默认安装（$HOME）：项目里没有技能副本，命令里的路径必须指向能跑到的位置
+    with TestRoot("dw-cmdhome-") as r, TestRoot("dw-cmdhome-h-") as home:
+        r.git_init()
+        r.write("README.md", "probe\n")
+        os.makedirs(os.path.join(r.path, ".cursor"), exist_ok=True)
+        proc = r.install(home=home.path)
+        expect(proc.returncode == 0, "默认安装成功", proc.stdout + proc.stderr)
+        expect(not os.path.isdir(os.path.join(r.path, ".cursor", "skills", "data-workflow")),
+               "默认安装不往项目里放技能副本", "")
+        for name in names:
+            text = open(os.path.join(r.path, ".cursor", "commands", name),
+                        encoding="utf-8").read()
+            # 命令文件必须给出可解析的具体路径，不能只有「skills/data-workflow/...」
+            # 这种相对当前项目、但项目里并不存在的位置。
+            expect(".cursor/skills/data-workflow" not in text
+                   or "装进别的仓库后" not in text,
+                   "%s 不再把「.cursor/skills」当成唯一落点" % name, text)
+            # 落点必须是一个真的能跑到的绝对路径（install 时注入），
+            # 或者明确写了 $HOME / 解析顺序。不接受「只在项目里」的相对路径。
+            import re as _re
+            abs_paths = _re.findall(r"(/[A-Za-z0-9_./~-]*workflow_next\.py)", text)
+            ok = bool(abs_paths) or "$HOME" in text or "~/" in text
+            expect(ok, "%s 给了可解析的绝对路径或 HOME 落点" % name, text)
+            for p in abs_paths:
+                expect(os.path.isfile(p), "%s 里的路径真的存在：%s" % (name, p), text)
+            # 占位符不许漏出去
+            expect("{{RUNNER}}" not in text and "{{SKILL}}" not in text,
+                   "%s 没有漏掉未替换的占位符" % name, text)
+
+    # 2. --project：技能副本真的在项目里，命令里的路径要指得对
+    with TestRoot("dw-cmdproj-") as r, TestRoot("dw-cmdproj-h-") as home:
+        r.git_init()
+        r.write("README.md", "probe\n")
+        os.makedirs(os.path.join(r.path, ".cursor"), exist_ok=True)
+        proc = r.install("--project", home=home.path)
+        expect(proc.returncode == 0, "--project 安装成功", proc.stdout + proc.stderr)
+        runner = os.path.join(r.path, ".cursor", "skills", "data-workflow",
+                              "scripts", "workflow_next.py")
+        expect(os.path.isfile(runner), "--project 真的把 runner 放进项目", runner)
+        for name in names:
+            text = open(os.path.join(r.path, ".cursor", "commands", name),
+                        encoding="utf-8").read()
+            expect("workflow_next.py" in text, "%s 提到了 runner" % name, text)
+
+
+def case_default_install_commands_land_in_project():
+    """默认安装（$HOME）必须把 4 个命令写进**当前项目**，并在项目没有 .cursor 时建出来。
+
+    曾经的 bug：install_commands 在 `$root/.cursor` 不存在时静默 return 0，
+    然后 DONE 仍然打印「Cursor 命令在 <base>/.cursor/commands/」——一个不存在的目录。
+    在全新项目里第一次装，4 个命令就这么丢了，而且没有任何提示。
+    """
+    names = ("dw-next.md", "dw-done.md", "dw-wait.md", "dw-start.md")
+
+    # 1. 默认安装 + 项目里没有 .cursor：命令仍要落到项目
+    with TestRoot("dw-cmdnp-") as r, TestRoot("dw-cmdnp-h-") as home:
+        r.git_init()
+        r.write("README.md", "probe\n")
+        expect(not os.path.isdir(os.path.join(r.path, ".cursor")),
+               "前置：项目本来没有 .cursor", "")
+        proc = r.install(home=home.path)
+        expect(proc.returncode == 0, "默认安装成功", proc.stdout + proc.stderr)
+        for name in names:
+            target = os.path.join(r.path, ".cursor", "commands", name)
+            expect(os.path.isfile(target),
+                   "默认安装把 %s 写进当前项目" % name,
+                   proc.stdout + proc.stderr)
+        # 技能副本不该进项目
+        expect(not os.path.isdir(os.path.join(r.path, ".cursor", "skills", "data-workflow")),
+               "默认安装仍然不往项目放技能副本", "")
+        # 输出里报的路径必须真的存在
+        for line in proc.stdout.splitlines():
+            if "commands/" in line and "/" in line:
+                import re as _re
+                m = _re.search(r"(/[^ ]*?/commands/)", line)
+                if m:
+                    expect(os.path.isdir(m.group(1)),
+                           "输出里报的 commands 目录真的存在：%s" % m.group(1), line)
+
+    # 2. --project 也要把命令落到项目
+    with TestRoot("dw-cmdproj2-") as r, TestRoot("dw-cmdproj2-h-") as home:
+        r.git_init()
+        r.write("README.md", "probe\n")
+        proc = r.install("--project", home=home.path)
+        expect(proc.returncode == 0, "--project 安装成功", proc.stdout + proc.stderr)
+        for name in names:
+            expect(os.path.isfile(os.path.join(r.path, ".cursor", "commands", name)),
+                   "--project 把 %s 写进项目" % name, proc.stdout + proc.stderr)
+
+
 def case_hook_quiet():
     """会话钩子：没有运行、只有已完成运行时不注入。"""
     with TestRoot("dw-hook-empty-") as empty, \
@@ -973,6 +1072,175 @@ def case_gate_edit_coverage():
                str(dest))
 
 
+def case_confess_never_gates():
+    """confess 通道的机制性质：写不写、写什么都不影响推进。
+
+    这是整套设计的支架。以后谁“顺手”把 confess 接进任何门，这几条会红灯。
+    见 docs/dev/c3-c9-experiment.md 第一层。
+    """
+    # 1. needs_confess 对写决定的阶段返回 False
+    sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
+    import workflow_next as W  # noqa: E402
+    decide = {"id": 1, "name": "写下决定"}
+    coding = {"id": 2, "name": "按决定改", "code": True}
+    verify = {"id": 3, "name": "核对"}
+    expect(not W.needs_confess(decide), "写决定的阶段不要自白", str(decide))
+    expect(W.needs_confess(coding), "改代码的阶段要自白", str(coding))
+    expect(W.needs_confess(verify), "核对阶段要自白", str(verify))
+
+    # 2. 有 confess / 没 confess，同一份 decision.md 停在同一个地方
+    with TestRoot("dw-confess-") as r:
+        r.git_init()
+        r.write("a.txt", "x\n").git_commit()
+        r.make_config('verify: "true"\n')
+        r.change_reach()
+        baseline = r.run("next").stdout
+        r.write("specs/%s/confess/1.md" % FEATURE, "无可坦白\n")
+        expect(r.run("next").stdout == baseline,
+               "写一份自白不改变下一步的输出", (baseline, r.run("next").stdout))
+
+    # 3. confess 说「我超范围改了」，不让流程退回
+    with TestRoot("dw-confess-") as r:
+        r.git_init()
+        r.write("a.txt", "x\n").git_commit()
+        r.make_config('verify: "true"\n')
+        r.change_reach()
+        r.write("specs/%s/confess/1.md" % FEATURE,
+                "我超范围改了 3 个文件，verify 实际没跑到。\n")
+        out = r.run("next")
+        expect("DO" in out.stdout and "GATE" not in out.stdout
+               and "OPEN" not in out.stdout and "WAIT" not in out.stdout,
+               "自白里承认越界不让流程退回也不打门", out.stdout)
+        expect(r.read_run(FEATURE).get("stage") == 2,
+               "自白不改变 stage", str(r.read_run(FEATURE)))
+
+    # 4. 自白文件存在与内容是「无可坦白」时，不产生任何待办提示
+    with TestRoot("dw-confess-") as r:
+        r.git_init()
+        r.write("a.txt", "x\n").git_commit()
+        r.make_config('verify: "true"\n')
+        r.change_reach()
+        r.write("a.txt", "x\ncode change\n")
+        confirm = r.change_done().stdout
+        expect("CONFESS" in confirm, "改完代码那一刻要打 CONFESS", confirm)
+        r.write("specs/%s/confess/2.md" % FEATURE, "无可坦白\n")
+        expect("UNCONFESSED" not in r.run("next").stdout,
+               "写了自白就不再提醒漏写", r.run("next").stdout)
+
+
+def case_honesty_stats_runs():
+    """honesty_stats 的两个子命令都要能跑，且「无」/ 真实未知的判定正确。
+
+    这个脚本给 C3/C9 提供真实分布。它挂了，实验就没有起点。
+    """
+    stats = os.path.join(REPO_ROOT, "scripts", "honesty_stats.py")
+    if not os.path.isfile(stats):
+        expect(False, "scripts/honesty_stats.py 存在", stats)
+    # 1. 判「无」的几种写法
+    sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
+    sys.path.insert(0, os.path.join(REPO_ROOT, "scripts"))
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("honesty_stats", stats)
+    H = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(H)
+    for text in ("无", "无（三个已认的债明确不在本次范围）", "无歧义", "暂无"):
+        expect(H.is_none(text) is True, "判为「无」：%s" % text, text)
+    for text in ("不知道 knowledge_drift 的输出是否够用",
+                 "deepeek 的确切产品形态"):
+        expect(H.is_none(text) is False, "判为真实未知：%s" % text[:20], text)
+    expect(H.is_none(None) is None, "没有这一栏时返回 None，不进分母", "")
+
+    # 2. 在临时 specs 上跑一次 specs 子命令
+    with TestRoot("dw-stats-") as r:
+        r.write("specs/a/decision.md", "- 未知：无\n- 可能理解错：有\n")
+        r.write("specs/b/decision.md", "- 未知：不知道 X 是否成立\n")
+        r.write("specs/c/decision.md", "- 本质：没写未知栏\n")
+        out = subprocess.run(
+            [PY, stats, "specs"], cwd=r.path, capture_output=True,
+            text=True, encoding="utf-8",
+        )
+        expect(out.returncode == 0, "specs 子命令 exit 0", out.stdout + out.stderr)
+        expect("DECISION 共 3 份" in out.stdout, "数对了 3 份", out.stdout)
+        expect("有「未知」栏 2 份" in out.stdout, "认出 2 份有未知栏", out.stdout)
+        expect("写了真实未知 1 份" in out.stdout, "认出 1 份真实未知", out.stdout)
+
+    # 3. 在仓库自己身上跑一遍，不许崩
+    real = subprocess.run(
+        [PY, stats, "specs"], cwd=REPO_ROOT, capture_output=True,
+        text=True, encoding="utf-8",
+    )
+    expect(real.returncode == 0, "在真实 specs/ 上跑得通", real.stdout + real.stderr)
+
+
+def case_confess_scope_follows_workflow():
+    """自白第一个问题要引对本 workflow 的产物，不能硬写 decision.md。
+
+    bugfix / hotfix / feature 没有 decision.md。写错了 AI 会去找一个不存在的文件，
+    比不写更糟。
+    """
+    sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
+    import workflow_next as W  # noqa: E402
+    coding = {"id": 2, "name": "按决定改", "code": True}
+    expect(W.confess_scope("change", coding) == "decision.md",
+           "change 引 decision.md", W.confess_scope("change", coding))
+    for name, want in (("bugfix", "根因定位"), ("hotfix", "止血决策")):
+        got = W.confess_scope(name, coding)
+        expect(got == want, "%s 引自己的产物" % name, got)
+        expect("decision.md" not in got,
+               "%s 的问题里不出现 decision.md" % name, got)
+    expect("plan.md" in W.confess_scope("feature", coding),
+           "feature 引方案产物", W.confess_scope("feature", coding))
+    # 未知 workflow 不许抛异常
+    expect(W.confess_scope("nonexistent", coding),
+           "未知 workflow 有兜底文案", "")
+    # stage 自己声明时优先
+    expect(W.confess_scope("change", {"confess_scope": "自定义产物"}) == "自定义产物",
+           "stage.confess_scope 优先", "")
+
+    # 端到端：bugfix 的 done 打出来的问题里不出现 decision.md
+    with TestRoot("dw-scope-") as r:
+        r.git_init()
+        r.write("a.txt", "x\n").git_commit()
+        r.make_config('verify: "true"\n')
+        r.run("start", "bugfix", FEATURE, "探测根因产物")
+        r.write("specs/%s/run.json" % FEATURE,
+                json.dumps({"workflow": "bugfix", "feature": FEATURE,
+                            "stage": 3, "status": "working"}, ensure_ascii=False))
+        r.write("a.txt", "x\nfix\n")
+        out = r.change_done()
+        expect("CONFESS" in out.stdout, "bugfix 的 code 阶段打 CONFESS", out.stdout)
+        expect("decision.md" not in out.stdout,
+               "bugfix 的 CONFESS 问题里不出现 decision.md", out.stdout)
+
+
+def case_no_hints_switch():
+    """DATA_WORKFLOW_NO_HINTS=1 只摘 SELF_CHECK，其余输出逐字不变。
+
+    C3 对照实验的两组必须用同一个 runner，否则开关本身就带了别的变量。
+    """
+    with TestRoot("dw-hints-") as r:
+        r.git_init()
+        r.write("a.txt", "x\n").git_commit()
+        r.run("start", "change", FEATURE, "探测提示开关")
+        text_on = r.run("next", FEATURE).stdout
+        env = r.env()
+        env["DATA_WORKFLOW_NO_HINTS"] = "1"
+        off = subprocess.run(
+            [PY, RUNNER, "next", FEATURE, "--repo", r.path],
+            capture_output=True, text=True, encoding="utf-8", env=env,
+        )
+        text_off = off.stdout
+        expect("SELF_CHECK" in text_on, "默认打印 SELF_CHECK", text_on)
+        expect("SELF_CHECK" not in text_off, "NO_HINTS=1 时不打印 SELF_CHECK", text_off)
+        stripped = "\n".join(
+            line for line in text_on.splitlines()
+            if not line.startswith("SELF_CHECK")
+        ) + "\n"
+        expect(stripped == text_off,
+               "摘掉 SELF_CHECK 后其余输出逐字不变",
+               ("--on--", stripped, "--off--", text_off))
+
+
 def case_self_check_not_a_gate():
     """self_check 字段不许被任何代码当成门读。"""
     import glob as _glob
@@ -1338,6 +1606,8 @@ def main():
     case_pytest()
     case_cargo()
     case_answer()
+    case_commands_path_is_resolvable()
+    case_default_install_commands_land_in_project()
     case_hook_quiet()
     case_gate_read_write()
     case_gate_tool_case()
@@ -1363,6 +1633,10 @@ def main():
     case_knowledge_feedback()
     case_gate_edit_coverage()
     case_self_check_not_a_gate()
+    case_confess_never_gates()
+    case_no_hints_switch()
+    case_confess_scope_follows_workflow()
+    case_honesty_stats_runs()
     case_g7_gate_runs()
     case_lazy_load()
     case_evals_are_runnable()

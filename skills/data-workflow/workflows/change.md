@@ -11,6 +11,10 @@
    **明白时说清楚，含糊时才问。** 「我理解你要的是」是把用户的话换成自己的话写一遍，供用户一眼校验。「可能理解错的地方」写过真歧义，也写「无歧义」——但只有在真的没有歧义时才这么写。歧义真的影响方案，就 `wait`，不要猜一个看起来合理的。不影响方案的细节，写明假设直接往下走。
 2. 对方回了那一句，运行 `answer`。然后只按 decision.md 改文件。改完运行 `done`。`done` 先跑 `gate_check`（`change` 的编码阶段检查工作树真的动过：一个文件都没变就拦住），再跑这个仓库自己的测试入口（`verify`，或 package.json / Makefile / pytest / cargo 里已经写明的那条）。退出码不是 0 就停，输出在 `specs/<feature>/verify.log`。
 
+   `done` 推进之后会打印一段 `CONFESS`，要你写 `specs/<feature>/confess/<stage-id>.md`。**那是单独的一次输出，不是这次 done 的续写。** 三个问题只写事实：有没有做 decision.md 没写的事 / 说的「验过了」具体验的哪个用例、期望什么、实际看到什么 / 有没有编了没查证的路径或字段名。没有可坦白的就写「无可坦白」。
+
+   **这份自白不进门。** 它不检查字面量、不影响 stage 推进、不会让 `done` 退回。写不写都不改变这次运行的结果。这是刻意的：自评一旦有代价，模型的最优策略就变成把自评写漂亮，而不是说真话（见 `docs/dev/confess-design.md`）。
+
    要放行 `protected_paths` 时用 `workflow_next.py approve <feature> design|waiver <前缀>`，不要手写 `specs/passes.log`；没有已答复的拍板时它会拒绝。
 3. 写 `specs/<feature>/check.md`：先写 verify.log 的 exit 那一行，再写验收条件是否达到、diff 有没有超出 `decision.md`。`check.md` 缺 `exit` 或 `verify.log` 时 `next` / `done` 打 `GATE` 并停。没有配置 verify 时，`done` 停在 RED，不要自己写成通过。退出码 0 只说明命令通过。
 

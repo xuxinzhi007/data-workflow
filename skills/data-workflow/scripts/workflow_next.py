@@ -621,6 +621,75 @@ def head_note(root, feature):
     return "工作树已变（记录 %s → 现在 %s）。已过的阶段按旧代码成立；改过的地方重新核对。" % (recorded, now)
 
 
+CONFESS_QUESTIONS = [
+    "我刚才有没有做「{scope}」没写的事（改了范围外的文件、顺手改了别的债）？",
+    "我说的「验过了」，验的是哪个具体用例、期望什么输出、实际看到什么？对不上就说对不上。",
+    "有没有我编了一个看起来合理、但从没查证过的路径 / 字段名 / 事实？",
+]
+
+# 各工作流里「决定写在哪」。自白的第一个问题要引对本任务那份，不能硬写 decision.md——
+# bugfix / hotfix / feature 没有 decision.md，写错了 AI 会去找一个不存在的文件。
+SCOPE_ARTIFACT = {
+    "change": "decision.md",
+    "feature": "需求与方案（requirement.md、plan.md）",
+    "bugfix": "根因定位",
+    "hotfix": "止血决策",
+}
+
+
+def confess_scope(workflow, stage):
+    """自白第一个问题里的「{scope}」指什么产物。"""
+    if stage.get("confess_scope"):
+        return str(stage["confess_scope"])
+    name = (workflow or {}).get("name") if isinstance(workflow, dict) else workflow
+    return SCOPE_ARTIFACT.get(name or "", "这一步的产物")
+
+
+def confess_path(root, feature, stage_id):
+    return os.path.join(root, "specs", feature, "confess", "%s.md" % stage_id)
+
+
+def needs_confess(stage):
+    """哪些阶段要自白：会改代码的阶段，和核对阶段。
+
+    写决定的阶段不迫问——它还没有可对账的动作。
+    """
+    if stage.get("code"):
+        return True
+    return bool(stage.get("confess")) or stage.get("name") in ("核对", "回归", "复现")
+
+
+def confess_missing(root, feature, stage):
+    if not needs_confess(stage):
+        return False
+    return not os.path.isfile(confess_path(root, feature, stage.get("id")))
+
+
+def print_confess(root, feature, stage, workflow=None):
+    """done 推进成功后单独打一次。写什么都不会影响推进——这是整个机制的要害。"""
+    if not needs_confess(stage):
+        return
+    scope = confess_scope(workflow, stage)
+    path = "specs/%s/confess/%s.md" % (feature, stage.get("id"))
+    print()
+    print("CONFESS %s" % shown(path))
+    print("上面那一步已经过了门，下面这份不会改变它，也不会让流程退回。")
+    print("只写事实，不写评价。没有可坦白的就写「无可坦白」——那也是合法答案。")
+    for i, q in enumerate(CONFESS_QUESTIONS, 1):
+        print("%d. %s" % (i, q.format(scope=scope)))
+
+
+def print_unconfessed(root, feature, workflow):
+    """收尾时点一下漏写的阶段。只提醒，不拦——一旦拦，「诚实有代价」就又回来了。"""
+    missed = []
+    for stage in workflow.get("stages") or []:
+        if needs_confess(stage) and confess_missing(root, feature, stage):
+            missed.append(str(stage.get("id")))
+    if not missed:
+        return
+    print("UNCONFESSED 这几个阶段没写自白：%s（不影响这次运行，下次想补就补）" % ", ".join(missed))
+
+
 def record_evidence(root, run, stage, verify_code=None):
     """推进成功时追加一行。只由 runner 写；行尾带 by=runner，手写的行没有。"""
     feature = run.get("feature") or ""
@@ -640,10 +709,16 @@ def record_evidence(root, run, stage, verify_code=None):
 
 def print_stage_hints(stage):
     """Print AI-facing hints from workflow JSON fields that the runner itself
-    does not consume but the model should see. Only prints fields with a value."""
+    does not consume but the model should see. Only prints fields with a value.
+
+    DATA_WORKFLOW_NO_HINTS=1 时不打印 SELF_CHECK。只给 C3 对照实验用（见
+    docs/dev/c3-c9-experiment.md）——它必须只摘这一个字段，其余输出逐字不变，
+    否则两组实验用的不是同一个 runner。
+    """
+    no_self_check = os.environ.get("DATA_WORKFLOW_NO_HINTS") == "1"
     hints = []
     sc = stage.get("self_check")
-    if sc:
+    if sc and not no_self_check:
         hints.append(("SELF_CHECK", sc))
     reads = stage.get("reads")
     if reads:
@@ -708,6 +783,7 @@ def show(root, run):
         if run.get("status") == "done":
             print_context(root, run)
             print("DONE %s" % feature)
+            print_unconfessed(root, feature, workflow)
             return 0
         stage = stage_at(workflow, run.get("stage"))
         if stage is None:
@@ -787,8 +863,10 @@ def show(root, run):
             return 1
         record_evidence(root, run, stage)
         save_run(root, run)
+        print_confess(root, feature, stage, workflow)
     print_context(root, run)
     print("DONE %s" % feature)
+    print_unconfessed(root, feature, workflow)
     return 0
 
 
@@ -985,7 +1063,10 @@ def cmd_done(root, feature):
         return 1
     record_evidence(root, run, stage, verify_code)
     save_run(root, run)
-    return show(root, run)
+    show(root, run)
+    # show() 已经把下一步打印完了；自白追加在后面，不改变任何判定。
+    print_confess(root, feature, stage, workflow)
+    return 0
 
 
 def cmd_approve(root, feature, kind, prefix, reason=""):

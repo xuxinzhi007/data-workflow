@@ -42,6 +42,14 @@ bash .cursor/skills/data-workflow/hooks/gate-edit
 
 技能装到 `$HOME/.cursor/skills/data-workflow`（工具目录已存在就装进去，不存在就建这个）。项目里只写 `.cursor/commands/dw-*.md` 四个文件，可以提交给团队共享入口。
 
+**项目没有 `.cursor` 时会建出来。** 命令是给人敲 `/` 的入口，必须跟着项目走。
+曾经这里是「没有 `.cursor` 就静默跳过」，然后在 DONE 里报一个不存在的目录——
+新项目第一次装就丢命令，还没有任何提示。锁在 `case_default_install_commands_land_in_project`。
+
+只写 `.cursor`，不写 `.agents`：斜杠命令是 Cursor 特有的机制，`.agents` 下没有
+`commands/` 的约定，放进去不会被识别成 `/dw-next`。非 Cursor 环境走 `SKILL.md`
+的 description 自动触发，不需要命令文件。
+
 改动技能正文后，重新跑默认安装即可更新 `$HOME` 里的副本，不动项目。
 
 ## `--project --with-hooks`
@@ -92,6 +100,11 @@ Qoder、Claude、Codex 的副本没有 `gate-edit` 那道拦截，那些环境�
 有未完成运行时，`sessionStart` 注入一条 NOTICE：运行名、状态、一行摘要。它不代替当前需求。用户要继续那条时再跑 `next`。
 
 Agent 输入框输入 `/`，可选 `dw-next`、`dw-done`、`dw-wait`、`dw-start`。
+
+这四个文件在安装时**生成**，不是原样复制：源文件 `commands/*.md` 里写 `{{RUNNER}}` / `{{SKILL}}`，
+`install.sh` 按实际落点替换成绝对路径。默认安装装 `$HOME`、`--project` 装项目内副本，两种落点
+路径不同，写死其中一种就会让另一种环境跑不通（真实发生过：默认安装下命令文件指向
+`.cursor/skills/...`，那个目录不存在）。见 `check_runner: case_commands_path_is_resolvable`。
 
 ## 这个仓库带来什么
 

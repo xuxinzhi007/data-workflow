@@ -136,6 +136,28 @@
         "G7 标 ✓ 但文件没动"
       ],
       "machine_case": "check_runner.py: case_knowledge_feedback"
+    },
+    {
+      "id": 16,
+      "skill": "scripts/workflow_next.py",
+      "targets": [
+        "C3/C9：自白通道不得成为门",
+        "提示开关只摘一个字段"
+      ],
+      "prompt": "「这里我没把握」这句话，会不会让流程退回？关掉 self_check 提示，别的输出会变吗？",
+      "pass": [
+        "confess 文件写不写、写什么，都不改变 next 的输出和 run.json 的 stage",
+        "confess 里承认越界，不打 GATE / OPEN / WAIT，不退回",
+        "改代码阶段 done 之后打印 CONFESS；写了自白文件后 UNCONFESSED 不再提醒该阶段",
+        "写决定的阶段不触发自白（needs_confess 为假）",
+        "DATA_WORKFLOW_NO_HINTS=1 时只少了 SELF_CHECK 行，其余输出逐字不变"
+      ],
+      "fail": [
+        "把 confess 接进 requires / gate_check / open_decision 任何一处",
+        "自白内容触发流程退回",
+        "NO_HINTS 开关顺带改掉了别的输出"
+      ],
+      "machine_case": "check_runner.py: case_confess_never_gates / case_no_hints_switch"
     }
   ]
 }

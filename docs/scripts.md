@@ -14,6 +14,8 @@
 | `scripts/find_python.sh` | 逐个实跑 `py -3` / `python3` / `python` 选可用的一个。Windows 上 `python3` 常是 Store 占位程序 |
 | `scripts/layout.py` | 运行产物落到哪。一律当前工作仓库根，不回技能源仓库 |
 | `scripts/check_runner.py` | 回归集。`bash scripts/verify.sh` 会调它 |
+| `scripts/honesty_stats.py` | 从 `specs/` 历史运行里取自评分布（「未知」栏写「无」的比例、真实未知数）。不调用模型 |
+| `scripts/self-eval-stats.sh` | 上一条的入口。`bash scripts/self-eval-stats.sh` 直接跑 |
 
 `knowledge_drift.sh` 恒 exit 0。exit 2 只表示文档无法解析。缺 frontmatter 算 STALE。知识源为空时打印 `DEGRADED`，回退 `<repo>/docs`。
 

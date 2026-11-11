@@ -166,7 +166,7 @@ block = [begin, "# data-workflow 产物。运行记录是本机工作记忆，�
 block.append(".*/skills/data-workflow/config.yaml")
 block.append(".*/skills/data-workflow/origin")
 block.append("")
-block.append("# 一次运行的产物（run.json / decision.md / check.md / verify.log）。")
+block.append("# 一次运行的产物（run.json / decision.md / check.md / verify.log / confess/）。")
 block.append("# 想让团队看到进度，就删掉下面这一行。")
 block.append("specs/")
 if not with_hooks:
@@ -271,7 +271,10 @@ PY
 install_commands() {
 
   local root="$project_root"
-  [ -d "$root/.cursor" ] || return 0
+  # 项目没有 .cursor 也要把命令写进去。以前这里是 `[ -d ] || return 0`，
+  # 静默跳过，然后在 DONE 里报一个不存在的目录——新项目第一次装就丢命令。
+  # 命令是给人点 `/` 的入口，必须跟着项目走，不能因为目录还没建就算了。
+  mkdir -p "$root/.cursor/commands"
   local dest="$root/.cursor/commands"
   local name
   if [ "$unlink" = 1 ]; then
@@ -285,9 +288,41 @@ install_commands() {
     printf 'COMMANDS removed %s\n' "$dest"
     return 0
   fi
+
+  # 命令文件里的路径必须指向真实存在的位置。默认安装装 $HOME，--project 装项目，
+  # 两种落点不同，不能把其中一种写死进 md——写了就是又一个「只在开发环境跑得通」。
+  # 这里在安装时把 {{RUNNER}} / {{SKILL}} 替换成实际路径。
+  local runner skill_dir
+  if [ "$global" = 1 ]; then
+    # 默认装 $HOME：找 HOME 下真实存在的那一份
+    skill_dir=""
+    for d in .cursor .claude .agents .qoder .codex; do
+      if [ -f "$HOME/$d/skills/data-workflow/scripts/workflow_next.py" ]; then
+        skill_dir="$HOME/$d/skills/data-workflow"
+        break
+      fi
+    done
+  else
+    for d in .cursor .claude .agents .qoder .codex; do
+      if [ -f "$base/$d/skills/data-workflow/scripts/workflow_next.py" ]; then
+        skill_dir="$base/$d/skills/data-workflow"
+        break
+      fi
+    done
+  fi
+
+  if [ -z "$skill_dir" ]; then
+    printf 'WARN 找不到已安装的 data-workflow，命令文件里的路径留空占位\n'
+    skill_dir=""
+    runner=""
+  else
+    runner="$skill_dir/scripts/workflow_next.py"
+  fi
+
   mkdir -p "$dest"
   for name in dw-next.md dw-done.md dw-wait.md dw-start.md; do
-    cp "$src/commands/$name" "$dest/$name"
+    sed -e "s|{{RUNNER}}|$runner|g" -e "s|{{SKILL}}|$skill_dir|g" \
+      "$src/commands/$name" > "$dest/$name"
     printf 'COMMAND %s\n' "$dest/$name"
   done
 }
@@ -415,8 +450,8 @@ if [ "$unlink" = 0 ]; then
   else
     printf '\nDONE 技能副本在 %s 个工具目录。配置在 %s。\n' "${#dirs[@]}" "$primary"
     printf '     要更新技能正文，再跑一次本脚本，config.yaml 不会被盖掉。\n'
-    if [ "$global" = 1 ] && [ "$(cd "$base" 2>/dev/null && pwd -P)" != "$HOME" ]; then
-      printf '     Cursor 命令在 %s/.cursor/commands/，可提交给团队共享入口。\n' "$base"
+    if [ "$global" = 1 ] && [ "$(cd "$project_root" 2>/dev/null && pwd -P)" != "$HOME" ]; then
+      printf '     Cursor 命令在 %s/.cursor/commands/，可提交给团队共享入口。\n' "$project_root"
     fi
   fi
 fi

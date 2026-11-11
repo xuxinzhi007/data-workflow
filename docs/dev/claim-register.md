@@ -17,12 +17,13 @@
 |---|---|---|---|---|
 | C1 | `protected_paths` 里 `api/`、`*.proto`、`*.pb.go`、`internal/biz/status.go` 是「该保护」的路径 | **高**：这是全线唯一不依赖 LLM 的增量。配错了，这个增量价值为零；漏配了，真该保护的东西不设防 | 待确认 | 需要业务方给出「为什么这个路径动之前必须有人拍板」。**当前全仓无此依据**，`config.yaml` 默认 `""` |
 | C2 | 「70% 写操作覆盖率」（19 项探针中拦 14） | **高**：这是对唯一增量的可靠性描述，会被人当事实引用 | 待确认（**有偏样本**） | 19 项是凭经验枚举的，不是从 Agent 实际 shell 日志抽的。仓库内**无 shell 命令日志**。需先采集真实命令频次，再加权统计 |
-| C3 | `gate` 字段（自评提示）对产出质量有正贡献 | **高**：若为负（降低审查强度），它比没有更危险 | 待确认 | 双盲实验：保留/剥离 `self_check` 文本，测发现率与信心。未做 |
+| C3 | `gate` 字段（自评提示）对产出质量有正贡献 | **高**：若为负（降低审查强度），它比没有更危险 | 待确认（**实验已设计，机制层已锁**） | 2×2 对照见 `c3-c9-experiment.md`。第一层（机制性质）已进 `verify.sh`：`case_no_hints_switch` 证明开关只摘 SELF_CHECK。第二层（AI 表现，N=10×4 组）未跑 |
 | C4 | `fail-open`（未知工具、MCP 写入放行）是有意设计 | **中高**：若无事后补偿机制，「放行」等于没有兜底 | 待确认 | 需要一条「MCP 写了受保护文件，事后怎么发现」的补偿路径。**当前没有** |
 | C5 | 「一次只读一个文件」优于一次性加载 | **中**：影响上下文供给策略；`business-model.md` 称合并会互相污染，但未测 | 待确认 | A/B 实验，需先固定 stage 划分（C6） |
 | C6 | 24 个 stage 的边界划得对 | **中**：前置于 C5；格子划错，测什么都不干净 | 待确认 | 边界重叠/合并分析，未做 |
 | C7 | `change` 三步对 L1 改动不过重 | **中低**：体验问题，不伤正确性 | 推断 | 无数据；仅「用户反馈偏重」 |
 | C8 | `quality-gate` G7 知识反哺跑得对 | **已降级**：判据已存在且会拦（见「已证实」V10），但只判 `verified_commit` 是否 == HEAD，**不判内容对不对**；「口径冲突只标不改」仍只是文字，无用例 | 存在冲突 | 仍需：拿真实域文件跑一次，看 §4 符号是否真刷新 |
+| C9 | `confess` 通道（独立自白文件，不入门、不影响推进）能提升自评的诚实度 | **中高**：效仿 OpenAI 自白（2025-12-03），目标分离是该机制成立的前提。若无效，它只是又多一层仪式，且会让人误以为有了诚实保障 | 推断（**外部结论，非本仓实测**）；机制性质已锁，效果未测 | 2×2 对照见 `c3-c9-experiment.md`。第一层已进 `verify.sh`：`case_confess_never_gates` 锁住「写什么都不影响推进」。第二层未跑。**绕开 C6**（只跑 change 三步，不碰 24 个 stage） |
 
 ---
 
@@ -40,6 +41,9 @@
 | V8 | 状态机无回退边（`abandon`/`bypass` 是终止边，非回退边） | 遍历 workflow JSON，无指向前序阶段的字段 |
 | V9 | `SKILL.md` 102 行，`stages/` 24 个文件，`references/` 10 个 | `wc -l` |
 | V10 | G7 知识反哺有可执行的判据，且三种状态都会拦/放行 | `check_runner: case_g7_gate_runs`（命中→拦、刷新→放行、无关→不命中）；实现 `workflow_next.knowledge_feedback()` |
+| V11 | confess 通道不参与任何判定：写不写、写什么都不改变 next 输出与 run.json 的 stage；`needs_confess` 对写决定阶段为假 | `check_runner: case_confess_never_gates`（四条子断言）；`workflow_next.py: needs_confess/confess_missing` |
+| V12 | `DATA_WORKFLOW_NO_HINTS=1` 只摘掉 SELF_CHECK 行，其余输出逐字不变 | `check_runner: case_no_hints_switch`（逐字比对 on/off 全文） |
+| V13 | 「未知」栏在真实运行里 88% 写「无」（15/17），而「可能理解错」栏 91% 在写内容（10/11） | `bash scripts/self-eval-stats.sh`（读 `specs/*/decision.md` 的真实分布，20 次运行）；`check_runner: case_honesty_stats_runs` 锁住判定逻辑 |
 
 ---
 
