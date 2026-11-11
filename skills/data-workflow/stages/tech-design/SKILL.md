@@ -44,3 +44,10 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"   # → $KNOW / $TEMPLATES / $TEC
 - `$REPO/specs/passes.log`：用 `workflow_next.py approve <feature> design <前缀>` 写，前缀覆盖接下来要改的 `api/`、proto、`internal/biz/status.go` 和相关 Go 文件。**不要手写那一行**：手写的行在 `gate_strict` 下不作数
 
 门没过就不要写 `plan pass`。`plan.md` 里的每一项技术动作都要对应 `spec.md` 里的一条明确需求。对应不上的删掉，或在 `spec.md` 里写明为什么现在就要。写不上的，不要写 `plan pass`。这次发现的存量债记下来，不在这份方案里顺手偿还。
+
+## 常见错法
+
+- **手写 `plan pass`。** 必须用 `workflow_next.py approve` 写，手写的行在 `gate_strict` 下不作数。
+- **方案里塞进 spec 没有的技术动作。** 每一项都要对应一条明确需求；对应不上的删掉或补 spec。
+- **顺手偿还存量债。** 发现了记下来，不在这份方案里做。
+- **门没过先写下 pass。** 门没过就不写。

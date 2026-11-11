@@ -62,3 +62,11 @@ Prefer concrete checks such as:
 - verify behavior before and after a refactor
 
 Weak success criteria like `make it work` are not enough when a stronger check is available.
+
+## 常见错法
+
+- **顺手改无关的债。** 看到了就想一起修。改成在回复里点名，不进这个 diff。
+- **「验过了」但没有退出码。** 说的是「应该没问题」。要么贴命令和 exit，要么写「没验成」。
+- **新造一套模式。** 旁边已有实现却另起一个抽象。先找有没有可复用的。
+- **一次提交太大。** 一个 diff 里塞了几件事，没法一眼看完。
+- **把 mid-change 的树留在半坏状态。** 两次提交之间编译不过。

@@ -128,3 +128,9 @@ node "$SKILL_DIR/scripts/diagram_generator.js" diagram.json ./docs architecture
   <sub>（注：架构图源文件见 <a href="docs/architecture.excalidraw">docs/architecture.excalidraw</a>，支持在 <a href="https://excalidraw.com">Excalidraw</a> 中导入编辑）</sub>
 </p>
 ```
+
+## 常见错法
+
+- **字太小，导出后模糊。** 按「核心设计法则」先定字号再画。
+- **在 Excalidraw 里放真业务数据。** 图是要进 README 的，会公开。
+- **画完不给源文件。** `.excalidraw` 要一起给，别人才能改。

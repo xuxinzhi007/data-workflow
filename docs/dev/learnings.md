@@ -95,3 +95,16 @@ oncall/SKILL.md 同时被 bugfix 和 hotfix 用，但 bugfix 的 self_check 是"
 **核实**：`.agents` 在项目和 HOME 都有，但只有 `skills/`，没有 `commands/` 的约定。斜杠命令是 Cursor 特有机制。
 
 **决定**：只写 `.cursor/commands/`。非 Cursor 环境不需要命令文件——`SKILL.md` 的 description 会让 AI 自动触发，那才是真入口。往 `.agents` 塞 `commands/` 会让「技能」和「命令」两个概念混在一起，且放进去也不会生效。
+
+### 抄格式不抄架构：tempest 的两条规则（stages）
+
+**参照**：`mtthsnc/tempest`（参考对比用，不入本仓）。它 9 个 skill 全是 `Overview → Procedure → Common mistakes → Guardrails`，`description` 一律以 "Use when" 开头，`validate.sh` 强制检查。
+
+**只抄两条**：
+
+1. `description` 是触发器，不写步骤。原来 SKILL.md 的 description 写了「先跑 next 再读文件」——照它的话，agent 会照摘要办事而不读正文。
+2. 每个 stage 加「常见错法」段。历史证据：`specs/` 20 次运行「未知」栏 88% 写「无」——文件只讲做什么，没讲最容易错成什么样。
+
+**不抄**：它的状态机（它根本没有，`plan→build→review` 只是文档建议路径）、符号链接安装、只做格式验证。本仓的 `run.json`/字面量门/`evidence.log` 是它没有的东西。
+
+**体积纪律**：融合只给 stage 加失败模式段，运行时 2005 → 2077 行（+72，每个 stage 均 +7），最长 stage 180 行。锁在 `case_stages_have_failure_modes` 的 200 行上限里——超了就说明该拆 reference，不是加长。

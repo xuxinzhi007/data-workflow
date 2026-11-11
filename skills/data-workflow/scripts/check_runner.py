@@ -887,6 +887,63 @@ def case_decided():
                "next echoes the last decision", nxt.stdout)
 
 
+def case_description_is_a_trigger():
+    """description 是触发器，不是流程摘要。
+
+    照 tempest 的判据：description 里写「先跑 X 再读 Y」这类步骤，agent 会照着摘要
+    办事，而不去读正文。data-workflow 是唯一靠 description 自动触发的 skill，
+    stage 文件按路径读、不靠 description，所以只查这一个。
+    """
+    import re as _re
+    text = open(os.path.join(SKILL_ROOT, "SKILL.md"), encoding="utf-8").read()
+    m = _re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
+    expect(bool(m), "SKILL.md 有 frontmatter", text[:80])
+    front = m.group(1)
+    desc = _re.search(r"^description:\s*(.+)$", front, _re.M)
+    expect(bool(desc), "description 存在", front)
+    d = desc.group(1).strip()
+    expect(len(d) <= 1024, "description <= 1024 字符", len(d))
+
+    # 触发器式：描述「什么时候用」。禁止把执行步骤写进来。
+    step_markers = ["先跑", "然后去读", "接着", "再运行", "第一步"]
+    leaked = [k for k in step_markers if k in d]
+    expect(not leaked,
+           "description 不写执行步骤（会盖掉正文）：%s" % leaked, d)
+
+    # 必须点明触发场景
+    trigger_markers = ["当用户说", "当用户", "Use when", "用到时"]
+    expect(any(k in d for k in trigger_markers),
+           "description 有触发条件", d)
+
+
+def case_stages_have_failure_modes():
+    """每个 stage 必须有一段失败模式，且不靠新增章节数来堆体积。
+
+    历史证据：specs/ 20 次运行，「未知」栏 88% 写「无」——说明文件只讲「做什么」，
+    没讲「最容易错成什么样」。失败模式段是补这一层的唯一位置。
+    体积约束：每个 stage 文件 <= 200 行（超过说明该拆 reference，不是加长）。
+    """
+    import re as _re
+    stages_dir = os.path.join(SKILL_ROOT, "stages")
+    missing = []
+    too_long = []
+    for name in sorted(os.listdir(stages_dir)):
+        path = os.path.join(stages_dir, name, "SKILL.md")
+        if not os.path.isfile(path):
+            continue
+        text = open(path, encoding="utf-8").read()
+        lines = text.count("\n") + 1
+        if lines > 200:
+            too_long.append("%s(%d)" % (name, lines))
+        # 认「常见错法」或「失败模式」两种标题
+        if not _re.search(r"^#+\s*.*(常见错法|失败模式|最容易错)", text, _re.M):
+            missing.append(name)
+    expect(not missing,
+           "每个 stage 都有失败模式段（缺：%s）" % missing, "")
+    expect(not too_long,
+           "stage 文件不超 200 行（超：%s）" % too_long, "")
+
+
 def case_docs_match_reality():
     """docs/scripts.md 必须列出每个 skill 脚本。"""
     scripts_md = open(os.path.join(REPO_ROOT, "docs", "scripts.md"),
@@ -1627,6 +1684,8 @@ def main():
     case_intent_confirm_wired()
     case_readme_matches_requires()
     case_docs_match_reality()
+    case_description_is_a_trigger()
+    case_stages_have_failure_modes()
     case_open_marker()
     case_evidence_first()
     case_card_writeback()
