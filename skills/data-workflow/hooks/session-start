@@ -61,6 +61,12 @@ notice_for() {
   esac
   feature="$(printf '%s\n' "$first" | awk '{ print $2 }')"
   status="$(printf '%s\n' "$first" | awk '{ print $4 }')"
+  # done / closed / abandoned 都是终态。`next <feature>` 显式点名时仍会打
+  # `RUN ... closed`，但那不是「还没做完」——不能因此注入提醒，否则关单后的
+  # 每一次会话都会跳出一条「这是尚未结束的运行」。
+  case "$status" in
+    done|closed|abandoned) return ;;
+  esac
   summary="$(printf '%s\n' "$next" | awk '/^QUESTION /{ sub(/^QUESTION /,""); print; exit }')"
   if [ -z "$summary" ]; then
     summary="$(printf '%s\n' "$next" | awk '/^STAGE /{ sub(/^STAGE /,""); print; exit }')"

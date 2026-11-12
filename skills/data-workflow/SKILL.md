@@ -32,9 +32,13 @@ description: 当用户说「开始开发」「加字段」「改个功能」「�
 | `DO` | 按 `READ` 指明的阶段文件改代码，再 `done`——自动跑仓库声明的测试 |
 | `CONFESS` | `done` 推进之后追加的一次独立追问。写 `specs/<feature>/confess/<stage-id>.md`，只写事实。**它不进门、不影响推进**——写不写都不改变这次运行的结果 |
 | `DONE` | 这次运行结束。会话收尾前，如果执行中踩了意料之外的坑、发现了新的数据流问题、或对本技能有改进建议，把它追加到 `docs/dev/learnings.md`（标日期、工作流、feature，以及"谁消费/怎么消费/AI能不能到"的证据）。没有就跳过，不硬写 |
+| `CLOSED` | 这次运行已终止（`close` 关单，或本来就是关着的）。不再有下一步；`outcome` 说明为什么关（`fixed` 等）。同样适用上面 `DONE` 的知识回写 |
+| `CLOSE_IF` | 这一步**可以不继续**：产物写完 `artifact`、包含列出的字面量，`close <feature>` 跑过 `fingerprint` 就关单。典型场景：bug 已经被修掉了，不要再走修复链条。（`fingerprint` 是**复现命令**：`exit 0` = bug 还在 = 关不了；必须先把它换成你这个 bug 的复现命令） |
+| `NO_EXIT` | 这个阶段没有 `close_if`，没有早退出口。继续走完，或 `abandon` |
+| `ALREADY` | 同名已有一条没结束的运行。**不是错误**。看它打的 `RAW`/`DECIDED`：同一件事就 `next`，另一件事就 `start ... --new` |
 | `LAST` / `NO_RUN` | 没未完成运行了，直接回答当前问题 |
 
-开一次运行：`start <workflow> <feature> "<用户原话>"`。停在 `working` 的运行下次仍会被会话钩子注入 NOTICE，直到 `abandon`。
+开一次运行：`start <workflow> <feature> "<用户原话>"`。停在 `working` 的运行下次仍会被会话钩子注入 NOTICE，直到 `done`、`close` 或 `abandon`。
 
 ## 绑定
 

@@ -39,6 +39,14 @@ eval "$(bash "$PLUGIN_ROOT/scripts/paths.sh")"   # → $KNOW / $CARDS / $TEMPLAT
 
 **所有分类都先走 [routing.md](references/routing.md)**：step 0 grep 已有卡片 → step 1 只加载一个 知识层域文件 → step 2 按快速定位规则选代码入口。
 
+### 出门顺序（按这个顺序做，不要跳）
+
+1. **先确认这个 bug 现在还在不在**——能复现、或已有证据表明它不再发生，两者的下一步完全不同。已经不在的，不要再推修复链条。
+2. **grep `$CARDS/`**——已经付过代价的调查不要重做一遍。命中就按 `knowledge_drift.sh` 的新鲜度用。
+3. **只加载一个域文件**，再读代码。
+
+第 1 步不是靠自述完成的：写「已修复」谁都会写。走 `bugfix` 时这一步有机器出口——`close_if.fingerprint` 那条命令 exit 0 才算真不在，命令能跑就不收叙述。
+
 定位到域之后，**按 [../../references/business-model.md](../../references/business-model.md) 的九个维度逐维度取证**：对象与身份 / 状态族 / 迁移与守卫 / 读侧可见性 / 角色与数据范围 / 外部通道 / 幂等与重试 / 审计与通知 / 契约。一次只用一个维度——九维同时铺开会互相污染结论。知识落点优先 `$DOMAIN_DOCS`（仓库内），其次 `$KNOW`（补充源）。
 
 非平凡回答前加载 [answer.md](references/answer.md)。要沉淀知识、或发现降级区文档失效时加载 [capture.md](references/capture.md)。

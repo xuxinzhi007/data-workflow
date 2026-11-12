@@ -537,6 +537,16 @@ def list_runs(root):
     return found
 
 
+def is_finished(run):
+    """这条运行是否已经结束。
+
+    终态有三个，判定只在这一处。以前三处各写一遍 `not in ("done", "abandoned")`，
+    加一个终态就要改三个地方——漏一个，运行就永远算「未完成」，
+    会话钩子每次都注入 NOTICE，`start` 每次都打 ALREADY。
+    """
+    return run.get("status") in ("done", "closed", "abandoned")
+
+
 def stage_at(workflow, stage_id):
     for stage in workflow["stages"]:
         if stage.get("id") == stage_id:
@@ -690,8 +700,12 @@ def print_unconfessed(root, feature, workflow):
     print("UNCONFESSED 这几个阶段没写自白：%s（不影响这次运行，下次想补就补）" % ", ".join(missed))
 
 
-def record_evidence(root, run, stage, verify_code=None):
-    """推进成功时追加一行。只由 runner 写；行尾带 by=runner，手写的行没有。"""
+def record_evidence(root, run, stage, verify_code=None, outcome=None):
+    """推进成功时追加一行。只由 runner 写；行尾带 by=runner，手写的行没有。
+
+    `outcome` 只在真的给了值时才追加这一列，所以所有历史行和已有的断言
+    逐字不变——改证据格式等于让过去的所有记录换一种读法。
+    """
     feature = run.get("feature") or ""
     folder = os.path.join(root, "specs", feature)
     os.makedirs(folder, exist_ok=True)
@@ -702,6 +716,8 @@ def record_evidence(root, run, stage, verify_code=None):
         git_head(BUSINESS or root),
         datetime.now().astimezone().isoformat(timespec="seconds"),
     )
+    if outcome is not None:
+        row += " outcome=%s" % outcome
     with open(os.path.join(folder, "evidence.log"), "a", encoding="utf-8") as fh:
         fh.write(row + "\n")
     return row
@@ -753,6 +769,22 @@ def print_stage_hints(stage):
             hints.append(("SUBAGENTS", "; ".join(parts)))
     for label, text in hints:
         print("%s: %s" % (label, text))
+    # close_if 是机器判的（close 会跑它），但**存在本身**是 AI 需要知道的指令：
+    # 不知道有出口，就会一直往下推那个已经修好的 bug。这里把指纹和要写的字面量
+    # 摆到 AI 眼前，让它知道「不修也能结案」并且知道凭什么结。
+    spec = close_if_spec(stage)
+    if spec:
+        print("CLOSE_IF: artifact=%s literal=%s outcome=%s" % (
+            spec["artifact"],
+            "、".join(spec["literal"]),
+            spec["outcome"],
+        ))
+        print("  fingerprint: %s" % spec["fingerprint"])
+        print("  ↑ 这一步可以不继续，而是关掉：把上面字面量写进 artifact，让 fingerprint 命令 exit 0，"
+              "然后 %s close <feature>" % ME)
+        print("  ↑ fingerprint 的极性：exit 0 表示「bug 仍然复现」。还没改成你这个 bug 的复现命令时它不会过。")
+    elif "close_if" in stage:
+        print("BAD close_if：artifact / literal（非空列表）/ fingerprint 三项都要写，否则 close 用不了")
 
 
 def print_wait(root, run):
@@ -762,6 +794,49 @@ def print_wait(root, run):
     print("REPLY " + (run.get("reply") or ""))
     print("对方回的是 REPLY 这一句时，再运行：")
     print("%s answer %s %s" % (ME, run["feature"], json.dumps(run.get("reply") or "", ensure_ascii=False)))
+
+
+def stage_gates_block(root, run, stage, paths, feature):
+    """跑本阶段的机器门（待拍板 / requires / gate_check）。拦住了返回 True。
+
+    `show()` 和 `cmd_done()` 各有一份副本的时候，`show()` 在 `code` 阶段**之前**
+    就 `return` 了，于是 `code` 阶段的 OPEN / GATE / CHECK 从来没被 `next` 判过——
+    而 `done` 会判。两个入口对同一个阶段给出不同结论，`next` 说「去做」，
+    `done` 说「不许」，中间没有任何提示。这里只有一份，两个入口共用。
+
+    返回 True 表示已经打印了拦住的原因，调用方别再往下走。
+    """
+    if any(open_decision(root, p) for p in paths):
+        print_context(root, run)
+        print("OPEN")
+        print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+        print_stage_hints(stage)
+        print("文件里还有待拍板。先运行 wait，reply 写成对方能原样粘贴的一句，然后停止。")
+        print("%s wait %s \"<问题>\" \"<一句回复>\"" % (ME, feature))
+        return True
+    unmet = unmet_requires(root, stage, paths)
+    if unmet:
+        print_context(root, run)
+        print("GATE")
+        print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+        print_stage_hints(stage)
+        print("缺：%s" % "、".join(unmet))
+        print("READ %s" % stage.get("file"))
+        print("补进本阶段产物后再运行：")
+        print("%s next %s" % (ME, feature))
+        return True
+    ok, check_cmd, check_out = run_gate_check(root, stage, feature)
+    if not ok:
+        print_context(root, run)
+        print("GATE")
+        print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+        print_stage_hints(stage)
+        print("CHECK %s" % check_cmd)
+        for line in tail_lines(check_out):
+            print(line)
+        print("READ %s" % stage.get("file"))
+        return True
+    return False
 
 
 def show(root, run):
@@ -785,6 +860,12 @@ def show(root, run):
             print("DONE %s" % feature)
             print_unconfessed(root, feature, workflow)
             return 0
+        if run.get("status") == "closed":
+            print_context(root, run)
+            print("CLOSED %s %s" % (feature, run.get("outcome") or "fixed"))
+            print("RECORD %s" % shown("specs/%s/run.json" % feature))
+            print_unconfessed(root, feature, workflow)
+            return 0
         stage = stage_at(workflow, run.get("stage"))
         if stage is None:
             print_context(root, run)
@@ -806,24 +887,9 @@ def show(root, run):
             print("写完后运行：")
             print("%s next %s" % (ME, feature))
             return 0
-        if any(open_decision(root, p) for p in paths):
-            print_context(root, run)
-            print("OPEN")
-            print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
-            print_stage_hints(stage)
-            print("文件里还有待拍板。先运行 wait，reply 写成对方能原样粘贴的一句，然后停止。")
-            print("%s wait %s \"<问题>\" \"<一句回复>\"" % (ME, feature))
-            return 0
-        unmet = unmet_requires(root, stage, paths)
-        if unmet:
-            print_context(root, run)
-            print("GATE")
-            print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
-            print_stage_hints(stage)
-            print("缺：%s" % "、".join(unmet))
-            print("READ %s" % stage.get("file"))
-            print("补进本阶段产物后再运行：")
-            print("%s next %s" % (ME, feature))
+        # 门要在 code 分支之前：以前 code 阶段的 OPEN / GATE / CHECK 全部被跳过，
+        # next 说 DO，done 说 GATE。paths 为空时不判（那些阶段本来就没有可检的产物）。
+        if paths and stage_gates_block(root, run, stage, paths, feature):
             return 0
         copied = restated_raw(root, paths)
         if copied:
@@ -838,17 +904,6 @@ def show(root, run):
             print_stage_hints(stage)
             print("做完后运行：")
             print("%s done %s" % (ME, feature))
-            return 0
-        ok, check_cmd, check_out = run_gate_check(root, stage, feature)
-        if not ok:
-            print_context(root, run)
-            print("GATE")
-            print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
-            print_stage_hints(stage)
-            print("CHECK %s" % check_cmd)
-            for line in tail_lines(check_out):
-                print(line)
-            print("READ %s" % stage.get("file"))
             return 0
         if not paths:
             print_context(root, run)
@@ -889,7 +944,8 @@ def cmd_next(root, feature):
             return 1
         return show(root, run)
     runs = list_runs(root)
-    open_runs = [item for item in runs if item[2] not in ("done", "abandoned")]
+    open_runs = [item for item in runs
+                 if item[2] not in ("done", "closed", "abandoned")]
     if not runs:
         print("NO_RUN")
         return 0
@@ -908,7 +964,7 @@ def cmd_next(root, feature):
     return 0
 
 
-def cmd_start(root, workflow_name, feature, raw_request=""):
+def cmd_start(root, workflow_name, feature, raw_request="", new=False):
     if not FEATURE_RE.fullmatch(feature or ""):
         print("BAD feature")
         return 1
@@ -917,9 +973,26 @@ def cmd_start(root, workflow_name, feature, raw_request=""):
         print("BAD workflow %s" % workflow_name)
         return 1
     existing = load_run(root, feature)
-    if existing and existing.get("status") not in ("done", "abandoned"):
+    if existing and not is_finished(existing):
+        if new:
+            # 同名开新的一条：找最小的空闲后缀，绝不覆盖旧记录。
+            # 旧运行留在那里，谁想回去看都还在。
+            base = feature
+            n = 2
+            while os.path.exists(os.path.join(root, "specs", "%s-%d" % (base, n))):
+                n += 1
+            fresh = "%s-%d" % (base, n)
+            print("NEW %s (from %s)" % (fresh, base))
+            return cmd_start(root, workflow_name, fresh, raw_request, new=False)
+        # 死路修复：以前这里直接 show(existing)，于是新需求被旧链条拽回去，
+        # 而且看不出自己是被哪条旧运行拽回去的。现在把旧运行的 RAW / DECIDED
+        # 原话一起打出来，让人自己判断是不是同一件事。
         print("ALREADY %s %s" % (feature, existing.get("status")))
-        return show(root, existing)
+        print_context(root, existing)
+        print("这是一个还没结束的运行，不是失败。两条出路：")
+        print("继续这条：%s next %s" % (ME, feature))
+        print("另开一条：%s start %s %s --new" % (ME, workflow_name, feature))
+        return 0
     if workflow_name in ("feature", "bugfix", "hotfix"):
         stack = config_value(root, "stack")
         if stack != "go":
@@ -995,6 +1068,11 @@ def cmd_done(root, feature):
         print_context(root, run)
         print("DONE %s" % feature)
         return 0
+    if run.get("status") == "closed":
+        # 已关掉的运行不再推进任何阶段。再 done 一次就是幂等的成功。
+        print_context(root, run)
+        print("CLOSED %s %s" % (feature, run.get("outcome") or "fixed"))
+        return 0
     workflow = load_workflow(run.get("workflow") or "")
     if workflow is None:
         print("BAD workflow %s" % run.get("workflow"))
@@ -1015,30 +1093,7 @@ def cmd_done(root, feature):
         print("写完后运行：")
         print("%s next %s" % (ME, feature))
         return 1
-    if any(open_decision(root, p) for p in paths):
-        print_context(root, run)
-        print("OPEN")
-        print("文件里还有待拍板。先 wait，再 answer。")
-        return 1
-    unmet = unmet_requires(root, stage, paths)
-    if unmet:
-        print_context(root, run)
-        print("GATE")
-        print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
-        print_stage_hints(stage)
-        print("缺：%s" % "、".join(unmet))
-        print("READ %s" % stage.get("file"))
-        return 1
-    ok, check_cmd, check_out = run_gate_check(root, stage, feature)
-    if not ok:
-        print_context(root, run)
-        print("GATE")
-        print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
-        print_stage_hints(stage)
-        print("CHECK %s" % check_cmd)
-        for line in tail_lines(check_out):
-            print(line)
-        print("READ %s" % stage.get("file"))
+    if stage_gates_block(root, run, stage, paths, feature):
         return 1
     if stage.get("knowledge_feedback"):
         kf_ok, kf_hits, kf_detail = knowledge_feedback(root, feature)
@@ -1119,12 +1174,143 @@ def cmd_abandon(root, feature):
     return 0
 
 
+def close_if_spec(stage):
+    """读 stage.close_if。合格返回规范化的 dict，不合格返回 None。
+
+    三项都要非空：
+      artifact     可机器解析的产物文件（走 artifact_paths，所以中文项当场就落空）
+      literal      列表，每一条都必须在产物里出现
+      fingerprint  一条命令，exit 0 表示**这个 bug 仍然能复现**
+
+    为什么不用 requires 的语义：`requires` 是全文子串匹配，「无法复现，已修复」
+    也含「复现」二字，拿它当门等于把门退化成第二个「未知=无」（见
+    docs/dev/learnings.md：未知栏 88% 写「无」，就是因为没有外部锚点）。
+    字面量只能证明「写了」，fingerprint 才能证明「现在真的不坏」。
+    """
+    spec = stage.get("close_if")
+    if not isinstance(spec, dict):
+        return None
+    artifact = spec.get("artifact")
+    literal = spec.get("literal")
+    fingerprint = spec.get("fingerprint")
+    if not isinstance(artifact, str) or not artifact.strip():
+        return None
+    if not isinstance(literal, list) or not literal:
+        return None
+    if not all(isinstance(item, str) and item.strip() for item in literal):
+        return None
+    if not isinstance(fingerprint, str) or not fingerprint.strip():
+        return None
+    outcome = spec.get("outcome") or "fixed"
+    return {
+        "artifact": artifact.strip(),
+        "literal": [item.strip() for item in literal],
+        "fingerprint": fingerprint.strip(),
+        "outcome": str(outcome),
+    }
+
+
+def close_artifact_path(spec, feature):
+    """close_if.artifact 落成仓库相对路径。落不了就返回空串（由调用方报 BAD）。"""
+    paths = artifact_paths(spec["artifact"], feature)
+    return paths[0] if paths else ""
+
+
+def cmd_close(root, feature):
+    """已修的 bug 的出口：不是一个新阶段，是一次终止判定。
+
+    只在显式敲 close 时才评，不在 next 里自动评：next 必须是只读的
+    （钩子、C3 实验、case_no_hints_switch 都依赖它不改 run.json），
+    而且「关掉」是一个有代价的决定，该由人/AI 主动确认，不该是滑块自己走到的位置。
+    """
+    run = load_run(root, feature)
+    if run is None:
+        print("NO_RUN %s" % feature)
+        return 1
+    if is_finished(run):
+        # 幂等：已经结束了就只报一声，不重复写证据、不推进阶段。
+        print_context(root, run)
+        print("CLOSED %s %s" % (feature, run.get("outcome") or "fixed"))
+        return 0
+    workflow = load_workflow(run.get("workflow") or "")
+    if workflow is None:
+        print("BAD workflow %s" % run.get("workflow"))
+        return 1
+    stage = stage_at(workflow, run.get("stage"))
+    if stage is None:
+        print("BAD stage %s" % run.get("stage"))
+        return 1
+    malformed = "close_if" in stage and close_if_spec(stage) is None
+    spec = close_if_spec(stage)
+    if malformed:
+        # 配错了必须响。静默地把出口禁掉，比报错更难发现。
+        print("BAD close_if stage %s：artifact / literal（非空列表）/ fingerprint 三项都要写" % stage.get("id"))
+        return 1
+    if spec is None:
+        print("NO_EXIT %s %s" % (feature, stage.get("id")))
+        print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+        print("这个阶段没有 close_if，没有早退出口。要么继续走完，要么用 abandon 结束。")
+        return 1
+    path = close_artifact_path(spec, feature)
+    if not path:
+        print("BAD close_if：artifact %r 解析不出可判定的文件路径（中文项 / 通配符 / 以 $ 开头都不行）"
+              % spec["artifact"])
+        return 1
+    if not satisfied(root, path):
+        print_context(root, run)
+        print("NEED %s" % shown(path))
+        print("先写出关闭证据，再运行：")
+        print("%s close %s" % (ME, feature))
+        return 1
+    text = ""
+    for concrete in concrete_files(root, path):
+        text += read_text(concrete) + "\n"
+    unmet = [item for item in spec["literal"] if item not in text]
+    if unmet:
+        print_context(root, run)
+        print("GATE")
+        print("STAGE %s %s" % (stage.get("id"), stage.get("name") or ""))
+        print("缺：%s" % "、".join(unmet))
+        print("READ %s" % shown(path))
+        print("写进 %s 后再运行：" % shown(path))
+        print("%s close %s" % (ME, feature))
+        return 1
+    # 极性：fingerprint 是「复现命令」，exit 0 = bug 仍然复现。而 run_gate_check 的
+    # `ok` 是「命令成功」——正好相反，所以必须在这里取反。
+    # 弄反的后果是：bug 还好好的时候把单关掉，而且不报错、不留痕。
+    reproduces, check_cmd, check_out = run_gate_check(
+        root, {"gate_check": spec["fingerprint"]}, feature)
+    if reproduces:
+        print_context(root, run)
+        print("CHECK %s" % check_cmd)
+        for line in tail_lines(check_out):
+            print(line)
+        print("复现指纹仍成立：bug 还在，不能关。要么继续修，要么写明为什么不修（abandon）。")
+        return 1
+    outcome = spec["outcome"]
+    run["status"] = "closed"
+    run["outcome"] = outcome
+    run["closed_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
+    run["closed_by"] = "runner"
+    run["question"] = ""
+    run["reply"] = ""
+    record_evidence(root, run, stage, outcome=outcome)
+    save_run(root, run)
+    print_context(root, run)
+    print("CLOSED %s %s" % (feature, outcome))
+    print("EVIDENCE %s" % shown("specs/%s/evidence.log" % feature))
+    print("RECORD %s" % shown("specs/%s/run.json" % feature))
+    print_unconfessed(root, feature, workflow)
+    return 0
+
+
 def usage():
     print("用法: workflow_next.py next [feature] [--repo DIR]")
-    print("      workflow_next.py start <workflow> <feature> [\"<用户原话>\"] [--repo DIR]")
+    print("      workflow_next.py start <workflow> <feature> [\"<用户原话>\"] [--new] [--repo DIR]")
     print("      workflow_next.py wait <feature> <问题> <一句回复> [--repo DIR]")
     print("      workflow_next.py answer <feature> <回复原文> [--repo DIR]")
     print("      workflow_next.py done <feature> [--repo DIR]")
+    print("      workflow_next.py close <feature> [--repo DIR]")
     print("      workflow_next.py approve <feature> <design|waiver> <前缀> [原因] [--repo DIR]")
     print("      workflow_next.py abandon <feature> [--repo DIR]")
     return 2
@@ -1139,6 +1325,10 @@ def main(argv):
             return usage()
         root = args[idx + 1]
         del args[idx : idx + 2]
+    # --new 先摘出来，否则下面的 len(args) in (3, 4) 会被它撑坏。
+    new = "--new" in args
+    if new:
+        args = [item for item in args if item != "--new"]
     root = repo_root(root)
     if not root or not os.path.isdir(root):
         print("BAD repo")
@@ -1158,13 +1348,15 @@ def main(argv):
         return cmd_next(root, feature)
     if cmd == "start" and len(args) in (3, 4):
         raw = args[3] if len(args) == 4 else ""
-        return cmd_start(root, args[1], args[2], raw)
+        return cmd_start(root, args[1], args[2], raw, new=new)
     if cmd == "wait" and len(args) == 4:
         return cmd_wait(root, args[1], args[2], args[3])
     if cmd == "answer" and len(args) >= 3:
         return cmd_answer(root, args[1], " ".join(args[2:]))
     if cmd == "done" and len(args) == 2:
         return cmd_done(root, args[1])
+    if cmd == "close" and len(args) == 2:
+        return cmd_close(root, args[1])
     if cmd == "approve" and len(args) >= 4:
         return cmd_approve(root, args[1], args[2], args[3], " ".join(args[4:]))
     if cmd == "abandon" and len(args) == 2:

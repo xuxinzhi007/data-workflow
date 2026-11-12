@@ -130,10 +130,15 @@ done                                  # → DONE
 
 **`workflows/*.json` 里的 `self_check` 不是门。** 它是一段给 Agent 读的自评提示（如「四轴都填了吗」），没有裁判：机器只判 `requires` 字面量在不在和命令退出码。它以前叫 `gate`，容易被读成上面四类中的一员，所以改名。待确认断言记在 [`docs/dev/claim-register.md`](docs/dev/claim-register.md)。
 
+**`close_if` 也不是第五类门。** 它是上面「内容门 + 命令门」在**反方向**上的同一个判据：`requires` 问「这一步做完了吗」，`close_if` 问「这一步还需要做吗」。判据本身没变——产物里的字面量 + 一条命令的退出码，由 `workflow_next.py` 判——只是结论从「继续」变成「关掉」。所以 `close` 只由显式子命令触发，不在 `next` 里自动评（`next` 必须只读）。**字面量单独不足以关单**：写「已修复」谁都会写，`fingerprint` 才能提供外部锚点。
+
+`fingerprint` 的**极性是反的**，这是全仓唯一一处：它是一条**复现命令**，`exit 0` 表示「bug 仍然复现」，所以 `exit 0` **不许关单**；`exit 非 0` 才说明 bug 不在了、可以关。填错方向会静默关掉活着的 bug，所以 `bugfix.json` 的出厂值是一条**恒 exit 0** 的占位命令（关不了单，并叫你去改）。没配 `close_if` 的阶段打 `NO_EXIT`。
+
 `specs/<feature>/` 里的证据链：
 
 ```
-run.json      停在第几步（进度，不存理由）
+run.json      停在第几步（进度，不存理由）；terminal 的 status 有 done / closed / abandoned 三种
+run.json.outcome  仅 closed 有：为什么关（fixed / wontfix / accepted …）
 evidence.log  每次推进一行：stage / 门 / 退出码 / head / 时间 / by=runner（只由 runner 写）
 verify.log    测试入口的原始输出（第一行是 exit）
 passes.log    放行记录（只由 approve 写，行尾带 approved）

@@ -16,8 +16,18 @@
       "artifacts": [
         "specs/<feature>/spec.md（精简版：症状 / 真实链路 / 根因 / 证据）"
       ],
-      "self_check": "根因有代码证据（文件:符号）或运行时证据；区分 code-confirmed / hypothesis；偶发故障或性能回退另读全局技能 diagnosing-bugs",
-      "on_gate_fail": "停在假设，不许开始改代码",
+      "close_if": {
+        "artifact": "specs/<feature>/spec.md",
+        "literal": [
+          "已修复",
+          "验证命令",
+          "退出码"
+        ],
+        "fingerprint": "echo 'close_if.fingerprint 还是占位：把它改成你这个 bug 的复现命令（exit 0 = bug 还在，所以关不了）' >&2; exit 0",
+        "outcome": "fixed"
+      },
+      "self_check": "根因有代码证据（文件:符号）或运行时证据；区分 code-confirmed / hypothesis；偶发故障或性能回退另读全局技能 diagnosing-bugs。**先确认这个 bug 现在还在不在**：一上手就复现不出来、或 spec 里写着「已在 commit X 修复／验证通过」，不要往下走修复链条，把 spec.md 按「已修复＋验证命令＋退出码」写清楚，再运行 close <feature>。注意 close_if.fingerprint 的极性是**反的**：它是复现命令，exit 0 表示 bug 还在、关不了；exit 非 0 才说明 bug 不在了。出厂占位恒 exit 0，因此不改就永远关不了（故意的）。自述「修好了」不算证据",
+      "on_gate_fail": "停在假设，不许开始改代码；bug 已不存在时走 close，不硬推后续阶段",
       "subagents": {
         "allowed": true,
         "criteria": "多条互不依赖的链路可并行取证（例：写入方一条、读取方一条、外部通道一条）",

@@ -108,3 +108,53 @@ oncall/SKILL.md 同时被 bugfix 和 hotfix 用，但 bugfix 的 self_check 是"
 **不抄**：它的状态机（它根本没有，`plan→build→review` 只是文档建议路径）、符号链接安装、只做格式验证。本仓的 `run.json`/字面量门/`evidence.log` 是它没有的东西。
 
 **体积纪律**：融合只给 stage 加失败模式段，运行时 2005 → 2077 行（+72，每个 stage 均 +7），最长 stage 180 行。锁在 `case_stages_have_failure_modes` 的 200 行上限里——超了就说明该拆 reference，不是加长。
+
+## 2026-11-12
+
+### 状态机缺一个「不需要做了」的终态，比缺一个阶段更贵（bugfix-close-exit）
+
+**证据**：真实运行复现。临时仓库 `start bugfix bug-x` 后，在 `specs/bug-x/spec.md` 写「已修复 commit abc123，验证通过，不需要再排查」，`next` 仍输出 `STAGE 2 修复影响面 / NEED impact.md`。同名再 `start` 打到 `ALREADY` 后直接 `show(existing)`，人被拽回旧链条，连开新运行的口都没有。
+
+**根因**：`run.json` 只表达「进度」（`stage` 索引）和「结束」（`status=done`）。「这个 bug 已经不存在了」不是某个阶段的产物，也无法用「再写一份文件」表达——它是**终止判定**。状态机里没有这条边，AI 就只能沿着唯一的路继续要文件。
+
+**修复**：加终态 `closed`（+ `outcome` 说明为什么关），由显式子命令 `close` 触发，不在 `next` 里自动评。
+
+**教训**：判断「缺的是阶段还是终态」看一件事——这个变化是**多写一份产物**，还是**不用再写了**。前者加阶段，后者加终态。用阶段去表达「不用做了」，就会永远停在那个阶段要文件。
+
+### 判定「已经好了」必须有外部锚点，字面量不够（bugfix-close-exit）
+
+**证据**：上一轮的候选修法是给 bugfix 阶段 1 加 `requires: ["复现"]`。但 `requires` 是全文子串匹配，「无法复现，已修复」里也有「复现」二字——门立刻退化成第二个「未知=无」。这与 `docs/dev/learnings.md` 上面那条 88% 是同一个失效模式：自评没有外部文本可对账时，写最安全的那个词永远过关。
+
+**修复**：`close_if` 要求三项独立成立——产物文件非空、产物含 `literal` 里的每一条、`fingerprint` 命令 exit 0。前两项人可读，第三项是外部锚点。**字面量单独永远不足以关单**，有专门用例钉住：`PASS all literals present but a failing fingerprint still refuses`。
+
+**教训**：任何「确认某事已经不成立」的判定，都要有一条**不由被判定方提供**的证据。退出码、测试结果、外部 API 响应都行；文档里的一句话不行。
+
+### 同一个阶段被两个入口判，结论必须一致（bugfix-close-exit）
+
+**证据**：`show()` 在 `if stage.get("code")` 处 `return`，而这段代码在 `open_decision` / `unmet_requires` / `run_gate_check` **之前**。于是 `code` 阶段的五道门只有 `done` 会判：`next` 说 `DO`（去做），`done` 说 `GATE`（不许），中间没有任何提示。
+
+**修复**：抽出 `stage_gates_block()`，`show()` 与 `cmd_done()` 共用，并把调用点提到 `code` 分支之前。
+
+**教训**：和上面「DONE 有两条出口」是同一类错误的另一面——**同一个判定有多条进入路径时，只在其中一条上做检查**。加一个阶段属性时，要问「哪些阶段类型会早退，它们会不会跳过这个检查」。
+
+### 模板里的「恒真」默认值等于给门开后门（bugfix-close-exit）
+
+**风险**：第一版把 `bugfix.json` 的 `close_if.fingerprint` 写成了 `true` 做占位。后果：照着不改的人可以凭一句「已修复」直接关单——正好是本改动要防的事。
+
+**修复 1**：占位改成一个**恒 exit 0** 的命令（打印「还是占位，把它改成本 bug 的复现命令」）。因为 `fingerprint` 的极性是「exit 0 = 仍然复现」，恒 exit 0 就恒关不了，必须有一个人真的把指纹改成复现命令。用例：`PASS the shipped placeholder fingerprint cannot close a bug`。
+
+**教训**：给模板填默认值时，任何「恒真」的默认值都等于给门开了一个后门。占位必须**失败**（在这里是「恒报 bug 还在」），不能通过。这与「`return 0` 是成功码，别用它表示跳过」是同一条：一个东西的默认状态应该是「还没做」，不是「已经做好了」。
+
+### 复用 `run_gate_check` 时，极性会被反转（bugfix-close-exit）——差点上线就关掉活 bug
+
+**证据**：`run_gate_check` 返回的 `ok` 语义是「命令**成功**」（exit 0 = 放行）。而 `close_if.fingerprint` 是**复现命令**，exit 0 = bug 还在。我把 `ok` 直接当成了「可以关」，于是：`app.go` 里还留着 `stuck-status`（grep exit 0）、`spec.md` 写了「已修复」，`close` 输出 `CLOSED bug-x fixed` 并退出 0。**等于是「bug 活着的时候把单关掉」，而且不报错、不留痕**。
+
+**怎么发现的**：端到端手动跑了一遍“bug 仍在 → 应拒绝”的方向，预期 `exit 1`，实际 `exit 0`。写单测时我也是拿着错误极性写的（把 `exit 1` 当“不许关”），所以**测试全绿并没有拦住它**——用了同一个错误假设。
+
+**修复**：在 `cmd_close` 里把 `reproduces` 取反后再判；变量名从 `ok` 改成 `reproduces`，让“这条命令成功 = 什么”在调用点就能读出来。两个方向的端到端用例都补上。
+
+**教训**：
+
+1. **复用别人语义的函数，第一件事是确认它的 true 在你的领域里意味着什么。** `run_gate_check` 的 `ok` 在 `gate_check` 语境里是“门开了”，在 `close_if` 语境里变成“门关了”。同一个布尔在两个调用点意义相反，就一定会写错一边。
+2. **变量名 `ok` 会掩盖这个问题。** 叫 `reproduces` 时，“reproduces 为真就返回 1”读起来是显然的；叫 `ok` 时，“ok 为真就返回 1”看起来像个手误，反而容易被“改正”成错的。
+3. **测试和实现同时写错时，绿灯是假的。** 我的用例 encode 了同一份错误假设，所以 269 条 PASS 一条都没拦住。判据是“这个用例能不能在我写错时红灯”——不能的话，它只是在重述实现。只用手工跑一遍真实场景（真实文件 + 真实 grep + 看真实退出码）才发现。

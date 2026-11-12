@@ -40,6 +40,23 @@ def tool(name):
     return shutil.which(name) is not None
 
 
+def runs(name, *args):
+    """`which` 找得到 ≠ 跑得起来。
+
+    真实的坑：pnpm 存在但那台机器上它自己一跑就被信号杀掉（Killed: 9），
+    `tool("pnpm")` 仍然 True，于是 case_pnpm 断言「应该推进」——而 verify
+    永远 RED。测的环境不是用的环境，就会把环境故障读成技能故障。
+    这里只要求它至少能跑完并给出退出码（0 或 1 都算能用）。
+    """
+    if not tool(name):
+        return False
+    try:
+        proc = subprocess.run([name, *args], capture_output=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return proc.returncode in (0, 1)
+
+
 def module(name):
     proc = subprocess.run(
         ["python3", "-c", "import %s" % name],
@@ -248,6 +265,51 @@ class TestRoot:
         return os.path.join(self.path, ".cursor", "skills", "data-workflow",
                             "scripts", sub)
 
+    # ── 技能副本（改 workflow JSON 用）──
+
+    def skill_copy(self, workflow, mutate):
+        """复制一份技能到本仓库内，改一个 workflow JSON，返回跑副本的入口。
+
+        close_if.fingerprint 必须以真实 bug 为转移，而本仓库出的模板是恒 exit 0
+        的占位（故意的：不改就关不了单）。所以每个要真正关单的用例都得改 JSON。
+        改**源**技能会污染其它用例、也会把仓库弄脏，只能改副本。
+
+        返回 (run_copy, wf_path)；run_copy(*args) 用副本的 runner 打本仓库。
+        副本里自己写 run.json，所以副本 runner 与源 runner 看到的是同一个 store。
+        """
+        copy = os.path.join(self.path, "skillcopy")
+        shutil.copytree(SKILL_ROOT, copy)
+        wf_path = os.path.join(copy, "workflows", "%s.json" % workflow)
+        with open(wf_path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        mutate(data)
+        with open(wf_path, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, ensure_ascii=False, indent=2)
+        copy_runner = os.path.join(copy, "scripts", "workflow_next.py")
+
+        def run_copy(*args):
+            return subprocess.run(
+                [PY, copy_runner, *args, "--repo", self.path],
+                capture_output=True, text=True, encoding="utf-8",
+                env=self.env(clean_env()),
+            )
+
+        return run_copy, wf_path
+
+    def write_spec_fixed(self, feature=FEATURE, extra=""):
+        """写出满足出厂的三个 close_if 字面量（已修复 / 验证命令 / 退出码）。"""
+        return self.write(
+            "specs/%s/spec.md" % feature,
+            "- 已修复 commit abc123\n- 验证命令: go test ./...\n- 退出码: 0\n" + extra,
+        )
+
+    def evidence_path(self, feature=FEATURE):
+        return os.path.join(self.path, "specs", feature, "evidence.log")
+
+    def evidence_text(self, feature=FEATURE):
+        p = self.evidence_path(feature)
+        return open(p, encoding="utf-8").read() if os.path.isfile(p) else ""
+
 
 # ── Cases ─────────────────────────────────────────────────────────────────
 
@@ -348,7 +410,7 @@ def _case_selected(label, setup, command, advances):
 
 def case_pnpm():
     _case_selected("pnpm test", lambda r: r.make_pkg(lock="pnpm"),
-                   "pnpm test", tool("pnpm"))
+                   "pnpm test", runs("pnpm", "--version"))
 
 
 def case_yarn():
@@ -1651,6 +1713,970 @@ def case_record_follows_install():
 # ── main ─────────────────────────────────────────────────────────────────
 
 
+def case_close_exit():
+    """close 出口：三项同时满足才关单；关掉后 next/done 都不再推阶段。"""
+    with TestRoot("dw-close-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+        started = r.run("start", "bugfix", FEATURE, "状态卡住")
+        expect(started.returncode == 0,
+               "bugfix starts", started.stdout + started.stderr)
+        # 有 close_if 的阶段要把出口告诉 AI，否则它只会一直往下推。
+        expect("CLOSE_IF" in started.stdout and "fingerprint" in started.stdout
+               and "exit 0 表示「bug 仍然复现」" in started.stdout,
+               "stage with close_if advertises the exit and its polarity to the AI",
+               started.stdout)
+
+        # 字面量不全 -> GATE，不许关
+        r.write("specs/%s/spec.md" % FEATURE, "- 只有症状，没写已修复\n")
+        partial = r.run("close", FEATURE)
+        expect(partial.returncode != 0 and "GATE" in partial.stdout
+               and r.read_run().get("status") == "working",
+               "close refuses when the literal is missing", partial.stdout)
+
+        # 出厂占位指纹必须关不了：它 exit 1，且说明要改什么。
+        # 留一个恒真的占位等于给门开后门。
+        r.write("specs/%s/spec.md" % FEATURE,
+                "- 已修复 commit abc123\n- 验证命令: go test ./...\n- 退出码: 0\n")
+        placeholder = r.run("close", FEATURE)
+        expect(placeholder.returncode != 0 and "CHECK" in placeholder.stdout
+               and r.read_run().get("status") == "working",
+               "the shipped placeholder fingerprint cannot close a bug",
+               placeholder.stdout)
+
+        # 把指纹改成真命令后 -> 关，落 outcome
+        copy = os.path.join(r.path, "skillcopy")
+        shutil.copytree(SKILL_ROOT, copy)
+        wf_path = os.path.join(copy, "workflows", "bugfix.json")
+        with open(wf_path, encoding="utf-8") as fh:
+            wf = json.load(fh)
+        wf["stages"][0]["close_if"]["fingerprint"] = "exit 1"  # 不复现（exit1）= 可以关
+        with open(wf_path, "w", encoding="utf-8") as fh:
+            json.dump(wf, fh, ensure_ascii=False, indent=2)
+        copy_runner = os.path.join(copy, "scripts", "workflow_next.py")
+
+        def run_copy(*args):
+            return subprocess.run(
+                [PY, copy_runner, *args, "--repo", r.path],
+                capture_output=True, text=True, encoding="utf-8",
+                env=r.env(clean_env()),
+            )
+
+        closed = run_copy("close", FEATURE)
+        record = r.read_run()
+        log = open(os.path.join(r.path, "specs", FEATURE, "evidence.log"),
+                   encoding="utf-8").read()
+        expect(closed.returncode == 0 and "CLOSED %s fixed" % FEATURE in closed.stdout
+               and record.get("status") == "closed"
+               and record.get("outcome") == "fixed"
+               and "outcome=fixed" in log,
+               "close reaches the terminal state and records the outcome",
+               closed.stdout + log)
+
+        # 幂等：再关一次不多写证据、不推阶段
+        again = run_copy("close", FEATURE)
+        log2 = open(os.path.join(r.path, "specs", FEATURE, "evidence.log"),
+                    encoding="utf-8").read()
+        expect(again.returncode == 0 and "CLOSED" in again.stdout
+               and log2.count("\n") == log.count("\n"),
+               "close is idempotent and writes no second evidence line",
+               again.stdout + log2)
+
+        # next 之后只打 CLOSED，不推 NEED / DO
+        nxt = r.run("next", FEATURE)
+        expect("CLOSED" in nxt.stdout and "NEED" not in nxt.stdout
+               and "DO" not in nxt.stdout,
+               "next on a closed run prints CLOSED and no next step", nxt.stdout)
+
+        # done 之后也不推阶段
+        done = r.run("done", FEATURE)
+        expect(done.returncode == 0 and "CLOSED" in done.stdout
+               and r.read_run().get("status") == "closed",
+               "done on a closed run is an idempotent success", done.stdout)
+
+        # 钩子不再注入：closed 是终态
+        expect(r.hook_text() == "",
+               "a closed run injects no NOTICE", r.hook_text())
+
+        # 同名再 start 当新运行（与 done 一致），不再 ALREADY
+        fresh = r.run("start", "bugfix", FEATURE, "另一件事")
+        expect("ALREADY" not in fresh.stdout and fresh.returncode == 0,
+               "start on a closed run proceeds as a fresh run", fresh.stdout)
+
+
+def case_close_refuses_literal_only():
+    """字面量齐了但指纹失败：bug 还在，不许关。
+
+    这是整个出口设计的要害。docs/dev/learnings.md 记过：「未知」栏 88% 写「无」，
+    因为那个自评没有外部锚点。一个只认字面量的出口，会变成第二个「未知=无」。
+    """
+    with TestRoot("dw-closefp-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+        # 临时技能副本，把 fingerprint 改成「一定失败」，模拟 bug 仍然存在
+        copy = os.path.join(r.path, "skillcopy")
+        shutil.copytree(SKILL_ROOT, copy)
+        wf_path = os.path.join(copy, "workflows", "bugfix.json")
+        with open(wf_path, encoding="utf-8") as fh:
+            wf = json.load(fh)
+        wf["stages"][0]["close_if"]["fingerprint"] = "exit 0"  # 仍然复现（exit0）= 不能关
+        with open(wf_path, "w", encoding="utf-8") as fh:
+            json.dump(wf, fh, ensure_ascii=False, indent=2)
+        copy_runner = os.path.join(copy, "scripts", "workflow_next.py")
+
+        def run_copy(*args):
+            return subprocess.run(
+                [PY, copy_runner, *args, "--repo", r.path],
+                capture_output=True, text=True, encoding="utf-8",
+                env=r.env(clean_env()),
+            )
+
+        run_copy("start", "bugfix", FEATURE, "还有问题")
+        r.write("specs/%s/spec.md" % FEATURE,
+                "- 已修复\n- 验证命令: go test\n- 退出码: 0\n")
+        refused = run_copy("close", FEATURE)
+        expect(refused.returncode != 0 and "CHECK" in refused.stdout
+               and r.read_run().get("status") == "working",
+               "all literals present but a failing fingerprint still refuses",
+               refused.stdout)
+
+        # 不配 close_if 的阶段没有出口 -> NO_EXIT
+        with open(wf_path, encoding="utf-8") as fh:
+            wf = json.load(fh)
+        wf["stages"][0].pop("close_if", None)
+        with open(wf_path, "w", encoding="utf-8") as fh:
+            json.dump(wf, fh, ensure_ascii=False, indent=2)
+        no_exit = run_copy("close", FEATURE)
+        expect(no_exit.returncode != 0 and "NO_EXIT" in no_exit.stdout,
+               "a stage without close_if answers NO_EXIT", no_exit.stdout)
+
+        # 配错（缺 fingerprint）要响，不能静默禁掉出口
+        with open(wf_path, encoding="utf-8") as fh:
+            wf = json.load(fh)
+        wf["stages"][0]["close_if"] = {"artifact": "specs/<feature>/spec.md",
+                                       "literal": ["已修复"]}
+        with open(wf_path, "w", encoding="utf-8") as fh:
+            json.dump(wf, fh, ensure_ascii=False, indent=2)
+        malformed = run_copy("close", FEATURE)
+        expect("BAD close_if" in malformed.stdout,
+               "a malformed close_if fails loudly instead of silently",
+               malformed.stdout)
+
+
+def case_close_fingerprint_polarity():
+    """fingerprint 的极性：exit 0 = bug 仍在 = 关不了；exit 非 0 = 不在了 = 可以关。
+
+    这个方向弄反就会在 bug 还活着的时候静默关单。这里不用 `exit 0`/`exit 1` 这种
+    抽象命令，而是用**真实文件 + 真实 grep** 跑两个方向——因为实现和用例曾经
+    同时拿错极性，269 条全绿也没拦住（见 docs/dev/learnings.md 2026-11-12）。
+    """
+    with TestRoot("dw-polarity-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+        copy = os.path.join(r.path, "skillcopy")
+        shutil.copytree(SKILL_ROOT, copy)
+        wf_path = os.path.join(copy, "workflows", "bugfix.json")
+        with open(wf_path, encoding="utf-8") as fh:
+            wf = json.load(fh)
+        # 复现命令：app.go 里还有 stuck-status 就 exit 0（bug 还在）
+        wf["stages"][0]["close_if"]["fingerprint"] = "grep -q 'stuck-status' app.go"
+        with open(wf_path, "w", encoding="utf-8") as fh:
+            json.dump(wf, fh, ensure_ascii=False, indent=2)
+        copy_runner = os.path.join(copy, "scripts", "workflow_next.py")
+
+        def run_copy(*args):
+            return subprocess.run(
+                [PY, copy_runner, *args, "--repo", r.path],
+                capture_output=True, text=True, encoding="utf-8",
+                env=r.env(clean_env()),
+            )
+
+        run_copy("start", "bugfix", FEATURE, "状态卡住")
+        r.write("specs/%s/spec.md" % FEATURE,
+                "- 已修复 commit abc123\n- 验证命令: go test\n- 退出码: 0\n")
+
+        # 方向 1：bug 仍在（grep exit 0）-> 必须拒绝
+        r.write("app.go", "package app // stuck-status\n")
+        alive = run_copy("close", FEATURE)
+        expect(alive.returncode != 0
+               and r.read_run().get("status") == "working",
+               "a still-reproducing bug (fingerprint exit 0) must NOT close",
+               alive.stdout + json.dumps(r.read_run(), ensure_ascii=False))
+        expect("CHECK" in alive.stdout and "不能关" in alive.stdout,
+               "the refusal names the fingerprint and says why", alive.stdout)
+
+        # 方向 2：真的不在了（grep exit 1）-> 可以关
+        r.write("app.go", "package app // fixed\n")
+        gone = run_copy("close", FEATURE)
+        expect(gone.returncode == 0
+               and r.read_run().get("status") == "closed"
+               and r.read_run().get("outcome") == "fixed",
+               "a no-longer-reproducing bug (fingerprint exit non-0) closes",
+               gone.stdout + json.dumps(r.read_run(), ensure_ascii=False))
+
+
+def case_start_new():
+    """ALREADY 不是死路，--new 能开新的一条，且不覆盖旧记录。"""
+    with TestRoot("dw-new-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+        first = r.run("start", "bugfix", FEATURE, "第一件事")
+        expect(first.returncode == 0, "first start works", first.stdout)
+
+        # 同名再来：不是失败，打出旧 RAW 和两条出路，且不再把旧链条甩回来
+        again = r.run("start", "bugfix", FEATURE, "另一件事")
+        expect(again.returncode == 0
+               and "ALREADY" in again.stdout
+               and "第一件事" in again.stdout
+               and "--new" in again.stdout
+               and "next %s" % FEATURE in again.stdout,
+               "ALREADY names both ways out and echoes the old raw request",
+               again.stdout)
+        expect("RAW 另一件事" not in again.stdout,
+               "ALREADY does not swallow the new request as if it were started",
+               again.stdout)
+        expect(r.read_run().get("raw_request") == "第一件事",
+               "ALREADY leaves the old run untouched",
+               json.dumps(r.read_run(), ensure_ascii=False))
+
+        # --new 开 <feature>-2，再开就是 -3，旧的不动
+        second = r.run("start", "bugfix", FEATURE, "第二件事", "--new")
+        expect("NEW %s-2" % FEATURE in second.stdout
+               and os.path.isfile(r.run_path("%s-2" % FEATURE)),
+               "--new opens a suffixed run", second.stdout)
+        third = r.run("start", "bugfix", FEATURE, "第三件事", "--new")
+        expect("NEW %s-3" % FEATURE in third.stdout,
+               "--new never reuses an occupied suffix", third.stdout)
+        expect(r.read_run().get("raw_request") == "第一件事"
+               and r.read_run("%s-2" % FEATURE).get("raw_request") == "第二件事",
+               "--new never overwrites earlier runs",
+               json.dumps(r.read_run(), ensure_ascii=False))
+
+
+def case_closed_stops_notice():
+    """closed 与 done/abandoned 同级：不再注入 NOTICE，也不再算未完成运行。"""
+    with TestRoot("dw-closednotice-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+        r.run("start", "bugfix", FEATURE, "已修好的")
+        expect("NOTICE" in r.hook_text(),
+               "precondition: an open run injects a notice", r.hook_text())
+
+        # 出厂占位指纹关不了；改成一个真命令才能关。
+        copy = os.path.join(r.path, "skillcopy")
+        shutil.copytree(SKILL_ROOT, copy)
+        wf_path = os.path.join(copy, "workflows", "bugfix.json")
+        with open(wf_path, encoding="utf-8") as fh:
+            wf = json.load(fh)
+        wf["stages"][0]["close_if"]["fingerprint"] = "exit 1"  # 不复现（exit1）= 可以关
+        with open(wf_path, "w", encoding="utf-8") as fh:
+            json.dump(wf, fh, ensure_ascii=False, indent=2)
+        copy_runner = os.path.join(copy, "scripts", "workflow_next.py")
+
+        def run_copy(*args):
+            return subprocess.run(
+                [PY, copy_runner, *args, "--repo", r.path],
+                capture_output=True, text=True, encoding="utf-8",
+                env=r.env(clean_env()),
+            )
+
+        r.write("specs/%s/spec.md" % FEATURE,
+                "- 已修复\n- 验证命令: go test\n- 退出码: 0\n")
+        closed = run_copy("close", FEATURE)
+        expect(closed.returncode == 0, "close succeeds", closed.stdout)
+        expect(r.hook_text() == "",
+               "a closed run stops the session notice", r.hook_text())
+        # 不指定 feature 的 next 也不该再把它当未完成
+        bare = r.run("next")
+        expect("CLOSED" not in bare.stdout and "NEED" not in bare.stdout,
+               "bare next treats a closed run as finished", bare.stdout)
+
+
+def case_gates_reach_code_stage():
+    """code 阶段也走 OPEN / GATE / CHECK。以前 show() 在 code 之前就 return 了。
+
+    后果：next 说 DO，done 说 GATE，中间没有任何提示。两个入口对同一阶段
+    给出不同结论，AI 只能靠自己撞。
+    """
+    with TestRoot("dw-codegate-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+
+        # 造一个 code 阶段带 artifact + requires 的工作流副本
+        copy = os.path.join(r.path, "skillcopy")
+        shutil.copytree(SKILL_ROOT, copy)
+        wf_path = os.path.join(copy, "workflows", "change.json")
+        with open(wf_path, encoding="utf-8") as fh:
+            wf = json.load(fh)
+        code_stage = wf["stages"][1]
+        code_stage["artifacts"] = ["specs/<feature>/code.md"]
+        code_stage["requires"] = ["改了什么"]
+        with open(wf_path, "w", encoding="utf-8") as fh:
+            json.dump(wf, fh, ensure_ascii=False, indent=2)
+        copy_runner = os.path.join(copy, "scripts", "workflow_next.py")
+
+        def run_copy(*args):
+            return subprocess.run(
+                [PY, copy_runner, *args, "--repo", r.path],
+                capture_output=True, text=True, encoding="utf-8",
+                env=r.env(clean_env()),
+            )
+
+        run_copy("start", "change", FEATURE, "改一处")
+        r.write_decision()
+        run_copy("done", FEATURE)
+        expect(r.read_run().get("stage") == 2,
+               "precondition: reached the code stage",
+               json.dumps(r.read_run(), ensure_ascii=False))
+
+        # 产物没有 requires 里的字面量 -> next 要打 GATE，不能再打 DO
+        r.write("specs/%s/code.md" % FEATURE, "随便写了点\n")
+        nxt = run_copy("next", FEATURE)
+        expect("GATE" in nxt.stdout and "DO" not in nxt.stdout,
+               "next now gates a code stage instead of saying DO", nxt.stdout)
+        expect("改了什么" in nxt.stdout,
+               "the gate names the missing literal", nxt.stdout)
+
+        r.write("specs/%s/code.md" % FEATURE, "改了什么: a.go\n")
+        passed = run_copy("next", FEATURE)
+        expect("DO" in passed.stdout and "GATE" not in passed.stdout,
+               "a satisfied code stage still reaches DO", passed.stdout)
+
+    # 回归：paths 为空的 code 阶段行为不变（change 原样 stage 2 就是这种）
+    with TestRoot("dw-codegate2-") as r:
+        r.git_init()
+        r.write("a.txt", "x\n").git_commit()
+        r.make_config('verify: "true"\n')
+        r.change_reach()
+        nxt = r.run("next", FEATURE)
+        expect("DO" in nxt.stdout and "GATE" not in nxt.stdout
+               and "OPEN" not in nxt.stdout,
+               "a code stage with no judgeable artifact still just says DO",
+               nxt.stdout)
+
+
+def case_evidence_outcome_column():
+    """outcome 只在给了值时才加这一列：历史证据行的格式不许改。"""
+    sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
+    import workflow_next as W  # noqa: E402
+
+    with TestRoot("dw-outcome-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+        r.write("a.txt", "x\n").git_commit()
+        run = {"feature": FEATURE, "workflow": "change", "stage": 1,
+               "status": "working"}
+        plain = W.record_evidence(r.path, run, {"id": 1})
+        marked = W.record_evidence(r.path, run, {"id": 1}, outcome="fixed")
+        expect("outcome=" not in plain,
+               "an advance row without an outcome is unchanged", plain)
+        expect(plain.endswith("by=runner"),
+               "the row still ends with by=runner", plain)
+        expect("outcome=fixed" in marked,
+               "declaring the outcome appends the column", marked)
+
+
+# ── close_if 判定表 ───────────────────────────────────────────────────────
+
+
+# 表驱动用例里「这个键干脆不要」的哨兵：与 None / 空串区分开。
+class _Drop:
+    def __repr__(self):
+        return "<drop>"
+
+
+_DROP = _Drop()
+
+
+def case_close_if_spec_table():
+    """close_if_spec() 的表驱动用例：合格返回规范化 dict，不合格一律 None。
+
+    不合格一律 None 而不是抛异常，是故意的：cmd_close 靠
+    `"close_if" in stage and close_if_spec(stage) is None` 区分「没配出口」与
+    「配错了」。配错要响（BAD close_if），没配要 NO_EXIT；两者都是 None 时
+    就只能靠 close_if 键在不在来分流，所以这个返回约定是接口的一部分。
+    """
+    sys.path.insert(0, os.path.join(SKILL_ROOT, "scripts"))
+    import workflow_next as W  # noqa: E402
+
+    ok_stage = {"artifact": "specs/<feature>/spec.md",
+                "literal": ["已修复"],
+                "fingerprint": "grep -q x app.go"}
+
+    def with_spec(spec):
+        return {"close_if": spec}
+
+    def replace(**kw):
+        spec = dict(ok_stage)
+        for key, value in kw.items():
+            if value is _DROP:
+                spec.pop(key, None)
+            else:
+                spec[key] = value
+        return with_spec(spec)
+
+    # (用例名, stage, 期望返回)
+    cases = [
+        ("no_dict", with_spec("x"), None),
+        ("no_dict_list", with_spec(["已修复"]), None),
+        ("empty_literal", replace(literal=[]), None),
+        ("blank_literal_item", replace(literal=["已修复", ""]), None),
+        ("whitespace_literal_item", replace(literal=["已修复", "   "]), None),
+        ("non_str_literal_item", replace(literal=["已修复", 1]), None),
+        ("no_fingerprint", replace(fingerprint=_DROP), None),
+        ("blank_fingerprint", replace(fingerprint="   "), None),
+        ("no_artifact", replace(artifact=_DROP), None),
+        ("blank_artifact", replace(artifact=" "), None),
+        # 没配 close_if 键：返回 None，但 malformed 为 False（cmd_close 靠这个分流 NO_EXIT）
+        ("nonexit_no_key", {}, None),
+        # 三项齐全 -> 规范化 dict，outcome 缺省 fixed
+        ("default_outcome", replace(),
+         {"artifact": "specs/<feature>/spec.md", "literal": ["已修复"],
+          "fingerprint": "grep -q x app.go", "outcome": "fixed"}),
+        ("custom_outcome", replace(outcome="wontfix"),
+         {"artifact": "specs/<feature>/spec.md", "literal": ["已修复"],
+          "fingerprint": "grep -q x app.go", "outcome": "wontfix"}),
+        ("empty_outcome_falls_back", replace(outcome=""),
+         {"artifact": "specs/<feature>/spec.md", "literal": ["已修复"],
+          "fingerprint": "grep -q x app.go", "outcome": "fixed"}),
+        # 首尾空白要 strip 掉，否则指纹命令带着空格跑不起来、字面量也匹配不上
+        ("strips_whitespace", with_spec({"artifact": "  specs/<feature>/spec.md  ",
+                                         "literal": ["  已修复 "],
+                                         "fingerprint": "  grep -q x app.go  "}),
+         {"artifact": "specs/<feature>/spec.md", "literal": ["已修复"],
+          "fingerprint": "grep -q x app.go", "outcome": "fixed"}),
+    ]
+    for name, stage, want in cases:
+        got = W.close_if_spec(stage)
+        expect(got == want,
+               "close_if_spec[%s] -> %r" % (name, want),
+               "got=%r want=%r stage=%r" % (got, want, stage))
+
+    # 「配错了」与「没配」必须在 close_if 键上可分：否则 cmd_close 会把
+    # 没配出口的执行阶段报成 BAD，或者把配错的出口静默禁掉。
+    # 两者都返回 None，唯一的分流依据是键在不在。
+    nonexit_stage = {}
+    malformed_stage = replace(literal=[])
+    expect("close_if" not in nonexit_stage
+           and W.close_if_spec(nonexit_stage) is None,
+           "close_if_spec[nonexit] no key -> None and key absent "
+           "(cmd_close: NO_EXIT)",
+           "got stage=%r spec=%r want spec=None and key absent"
+           % (nonexit_stage, W.close_if_spec(nonexit_stage)))
+    expect("close_if" in malformed_stage
+           and W.close_if_spec(malformed_stage) is None,
+           "close_if_spec[malformed] present but bad -> None and key present "
+           "(cmd_close: BAD close_if)",
+           "got stage=%r spec=%r want spec=None and key present"
+           % (malformed_stage, W.close_if_spec(malformed_stage)))
+
+    # close_artifact_path：中文项 / 以 $ 开头落不成可判定路径。
+    # 注意（实测，与 BAD 文案「通配符...都不行」不完全一致）：以 specs/ 开头的
+    # 通配符**会**被放行（`specs/<feature>/*.md`），因为 artifact_paths 在通配符
+    # 检查之前就 return 了。这里按真实行为钉住，不让未来改动悄悄改掉关单范围。
+    for label, artifact, want in [
+        ("plain", "specs/<feature>/spec.md", "specs/f/spec.md"),
+        ("chinese", "中文产物", ""),
+        ("dollar", "$CARDS/x.md", ""),
+        ("glob_bare", "*.md", ""),
+        ("glob_under_specs", "specs/<feature>/*.md", "specs/f/*.md"),
+    ]:
+        got = W.close_artifact_path({"artifact": artifact}, "f")
+        expect(got == want,
+               "close_artifact_path[%s] -> %r" % (label, want),
+               "got=%r want=%r artifact=%r" % (got, want, artifact))
+
+
+def case_close_judgement_table():
+    """cmd_close 的判定表：唯一能关单的组合是 artifact✓ literal✓ fingerprint 不复现。
+
+    每行一个独立的临时仓库。断言的共同点：走不通时 run.json 必须**原样**
+    （status 仍 working、没有 outcome），因为「关错了」比「关不了」严重得多。
+    """
+
+    def fingerprint_alive(data):
+        # 复现命令：app.go 里有 stuck-status 就 exit 0（bug 还在）
+        data["stages"][0]["close_if"]["fingerprint"] = \
+            "grep -q 'stuck-status' app.go"
+
+    def bare(data):
+        return None
+
+    def no_exit(data):
+        data["stages"][0].pop("close_if", None)
+
+    def malformed(data):
+        data["stages"][0]["close_if"] = {"artifact": "specs/<feature>/spec.md",
+                                         "literal": ["已修复"]}
+
+    def bad_artifact(data):
+        data["stages"][0]["close_if"]["artifact"] = "中文产物"
+
+    # (用例名, 改 JSON, spec.md 内容或 None, app.go 内容或 None,
+    #  期望退出码, 期望 stdout 必须含, 期望 stdout 不许含)
+    cases = [
+        ("fingerprint_reproduces__refuse", fingerprint_alive,
+         "- 已修复\n- 验证命令: go test\n- 退出码: 0\n",
+         "package app // stuck-status\n",
+         1, ["CHECK", "不能关"], ["CLOSED"]),
+        ("literal_missing__gate", fingerprint_alive,
+         "- 症状だけ，没写结论\n",
+         "package app // fixed\n",
+         1, ["GATE", "缺："], ["CLOSED"]),
+        ("artifact_missing__need", fingerprint_alive, None,
+         "package app // fixed\n",
+         1, ["NEED specs/%s/spec.md" % FEATURE], ["CLOSED"]),
+        ("template_placeholder__refuse", bare,
+         "- 已修复\n- 验证命令: go test\n- 退出码: 0\n",
+         "package app // stuck-status\n",
+         1, ["CHECK", "不能关"], ["CLOSED"]),
+        ("no_close_if__no_exit", no_exit,
+         "- 已修复\n- 验证命令: go test\n- 退出码: 0\n",
+         None, 1, ["NO_EXIT"], ["CLOSED"]),
+        ("malformed__bad", malformed,
+         "- 已修复\n- 验证命令: go test\n- 退出码: 0\n",
+         None, 1, ["BAD close_if"], ["CLOSED"]),
+        ("unresolvable_artifact__bad", bad_artifact,
+         "- 已修复\n- 验证命令: go test\n- 退出码: 0\n",
+         None, 1, ["BAD close_if"], ["CLOSED"]),
+        # 正向对照：三关全过才关得掉。没有这一行，上面 7 行可能全是「什么都不行」
+        ("all_pass__close", fingerprint_alive,
+         "- 已修复\n- 验证命令: go test\n- 退出码: 0\n",
+         "package app // fixed\n",
+         0, ["CLOSED %s fixed" % FEATURE], []),
+    ]
+
+    for name, mutate, spec, app, want_code, must, must_not in cases:
+        label = "close table[%s]" % name
+        with TestRoot("dw-closetable-") as r:
+            r.git_init()
+            r.make_config('verify: "true"\n')
+            run_copy, _ = r.skill_copy("bugfix", mutate)
+            started = run_copy("start", "bugfix", FEATURE, "状态卡住")
+            expect(started.returncode == 0, label + " starts",
+                   started.stdout + started.stderr)
+            if spec is not None:
+                r.write("specs/%s/spec.md" % FEATURE, spec)
+            if app is not None:
+                r.write("app.go", app)
+
+            proc = run_copy("close", FEATURE)
+            got = proc.returncode
+            expect(got == want_code, label + " exit -> %d" % want_code,
+                   "got=%d want=%d\nstdout=%s\nstderr=%s"
+                   % (got, want_code, proc.stdout, proc.stderr))
+            for needle in must:
+                expect(needle in proc.stdout,
+                       label + " stdout contains %r" % needle,
+                       "got stdout=%r\nwant substring=%r" % (proc.stdout, needle))
+            for needle in must_not:
+                expect(needle not in proc.stdout,
+                       label + " stdout omits %r" % needle,
+                       "got stdout=%r\nforbidden substring=%r"
+                       % (proc.stdout, needle))
+            if want_code != 0:
+                record = r.read_run()
+                expect(record.get("status") == "working"
+                       and "outcome" not in record,
+                       label + " leaves run.json untouched",
+                       "want status=working and no outcome; got=%s"
+                       % json.dumps(record, ensure_ascii=False))
+
+
+def case_close_run_absent():
+    """没有运行记录时 close 报 NO_RUN，且不凭空造出 specs/ 目录。"""
+    with TestRoot("dw-closenorun-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+        proc = r.run("close", FEATURE)
+        expect(proc.returncode == 1 and "NO_RUN %s" % FEATURE in proc.stdout,
+               "close on a missing run answers NO_RUN",
+               "got exit=%d stdout=%r" % (proc.returncode, proc.stdout))
+        expect(not os.path.exists(r.run_path()),
+               "close on a missing run writes no run.json",
+               "run.json exists at %s" % r.run_path())
+
+
+def case_close_on_stage_without_exit():
+    """change 的第 1 阶段没有 close_if：close 必须 NO_EXIT，且 run.json 字节不变。"""
+    with TestRoot("dw-closenoexit-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+        r.run("start", "change", FEATURE, "定架构")
+        r.write_decision()
+        before = open(r.run_path(), "rb").read()
+        proc = r.run("close", FEATURE)
+        after = open(r.run_path(), "rb").read()
+        expect(proc.returncode == 1 and "NO_EXIT %s 1" % FEATURE in proc.stdout,
+               "close on a stage without close_if answers NO_EXIT <feature> <stage>",
+               "got exit=%d stdout=%r" % (proc.returncode, proc.stdout))
+        expect(before == after,
+               "NO_EXIT does not rewrite run.json",
+               "bytes changed: before=%r after=%r" % (before, after))
+
+
+def case_closed_is_terminal():
+    """closed 与 done/abandoned 同级：next 不打 NEED/DO/STAGE，不推阶段，不注入 NOTICE。
+
+    这是 D1 的主诉求本身：bug 修好后，工作流不许再要求继续排查。
+    """
+    with TestRoot("dw-terminal-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+        run_copy, _ = r.skill_copy(
+            "bugfix", lambda d: d["stages"][0]["close_if"].__setitem__(
+                "fingerprint", "exit 1"))  # 不复现 = 可以关
+        run_copy("start", "bugfix", FEATURE, "状态卡住")
+        r.write_spec_fixed()
+        closed = run_copy("close", FEATURE)
+        expect(closed.returncode == 0, "precondition: close succeeds",
+               closed.stdout + closed.stderr)
+        stage_after_close = r.read_run().get("stage")
+
+        # next：只报 CLOSED，绝不把旧链条甩回来
+        nxt = r.run("next", FEATURE)
+        expect(nxt.returncode == 0 and "CLOSED %s fixed" % FEATURE in nxt.stdout,
+               "next on a closed run prints CLOSED",
+               "got exit=%d stdout=%r" % (nxt.returncode, nxt.stdout))
+        for needle in ("NEED", "DO", "STAGE 2", "STAGE 1"):
+            expect(needle not in nxt.stdout,
+                   "next on a closed run does not print %r" % needle,
+                   "forbidden %r in stdout=%r" % (needle, nxt.stdout))
+
+        # done：幂等成功，不推阶段
+        done = r.run("done", FEATURE)
+        expect(done.returncode == 0 and "CLOSED" in done.stdout
+               and r.read_run().get("stage") == stage_after_close
+               and r.read_run().get("status") == "closed",
+               "done on a closed run is an idempotent success that advances nothing",
+               "got exit=%d stdout=%r stage=%r want stage=%r"
+               % (done.returncode, done.stdout, r.read_run().get("stage"),
+                  stage_after_close))
+
+        # 钩子：closed 是终态，不再注入 NOTICE
+        expect(r.hook_text() == "",
+               "a closed run injects no session NOTICE",
+               "got additional_context=%r" % r.hook_text())
+
+
+def case_bare_next_skips_closed():
+    """不指定 feature 的 next：closed 不进 MANY、不被当未完成、也不被选中推进。"""
+    with TestRoot("dw-barenext-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+        for name in ("aa", "bb", "cc"):
+            r.run("start", "change", name, "原话%s" % name)
+
+        def close_run(name):
+            path = r.run_path(name)
+            with open(path, encoding="utf-8") as fh:
+                data = json.load(fh)
+            data["status"] = "closed"
+            data["outcome"] = "fixed"
+            with open(path, "w", encoding="utf-8") as fh:
+                json.dump(data, fh, ensure_ascii=False, indent=2)
+
+        # 一条 closed + 两条 working -> MANY 只列两条 working
+        close_run("aa")
+        many = r.run("next")
+        expect("MANY" in many.stdout,
+               "bare next with two open runs answers MANY", many.stdout)
+        expect("aa" not in many.stdout,
+               "MANY omits the closed run",
+               "forbidden 'aa' in MANY output=%r" % many.stdout)
+        expect("bb" in many.stdout and "cc" in many.stdout,
+               "MANY lists both open runs", many.stdout)
+
+        # 全部 closed -> 当已完成，不再报 NEED
+        close_run("bb")
+        close_run("cc")
+        bare = r.run("next")
+        expect(bare.returncode == 0 and "NEED" not in bare.stdout
+               and "MANY" not in bare.stdout,
+               "bare next with only closed runs reports no next step",
+               "got exit=%d stdout=%r" % (bare.returncode, bare.stdout))
+
+
+def case_start_already_and_new():
+    """ALREADY 不是死路：给出旧 RAW 与两条出路，且不再把旧链条甩回来。
+
+    D2 的诉求：同名 feature 二次提交时，不能被旧运行拽回去。
+    """
+    with TestRoot("dw-already-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+        first = r.run("start", "bugfix", FEATURE, "第一件事")
+        expect(first.returncode == 0, "first start succeeds",
+               first.stdout + first.stderr)
+
+        again = r.run("start", "bugfix", FEATURE, "第二件事")
+        expect(again.returncode == 0,
+               "start on an open run is not a failure",
+               "got exit=%d stdout=%r" % (again.returncode, again.stdout))
+        expect("ALREADY %s working" % FEATURE in again.stdout,
+               "ALREADY names the feature and its status", again.stdout)
+        expect("第一件事" in again.stdout,
+               "ALREADY echoes the old run's RAW request", again.stdout)
+        expect("next %s" % FEATURE in again.stdout,
+               "ALREADY offers 'continue this run'", again.stdout)
+        expect("--new" in again.stdout,
+               "ALREADY offers 'open a new run'", again.stdout)
+        for needle in ("STAGE 2", "NEED specs/%s/impact.md" % FEATURE):
+            expect(needle not in again.stdout,
+                   "ALREADY does not drag the caller into the old chain (%r)" % needle,
+                   "forbidden %r in stdout=%r" % (needle, again.stdout))
+        expect("RAW 第二件事" not in again.stdout,
+               "ALREADY does not pretend the new request was started",
+               again.stdout)
+        expect(r.read_run().get("raw_request") == "第一件事",
+               "ALREADY leaves the old run untouched",
+               "got raw_request=%r want '第一件事'"
+               % r.read_run().get("raw_request"))
+
+        # --new 递增后缀，绝不覆盖旧的
+        second = r.run("start", "bugfix", FEATURE, "第二件事", "--new")
+        expect("NEW %s-2 (from %s)" % (FEATURE, FEATURE) in second.stdout,
+               "--new opens <feature>-2 and says where it came from",
+               second.stdout)
+        expect(os.path.isfile(r.run_path("%s-2" % FEATURE)),
+               "--new creates specs/<feature>-2/run.json",
+               "missing %s" % r.run_path("%s-2" % FEATURE))
+        expect(r.read_run("%s-2" % FEATURE).get("stage") == 1,
+               "the new run starts at stage 1",
+               "got stage=%r" % r.read_run("%s-2" % FEATURE).get("stage"))
+
+        third = r.run("start", "bugfix", FEATURE, "第三件事", "--new")
+        expect("NEW %s-3" % FEATURE in third.stdout,
+               "--new never reuses an occupied suffix", third.stdout)
+        expect(r.read_run().get("raw_request") == "第一件事"
+               and r.read_run("%s-2" % FEATURE).get("raw_request") == "第二件事"
+               and r.read_run("%s-3" % FEATURE).get("raw_request") == "第三件事",
+               "--new never overwrites earlier runs",
+               "raw_requests=%r" % [r.read_run(n).get("raw_request")
+                                    for n in (FEATURE, "%s-2" % FEATURE,
+                                              "%s-3" % FEATURE)])
+
+
+def case_start_new_argument_position():
+    """--new 前置 / 后置都认，且不破坏 raw_request 的参数元数。"""
+    with TestRoot("dw-newpos-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+
+        front = r.run("start", "change", "pre", "--new", "原话前置")
+        expect(front.returncode == 0
+               and r.read_run("pre").get("raw_request") == "原话前置",
+               "--new before the raw request keeps the argument count",
+               "got exit=%d stdout=%r raw=%r"
+               % (front.returncode, front.stdout,
+                  r.read_run("pre").get("raw_request")
+                  if os.path.isfile(r.run_path("pre")) else None))
+
+        back = r.run("start", "change", "post", "原话后置", "--new")
+        expect(back.returncode == 0
+               and r.read_run("post").get("raw_request") == "原话后置",
+               "--new after the raw request keeps the argument count",
+               "got exit=%d stdout=%r raw=%r"
+               % (back.returncode, back.stdout,
+                  r.read_run("post").get("raw_request")
+                  if os.path.isfile(r.run_path("post")) else None))
+
+
+def case_start_new_on_finished_run():
+    """已结束（closed/done/abandoned）的运行上 --new 是 no-op：正常开同名，不生成 -2。"""
+    for status in ("closed", "done", "abandoned"):
+        label = "start --new on a %s run" % status
+        with TestRoot("dw-newfinished-") as r:
+            r.git_init()
+            r.make_config('verify: "true"\n')
+            r.run("start", "change", FEATURE, "旧的")
+            path = r.run_path()
+            with open(path, encoding="utf-8") as fh:
+                data = json.load(fh)
+            data["status"] = status
+            if status == "closed":
+                data["outcome"] = "fixed"
+            with open(path, "w", encoding="utf-8") as fh:
+                json.dump(data, fh, ensure_ascii=False, indent=2)
+
+            proc = r.run("start", "change", FEATURE, "新的", "--new")
+            expect(proc.returncode == 0 and "NEW" not in proc.stdout,
+                   label + " does not invent a suffix",
+                   "got exit=%d stdout=%r" % (proc.returncode, proc.stdout))
+            expect(r.read_run().get("raw_request") == "新的"
+                   and r.read_run().get("status") == "working"
+                   and r.read_run().get("stage") == 1,
+                   label + " reopens the same name from stage 1",
+                   "got=%s" % json.dumps(r.read_run(), ensure_ascii=False))
+            expect(not os.path.exists(r.run_path("%s-2" % FEATURE)),
+                   label + " creates no -2 run",
+                   "unexpected %s" % r.run_path("%s-2" % FEATURE))
+
+
+def case_close_advertised_to_ai():
+    """AI 是执行方：出口必须出现在它唯一会读的地方（next 的输出）。
+
+    AGENTS.md：runner 打印的 READ 指向 stage SKILL.md，AI 跟着 READ 走，
+    永远不会主动读 JSON 里的提示字段。close_if 只存在于 JSON -> 只有
+    print_stage_hints 转发，AI 才知道「这一步可以不继续」。
+    """
+    with TestRoot("dw-closehint-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+        r.run("start", "bugfix", FEATURE, "状态卡住")
+        text = r.run("next", FEATURE).stdout
+        expect("CLOSE_IF:" in text,
+               "next advertises the close_if exit", text)
+        expect("artifact=specs/<feature>/spec.md" in text
+               and "literal=" in text and "outcome=fixed" in text,
+               "the advertisement names artifact, literals and outcome", text)
+        expect("fingerprint:" in text,
+               "the advertisement shows the fingerprint command", text)
+        expect("exit 0 表示「bug 仍然复现」" in text,
+               "the advertisement states the inverted polarity", text)
+
+
+def case_close_hint_survives_no_hints():
+    """NO_HINTS=1 只摘 SELF_CHECK：CLOSE_IF 是门不是提示，不许被一起摘掉。
+
+    摘掉的后果是「出口看不见」-> AI 继续推已修好的 bug，正是这次要修的缺陷。
+    """
+    with TestRoot("dw-closehint2-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+        r.run("start", "bugfix", FEATURE, "状态卡住")
+        on = r.run("next", FEATURE).stdout
+        env = r.env()
+        env["DATA_WORKFLOW_NO_HINTS"] = "1"
+        off = subprocess.run(
+            [PY, RUNNER, "next", FEATURE, "--repo", r.path],
+            capture_output=True, text=True, encoding="utf-8", env=env,
+        ).stdout
+        expect("CLOSE_IF:" in on, "precondition: CLOSE_IF printed by default", on)
+        expect("CLOSE_IF:" in off,
+               "NO_HINTS=1 must not strip the close exit",
+               "CLOSE_IF missing from NO_HINTS output=%r" % off)
+        stripped = "\n".join(
+            line for line in on.splitlines()
+            if not line.startswith("SELF_CHECK")
+        ) + "\n"
+        expect(stripped == off,
+               "NO_HINTS=1 strips SELF_CHECK and nothing else",
+               "--on(two-line-diff)--\n%r\n--off--\n%r" % (stripped, off))
+
+
+def case_close_evidence_outcome():
+    """关单证据行：outcome 追加在末尾，其余列与推进行同构；非关单行不受影响。"""
+    with TestRoot("dw-closeevid-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+        def to_wontfix(data):
+            spec = data["stages"][0]["close_if"]
+            spec["outcome"] = "wontfix"
+            spec["fingerprint"] = "exit 1"  # 不复现 = 可以关
+
+        run_copy, _ = r.skill_copy("bugfix", to_wontfix)
+        run_copy("start", "bugfix", FEATURE, "不修")
+        r.write_spec_fixed()
+        closed = run_copy("close", FEATURE)
+        expect(closed.returncode == 0, "precondition: close succeeds",
+               closed.stdout + closed.stderr)
+        expect(r.read_run().get("outcome") == "wontfix",
+               "a custom outcome reaches run.json verbatim",
+               "got outcome=%r want 'wontfix'" % r.read_run().get("outcome"))
+
+        text = r.evidence_text()
+        rows = [line for line in text.splitlines() if line.strip()]
+        expect(len(rows) == 1,
+               "close writes exactly one evidence row",
+               "got %d rows: %r" % (len(rows), rows))
+        row = rows[0]
+        expect(row.endswith("outcome=wontfix"),
+               "the close row records the outcome at the end",
+               "got row=%r want suffix 'outcome=wontfix'" % row)
+        for label in ("stage=1", "requires=ok", "gate_check=", "verify=",
+                      "head=", "at=", "by=runner"):
+            expect(label in row,
+                   "the close row keeps the %r column" % label,
+                   "missing %r in row=%r" % (label, row))
+        expect(row.index("by=runner") < row.index("outcome="),
+               "outcome is appended after by=runner, not inserted before it",
+               "got row=%r" % row)
+
+        # 幂等：再关一次不写第二行
+        again = run_copy("close", FEATURE)
+        expect(again.returncode == 0
+               and len([l for l in r.evidence_text().splitlines() if l.strip()]) == 1,
+               "closing twice writes no second evidence row",
+               "got exit=%d rows=%r" % (again.returncode, r.evidence_text()))
+
+
+def case_gate_priority_on_code_stage():
+    """code 阶段：待拍板优先于 DO，且 requires 门在 code 分支之前生效。"""
+    with TestRoot("dw-codepriority-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+
+        def add_code_artifacts(data):
+            stage = data["stages"][1]
+            stage["artifacts"] = ["specs/<feature>/code.md"]
+            stage["requires"] = ["改了什么"]
+
+        run_copy, _ = r.skill_copy("change", add_code_artifacts)
+        run_copy("start", "change", FEATURE, "改一处")
+        r.write_decision()
+        run_copy("done", FEATURE)
+        expect(r.read_run().get("stage") == 2,
+               "precondition: reached the code stage",
+               json.dumps(r.read_run(), ensure_ascii=False))
+
+        # 待拍板 -> OPEN，不能同时打 DO
+        r.write("specs/%s/code.md" % FEATURE, "待拍板：要不要兼容旧数据\n改了什么: a.go\n")
+        opened = run_copy("next", FEATURE)
+        expect("OPEN" in opened.stdout and "DO" not in opened.stdout,
+               "an open decision on a code stage blocks DO",
+               "got stdout=%r" % opened.stdout)
+
+        # 已拍板 + 字面量齐 -> DO
+        r.write("specs/%s/code.md" % FEATURE,
+                "待拍板：要不要兼容旧数据\n已拍板：兼容\n改了什么: a.go\n")
+        passed = run_copy("next", FEATURE)
+        expect("DO" in passed.stdout and "OPEN" not in passed.stdout
+               and "GATE" not in passed.stdout,
+               "a decided, literal-satisfied code stage reaches DO",
+               "got stdout=%r" % passed.stdout)
+
+
+def case_close_glob_artifact():
+    """close_if.artifact 写成 specs/<feature>/*.md 时，字面量可以分散在多个文件。
+
+    实测行为（不在文档里，但确实可达）：artifact_paths 先接受 specs/ 前缀，
+    再走 concrete_files 的 glob 展开，所以字面量是「任意匹配文件里任一条满足」。
+    这意味着关单依赖的文件集不是单一文件——这里把它钉住，变了就会被看到。
+    """
+    with TestRoot("dw-closeglob-") as r:
+        r.git_init()
+        r.make_config('verify: "true"\n')
+
+        def to_glob(data):
+            data["stages"][0]["close_if"]["artifact"] = "specs/<feature>/*.md"
+            data["stages"][0]["close_if"]["fingerprint"] = "exit 1"
+
+        run_copy, _ = r.skill_copy("bugfix", to_glob)
+        run_copy("start", "bugfix", FEATURE, "状态卡住")
+
+        # 字面量分散在两个文件里：合并后满足
+        r.write("specs/%s/spec.md" % FEATURE, "- 已修复\n")
+        r.write("specs/%s/notes.md" % FEATURE, "- 验证命令: go test\n- 退出码: 0\n")
+        closed = run_copy("close", FEATURE)
+        expect(closed.returncode == 0
+               and r.read_run().get("status") == "closed",
+               "a glob artifact unions literals across matching files",
+               "got exit=%d stdout=%r run=%s"
+               % (closed.returncode, closed.stdout,
+                  json.dumps(r.read_run(), ensure_ascii=False)))
+
+
 def main():
     case_none()
     case_npm()
@@ -1702,6 +2728,27 @@ def main():
     case_foreign()
     case_default_no_hooks()
     case_record_follows_install()
+    case_close_exit()
+    case_close_refuses_literal_only()
+    case_close_fingerprint_polarity()
+    case_start_new()
+    case_closed_stops_notice()
+    case_gates_reach_code_stage()
+    case_evidence_outcome_column()
+    case_close_if_spec_table()
+    case_close_judgement_table()
+    case_close_run_absent()
+    case_close_on_stage_without_exit()
+    case_close_glob_artifact()
+    case_closed_is_terminal()
+    case_bare_next_skips_closed()
+    case_start_already_and_new()
+    case_start_new_argument_position()
+    case_start_new_on_finished_run()
+    case_close_advertised_to_ai()
+    case_close_hint_survives_no_hints()
+    case_close_evidence_outcome()
+    case_gate_priority_on_code_stage()
     print("OK")
 
 
