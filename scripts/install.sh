@@ -293,7 +293,11 @@ install_commands() {
   # 两种落点不同，不能把其中一种写死进 md——写了就是又一个「只在开发环境跑得通」。
   # 这里在安装时把 {{RUNNER}} / {{SKILL}} 替换成实际路径。
   local runner skill_dir
-  if [ "$global" = 1 ]; then
+  # dogfood：本仓库既是分发源又是用户，技能正文就在自己的 skills/data-workflow/，
+  # 不在 .cursor/skills/ 下。不认这条就会走到下面的 WARN，把命令文件写成空路径。
+  if [ "$dogfood" = 1 ] && [ -f "$repo_root/skills/data-workflow/scripts/workflow_next.py" ]; then
+    skill_dir="$repo_root/skills/data-workflow"
+  elif [ "$global" = 1 ]; then
     # 默认装 $HOME：找 HOME 下真实存在的那一份
     skill_dir=""
     for d in .cursor .claude .agents .qoder .codex; do
