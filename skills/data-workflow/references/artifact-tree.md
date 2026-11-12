@@ -56,6 +56,7 @@ $REPO/specs/<feature>/
 |---|---|---|
 | `specs/<feature>/**`（feature / bugfix / hotfix，以及审自己的分支） | 当前工作仓库根 `specs/`。install 到哪个仓库就写哪个，不回技能源仓库 | 记录跟着这一仓开发走；install.sh 已把它写进 `.gitignore` |
 | review-only 审别人的工作树 | `$CARDS/reviews/<feature>/` | 不改对方工作树。`$CARDS` 为空就问用户要一个该工作树之外的目录 |
+| architecture-review 报告 | `$REPO/docs/reviews/` | 落仓库**不落 `/tmp`**：临时目录会被清理，`git status` 也看不见 |
 | 排查卡片 | `$CARDS/`（个人知识层） | 结论跨需求复用，按症状检索；**不进仓库** |
 | 已稳定的领域知识 | `$KNOW/<域>/` | 归档走 `references/feature-archive.md` |
 | 决策前的临时工作记忆 | `$REPO/.cursor/plans/`（或该 IDE 的等价目录） | 临时，不升级为工件 |
@@ -82,5 +83,6 @@ $REPO/specs/<feature>/
 | `bugfix.json` | spec(精简) → impact → review/×3 → quality → change-note + 卡片 |
 | `hotfix.json` | rollback → quality → change-note（**跳过的阶段必须记账**） |
 | `review-only.json` | diff.patch → review/×3 → interface-test（不改业务代码；别人的工作树不写 `$REPO/specs/`） |
+| `architecture-review.json` | scope → findings/×2 → 报告 html + README 摘要 → verdict（不改业务代码，不提接口） |
 
 新业务场景 = **新工作流模板**（重排现有技能与工件），不是新技能。技能池是复用的，模板才是扩展点。

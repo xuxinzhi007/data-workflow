@@ -1,0 +1,76 @@
+{
+  "name": "architecture-review",
+  "kind": "review",
+  "when": "只审不改，看的是现有结构本身哪里在摩擦：哪个 module 浅、该往哪加深。用户说「看下这个仓库的架构」「这块设计有什么问题」「哪里可以重构」「帮我出个架构方案」时走这条。用户说的是「这批改动有没有问题」时走 review-only。",
+  "principle": "先圈范围再扫，不然会漫无目的走一遍。报告只指方向，不提接口。写完停下来问用户先展开哪个，不替用户选。",
+  "artifacts_root": "$REPO/docs/reviews/",
+  "stages": [
+    {
+      "id": 1,
+      "name": "圈定范围",
+      "reads": [
+        "git log --oneline -40",
+        "GLOSSARY.md",
+        "docs/adr/"
+      ],
+      "artifacts": [
+        "<artifacts_root>/scope.md"
+      ],
+      "self_check": "scope.md 写：这次扫哪里、为什么是这里（用户点名 / git 热点文件 TOP-N）、明确不扫什么。用户点名了方向就直接用，跳过热点推断。改动散得没热点时写明「放宽范围」而不是硬凑一个焦点。GLOSSARY.md 和 docs/adr 不存在时写「无」并跳过，不现编",
+      "note": "YAGNI：加深一个 module 的回报是以后改它更容易，所以权重压在最近真的在改的地方。明确不扫的东西也要写——防止下一轮重复提议已经被否掉的。",
+      "file": "$PLUGIN_ROOT/stages/architecture-deepening/SKILL.md"
+    },
+    {
+      "id": 2,
+      "name": "走查",
+      "reads": [
+        "<artifacts_root>/scope.md"
+      ],
+      "artifacts": [
+        "<artifacts_root>/findings/structure.md",
+        "<artifacts_root>/findings/callflow.md"
+      ],
+      "self_check": "两轴各自独立，都只读源码不改；每条 finding 必须指到 文件:符号，指不到的写「待确认」或删掉。每个候选都做了 deletion test 并写了结论（删掉它复杂度是消失=pass-through，还是在 N 个调用方重新长出来=挣饭钱）。只有「是的，会集中」才算候选",
+      "subagents": {
+        "allowed": true,
+        "criteria": "两轴彼此独立、只读同一份 scope.md、各写各的 finding → 满足 fan-out 判据",
+        "forbidden": [
+          "让子 agent 改代码",
+          "让子 agent 之间共享草稿（先各自独立出结论，再由主 agent 合并）"
+        ]
+      },
+      "file": "$PLUGIN_ROOT/stages/architecture-deepening/SKILL.md"
+    },
+    {
+      "id": 3,
+      "name": "出报告",
+      "reads": [
+        "<artifacts_root>/findings/structure.md",
+        "<artifacts_root>/findings/callflow.md",
+        "$PLUGIN_ROOT/stages/architecture-deepening/references/report.md"
+      ],
+      "artifacts": [
+        "<artifacts_root>/<topic>-architecture-review.html",
+        "<artifacts_root>/README.md"
+      ],
+      "self_check": "报告落在 artifacts_root，不在 OS 临时目录。每个候选有 before/after 图 + 推荐强度徽章（Strong/Worth exploring/Speculative）。Wins 用 depth 词表写（locality/leverage），不写「更易维护」「更干净」。词表不漂：说 module/interface/depth/seam/adapter，不说 component/service/API/boundary。结尾有 Top recommendation。README.md 是纯文本摘要（HTML 依赖 CDN，命令行读不了），状态写「提案，待决策」。这一步不提接口",
+      "note": "HTML 落仓库不落 /tmp——临时目录会被清理，git status 也看不见。同时落一份 md 摘要，开发时读摘要就够，不用开浏览器。",
+      "file": "$PLUGIN_ROOT/stages/architecture-deepening/SKILL.md"
+    },
+    {
+      "id": 4,
+      "name": "停下问",
+      "artifacts": [
+        "<artifacts_root>/verdict.md"
+      ],
+      "self_check": "verdict.md 写：推荐先做哪个 + 一句为什么 + 什么时候不该做。然后打一句「这几个你想先展开哪个？」就停，不替用户选。还有待拍板的架构选择逐条列出",
+      "subagents": {
+        "allowed": false,
+        "reason": "排序和取舍必须由单一主体负责，不能把责任分散给子 agent"
+      },
+      "file": "$PLUGIN_ROOT/stages/architecture-deepening/SKILL.md"
+    }
+  ],
+  "bypass": [],
+  "hard_rule": "不改业务代码、不提接口。A2 只出候选和方向，interface 设计是用户点头之后的事。被拒的候选若理由是「以后还会有人再提一遍」那种，提议记一条 ADR，别每轮重新吵。ADR 冲突只在摩擦真够大时才报，不列全所有被 ADR 禁掉的理论重构。"
+}

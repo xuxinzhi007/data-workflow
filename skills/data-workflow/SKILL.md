@@ -16,10 +16,13 @@ description: 当用户说「开始开发」「加字段」「改个功能」「�
 | data-service（Go 栈）新能力 / 加字段 / 加端点 | `workflows/feature.json` |
 | data-service 已知错误要修 | `workflows/bugfix.json` |
 | data-service 线上正在出事 | `workflows/hotfix.json` |
-| 只审不改 | `workflows/review-only.json` |
+| 只审不改（这批改动有没有问题） | `workflows/review-only.json` |
+| 只审不改（现有结构哪里在摩擦、该往哪加深） | `workflows/architecture-review.json` |
 | 任意仓库的一次改动，或给任意仓库定架构 | `workflows/change.json` |
 
 选型前读 `references/scope.md`，按 L1/L2/L3 定级。L1 走 `change`；碰到契约、持久化、权限、状态或回滚，即使用户把它叫成小改动，也走 `feature` 或 `hotfix`。只梳理、不改代码时不 `start`，直接读 `stages/oncall/references/routing.md`。
+
+`review-only` 与 `architecture-review` 都是只审不改，差别在审什么：前者看**这批改动**会不会搞坏东西，后者看**现有结构**本身哪里在摩擦。用户说「审一下这个 MR」走前者，说「看下这块设计」走后者。两者都不改业务代码。
 
 ## next 的输出对应什么
 

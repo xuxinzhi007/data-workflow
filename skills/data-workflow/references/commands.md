@@ -14,7 +14,7 @@ $py "$PLUGIN_ROOT/scripts/workflow_next.py" <子命令>
 |---|---|---|
 | `next` | 用户要继续那条未完成运行 | 只一件：`NEED`、`GATE`、`WAIT`、`DO`、`OPEN` 或 `DONE` |
 | `next` | 没有未完成运行 | `NO_RUN`，或 `LAST` 加记录路径 |
-| `start <workflow> <feature>` | 新开。workflow 为 feature、bugfix、hotfix、review-only、change | 停在第一阶段缺的文件 |
+| `start <workflow> <feature>` | 新开。workflow 为 feature、bugfix、hotfix、review-only、architecture-review、change | 停在第一阶段缺的文件 |
 | `start <workflow> <feature> --new` | 同名已有一条**没结束**的运行，但这次是另一件事 | `NEW <feature>-2`，原运行原样留着。`ALREADY` 不是失败——它打出旧运行的 `RAW`/`DECIDED` 和这两条出路 |
 | `close <feature>` | 阶段声明了 `close_if`，且这件事已经不需要做了（典型：bug 已被修掉） | `CLOSED <f> fixed`。要同时满足三项：产物文件非空、产物里有 `close_if.literal` 那几条字面量、`close_if.fingerprint` **命令 exit 非 0**（它是复现命令，`exit 0` = bug 还在 = 关不了）。没有 `close_if` 打 `NO_EXIT` |
 | `wait <feature> "<问题>" "<一句回复>"` | `OPEN`，或还要问一句 | `run.json` 里有这句 reply |
