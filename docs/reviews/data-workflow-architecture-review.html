@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>架构评审 · data-workflow</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+</script>
+<style>
+  .seam { stroke-dasharray: 5 5; }
+  .leak { stroke: #dc2626; stroke-width: 2; }
+  .ghost { opacity: .38; }
+  .lbl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
+  .deepfill { background: linear-gradient(135deg,#0f172a,#1e293b); }
+</style>
+</head>
+<body class="bg-stone-50 text-slate-900">
+<main class="max-w-6xl mx-auto px-8 py-14 space-y-14">
+
+  <header class="space-y-5">
+    <p class="lbl text-slate-500">data-workflow</p>
+    <h1 class="font-serif text-4xl tracking-tight">架构评审</h1>
+    <p class="text-sm text-slate-500">2026-11-12 · Asia/Shanghai · HEAD fe2b141 · 提案，待决策</p>
+    <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-600 border border-slate-200 bg-white rounded-lg px-5 py-3">
+      <span class="inline-flex items-center gap-2"><span class="inline-block w-8 h-5 border-2 border-slate-800 bg-white"></span>实线框 = module</span>
+      <span class="inline-flex items-center gap-2"><span class="inline-block w-8 h-0 border-t-2 border-dashed border-slate-500"></span>虚线 = seam</span>
+      <span class="inline-flex items-center gap-2"><span class="inline-block w-8 h-0 border-t-2 border-red-600"></span>红箭头 = leakage</span>
+      <span class="inline-flex items-center gap-2"><span class="inline-block w-8 h-5 border-4 border-slate-900 deepfill"></span>深色粗框 = deep module</span>
+    </div>
+  </header>
+
+  <section id="candidates" class="space-y-12">
+
+    <article id="cand-advance" class="space-y-5">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <h2 class="font-serif text-2xl">查询与推进挤在同一条路径</h2>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Strong</span>
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">调用路径</span>
+        </div>
+      </div>
+      <p class="font-mono text-sm text-slate-600">Files: workflow_next.py:show · workflow_next.py:cmd_done · workflow_next.py:knowledge_feedback · hooks/session-start</p>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="rounded-lg border border-slate-200 bg-white p-4 h-80 overflow-hidden">
+          <p class="lbl text-slate-400 mb-2">before</p>
+          <pre class="mermaid">
+flowchart LR
+  H[session-start] --> N[next]
+  N --> S[show]
+  S -->|产物齐| A[advance + 写盘]
+  A --> R[run.json]
+  A --> E[evidence.log]
+  S -.->|未调用| G[knowledge_feedback]
+  D[cmd_done] --> G
+  classDef leak stroke:#dc2626,stroke-width:2px;
+  class S,A,G leak
+          </pre>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-white p-4 h-80 relative overflow-hidden">
+          <p class="lbl text-slate-400 mb-3">after</p>
+          <div class="relative h-64">
+            <div class="absolute left-0 top-8 text-xs uppercase tracking-wider text-slate-500 w-20 text-right pr-2">钩子 / next</div>
+            <div class="absolute left-24 right-4 top-0 bottom-2 border-4 border-slate-900 deepfill rounded-md text-stone-100 px-4 py-3">
+              <p class="text-xs uppercase tracking-wider mb-3">运行状态 · deep</p>
+              <div class="grid grid-cols-2 gap-3 h-[11rem]">
+                <div class="border border-dashed border-stone-400 rounded px-3 py-2">
+                  <p class="text-xs uppercase tracking-wider text-stone-300">查询 seam</p>
+                  <p class="text-sm mt-2">只读当前步骤</p>
+                  <p class="ghost text-xs mt-3">不写 run.json</p>
+                </div>
+                <div class="border border-stone-500 rounded px-3 py-2 bg-slate-800/80">
+                  <p class="text-xs uppercase tracking-wider text-stone-300">推进 seam</p>
+                  <p class="text-sm mt-2">全部门 + 写盘</p>
+                  <p class="ghost text-xs mt-2">OPEN · requires · gate_check</p>
+                  <p class="text-xs mt-1 text-emerald-300">G7 走这里</p>
+                </div>
+              </div>
+            </div>
+            <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 400 256" fill="none">
+              <path d="M88 48 H120" stroke="#334155" stroke-width="2"/>
+              <polygon points="120,44 128,48 120,52" fill="#334155"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <p><span class="font-medium">Problem</span>　会话钩子把 next 当只读探针，show 在产物齐时却会推进并写记录；同一条路径还不调用只挂在 done 上的 G7。</p>
+      <p><span class="font-medium">Solution</span>　加深运行状态：查询与推进分成两条不相漏的路径，阶段能不能离开（含 G7）只在推进这一侧判定。</p>
+      <ul class="list-disc pl-5 text-sm space-y-1">
+        <li>Wins　locality: 写盘只发生在推进</li>
+        <li>locality: G7 跟其它门同路</li>
+        <li>leverage: 钩子与 next 共用只读路径</li>
+      </ul>
+    </article>
+
+    <article id="cand-config" class="space-y-5">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <h2 class="font-serif text-2xl">配置读取裂成四处浅 module</h2>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Strong</span>
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">配置</span>
+        </div>
+      </div>
+      <p class="font-mono text-sm text-slate-600">Files: layout.py:read_yaml_key · layout.py:configured_store · workflow_next.py:config_value · gate_edit.py:policy · gate_edit.py:strict</p>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="rounded-lg border border-slate-200 bg-white p-4 h-80">
+          <p class="lbl text-slate-400 mb-3">before · interface 与 implementation 几乎一样高</p>
+          <div class="flex items-end justify-around h-60 px-2">
+            <div class="flex flex-col items-center gap-1 w-16">
+              <div class="flex items-end gap-1 h-44">
+                <div class="w-6 bg-slate-300 h-20" title="interface"></div>
+                <div class="w-6 bg-slate-700 h-24" title="implementation"></div>
+              </div>
+              <p class="text-xs uppercase tracking-wider text-center leading-tight">layout yaml</p>
+            </div>
+            <div class="flex flex-col items-center gap-1 w-16">
+              <div class="flex items-end gap-1 h-44">
+                <div class="w-6 bg-slate-300 h-24"></div>
+                <div class="w-6 bg-slate-700 h-28"></div>
+              </div>
+              <p class="text-xs uppercase tracking-wider text-center leading-tight">config_value</p>
+            </div>
+            <div class="flex flex-col items-center gap-1 w-16">
+              <div class="flex items-end gap-1 h-44">
+                <div class="w-6 bg-slate-300 h-24"></div>
+                <div class="w-6 bg-slate-700 h-28"></div>
+              </div>
+              <p class="text-xs uppercase tracking-wider text-center leading-tight">policy</p>
+            </div>
+            <div class="flex flex-col items-center gap-1 w-20">
+              <div class="flex items-end gap-1 h-44">
+                <div class="w-6 bg-red-200 h-16"></div>
+                <div class="w-6 bg-red-700 h-16"></div>
+              </div>
+              <p class="text-xs uppercase tracking-wider text-center leading-tight text-red-700">strict 子集</p>
+            </div>
+          </div>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-white p-4 h-80">
+          <p class="lbl text-slate-400 mb-3">after · 一个 interface，一处 implementation</p>
+          <div class="flex items-end justify-center h-60 gap-16">
+            <div class="flex flex-col items-center gap-2">
+              <div class="w-24 h-14 border-2 border-slate-400 bg-stone-100 flex items-center justify-center text-xs uppercase tracking-wider">interface</div>
+              <div class="w-40 h-44 border-4 border-slate-900 deepfill text-stone-100 flex flex-col items-center justify-center px-3 text-center">
+                <p class="text-xs uppercase tracking-wider mb-2">配置读取 · deep</p>
+                <p class="ghost text-xs">候选路径</p>
+                <p class="ghost text-xs">优先级</p>
+                <p class="ghost text-xs">空值约定</p>
+              </div>
+              <p class="text-xs uppercase tracking-wider">一个 module</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p><span class="font-medium">Problem</span>　同一个「这个键在本仓库里取值是什么」要在四份浅副本之间跳，strict 的候选路径和优先级已经与 policy 不一致。</p>
+      <p><span class="font-medium">Solution</span>　加深一个配置读取 module，所有键、所有调用方走同一套查找。</p>
+      <ul class="list-disc pl-5 text-sm space-y-1">
+        <li>Wins　locality: 优先级只在一处</li>
+        <li>leverage: 一个 interface，N 个键</li>
+        <li>locality: strict 不再走子集</li>
+      </ul>
+    </article>
+
+    <article id="cand-artifacts" class="space-y-5">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <h2 class="font-serif text-2xl">产物落点的 interface 是空的</h2>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Strong</span>
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">产物落点</span>
+        </div>
+      </div>
+      <p class="font-mono text-sm text-slate-600">Files: workflows/architecture-review.json · workflow_next.py:artifact_paths · layout.py:configured_store</p>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="rounded-lg border border-slate-200 bg-white p-4 h-80 overflow-hidden">
+          <p class="lbl text-slate-400 mb-2">before</p>
+          <pre class="mermaid">
+flowchart LR
+  J["workflow JSON<br/>artifacts_root =<br/>$REPO/docs/reviews/"]
+  P["artifact_paths"]
+  F["specs/&lt;feature&gt;/<br/>&lt;topic&gt;-architecture-review.html"]
+  L["layout 配置键<br/>也叫 artifacts_root"]
+  J -->|声明| P
+  P -.leak.-> F
+  L -.-> P
+  classDef leak stroke:#dc2626,stroke-width:2px;
+  class P,F leak
+          </pre>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-white p-4 h-80 relative">
+          <p class="lbl text-slate-400 mb-3">after</p>
+          <div class="h-64 flex flex-col justify-center gap-3">
+            <div class="border border-slate-300 rounded px-3 py-2 text-xs uppercase tracking-wider">workflow 声明的根 + 占位符</div>
+            <div class="text-center text-slate-400 text-xs">↓ 一条 seam</div>
+            <div class="border-4 border-slate-900 deepfill rounded-md text-stone-100 px-4 py-4">
+              <p class="text-xs uppercase tracking-wider mb-2">产物落点 · deep</p>
+              <p class="text-sm">按声明的根解析占位符</p>
+              <p class="ghost text-xs mt-2">&lt;artifacts_root&gt; · &lt;feature&gt; · &lt;topic&gt;</p>
+            </div>
+            <div class="border border-dashed border-slate-400 rounded px-3 py-2 text-xs uppercase tracking-wider">docs/reviews/… 或 specs/&lt;feature&gt;/…</div>
+          </div>
+        </div>
+      </div>
+      <p><span class="font-medium">Problem</span>　JSON 声明了 artifacts_root，runner 不读这个字段，把占位符写死成 specs/&lt;feature&gt;，&lt;topic&gt; 也不替换；layout 里的同名键是另一件事。</p>
+      <p><span class="font-medium">Solution</span>　加深产物落点：机器门按工作流声明的根去找文件，占位符在一处解析完。</p>
+      <ul class="list-disc pl-5 text-sm space-y-1">
+        <li>Wins　locality: 落点规则只在一处</li>
+        <li>leverage: 新工作流声明根即生效</li>
+        <li>locality: 同名键不再对不上</li>
+      </ul>
+    </article>
+
+    <article id="cand-design-ok" class="space-y-5">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <h2 class="font-serif text-2xl">写入放行泄漏了 feature 的方案门</h2>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Worth exploring</span>
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">写入门禁</span>
+        </div>
+      </div>
+      <p class="font-mono text-sm text-slate-600">Files: workflow_next.py:cmd_approve · gate_edit.py:design_ok · gate_edit.py:decision · workflows/change.json</p>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="rounded-lg border border-slate-200 bg-white p-4 h-80 overflow-hidden">
+          <p class="lbl text-slate-400 mb-2">before</p>
+          <pre class="mermaid">
+flowchart LR
+  C[change 运行] --> A[approve]
+  A --> P[passes.log]
+  P --> D[gate_edit.decision]
+  F[feature 的 plan.md / gate] -.leak.-> D
+  classDef leak stroke:#dc2626,stroke-width:2px;
+  class F,D leak
+          </pre>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-white p-4 h-80">
+          <p class="lbl text-slate-400 mb-3">after</p>
+          <div class="h-64 relative">
+            <div class="absolute left-2 top-4 w-36 border border-slate-400 rounded p-2 text-xs uppercase tracking-wider">change / feature 运行</div>
+            <div class="absolute left-44 top-8 text-slate-400">→</div>
+            <div class="absolute left-52 right-2 top-0 bottom-8 border-4 border-slate-900 deepfill rounded-md text-stone-100 p-3">
+              <p class="text-xs uppercase tracking-wider mb-2">写入放行 · deep</p>
+              <p class="text-sm">按这次运行该有的产物判</p>
+              <p class="ghost text-xs mt-3">passes.log 仍是 seam</p>
+              <p class="ghost text-xs">feature 的 plan / gate 留在 feature 里</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p><span class="font-medium">Problem</span>　approve 已签发放行行，写入门禁仍要一份 change 从不产出的 plan.md 与 gate，才能放行受保护路径。</p>
+      <p><span class="font-medium">Solution</span>　加深放行判定，让它按这次运行的工作流看该有的产物，不再从 seam 对面漏进 feature 的形状。</p>
+      <ul class="list-disc pl-5 text-sm space-y-1">
+        <li>Wins　locality: 放行规则不再跨工作流漏</li>
+        <li>leverage: 同一条 seam，两种工作流都能用</li>
+      </ul>
+    </article>
+
+  </section>
+
+  <section id="top-recommendation" class="space-y-4">
+    <h2 class="font-serif text-2xl">Top recommendation</h2>
+    <a href="#cand-advance" class="block rounded-lg border-4 border-slate-900 deepfill text-stone-100 px-6 py-6 no-underline hover:opacity-95">
+      <p class="text-xs uppercase tracking-wider text-stone-300 mb-2">先做</p>
+      <p class="font-serif text-2xl mb-2">查询与推进挤在同一条路径</p>
+      <p class="text-stone-200">它已经在写盘，而且会跳过 G7；钩子和用例都还当 next 是只读的。</p>
+    </a>
+  </section>
+
+</main>
+</body>
+</html>

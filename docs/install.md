@@ -1,13 +1,26 @@
 # 安装
 
-在目标仓库根执行。data-service 和其他仓库是同一条命令。
+先把本仓库放到本机某处，下面用 `<data-workflow>` 表示它的路径。在目标仓库根执行。data-service 和其他仓库是同一条命令。
+
+macOS / Linux：
 
 ```bash
-bash ~/skills/data-workflow/scripts/install.sh                      # 默认：技能进 $HOME
-bash ~/skills/data-workflow/scripts/install.sh --project            # 副本也进项目
-bash ~/skills/data-workflow/scripts/install.sh --project --with-hooks  # 加上强制门禁
-bash ~/skills/data-workflow/scripts/install.sh --project --unlink   # 撤掉
+bash <data-workflow>/scripts/install.sh                      # 默认：技能进 $HOME
+bash <data-workflow>/scripts/install.sh --project            # 副本也进项目
+bash <data-workflow>/scripts/install.sh --project --with-hooks  # 加上强制门禁
+bash <data-workflow>/scripts/install.sh --unlink             # 撤掉
 ```
+
+Windows（PowerShell 或 cmd）。**不要直接敲 `bash`**：PATH 上的 `bash` 常常是还没安装发行版的 WSL，跑起来只会弹出 Linux 安装提示。用这个入口，它会调用 Git for Windows 自带的 Git Bash（请先安装 [Git for Windows](https://git-scm.com/download/win)）：
+
+```bat
+<data-workflow>\scripts\install.cmd                      # 默认：技能进用户主目录
+<data-workflow>\scripts\install.cmd --project            # 副本也进项目
+<data-workflow>\scripts\install.cmd --project --with-hooks  # 加上强制门禁
+<data-workflow>\scripts\install.cmd --unlink             # 撤掉
+```
+
+等价入口是同目录的 `install.ps1`。`install.cmd` 会绕过 PowerShell 的 ExecutionPolicy，更适合直接从 cmd 调用。当前工作目录是目标仓库，脚本所在仓库是技能源。
 
 ## 三种落点，能力不同
 

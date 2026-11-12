@@ -9,7 +9,7 @@
 ```bash
 # 1. 准备：需要一个有 data-service 代码和知识层的环境
 cd <data-service>            # config.yaml 的 repo 指向它
-bash ~/skills/data-workflow/scripts/install.sh --project
+bash <data-workflow>/scripts/install.sh --project   # Windows 用 <data-workflow>\scripts\install.cmd --project
 
 # 2. 在 Cursor 里新开会话，把下面某条 prompt 原样发给 agent
 

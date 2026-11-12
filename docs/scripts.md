@@ -5,7 +5,8 @@
 | `skills/data-workflow/scripts/workflow_next.py` | 下一步。子命令表在 `skills/data-workflow/references/commands.md` |
 | `skills/data-workflow/scripts/resolve.sh <key>` | 解析一个配置键。值走 stdout，来源走 stderr。未配置就空 |
 | `skills/data-workflow/scripts/paths.sh` | 一次 `eval` 出知识源和模板变量 |
-| `scripts/install.sh` | 把技能复制进已存在的工具目录。见 `docs/install.md` |
+| `scripts/install.sh` | 把技能复制进已存在的工具目录。见 `docs/install.md`。macOS / Linux 入口 |
+| `scripts/install.cmd` / `scripts/install.ps1` | Windows 入口。找到 Git Bash（避开 PATH 上的 WSL 占位 `bash`），再交给 `install.sh`。同一套参数 |
 | `scripts/repo_snapshot.sh` | 记录被测仓库的 branch、commit、是否有未提交改动 |
 | `scripts/knowledge_drift.sh` | 对照 `verified_commit` 与 `watches`，输出 `FRESH` / `STALE` / `SKIP` |
 | `scripts/contract_diff.sh <base>` | 以 merge-base 的 proto 为基线，输出七类 breaking。恒 exit 0，裁决归技能 |

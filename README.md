@@ -187,12 +187,27 @@ data-workflow/
 
 ## 安装与验证
 
+先把本仓库放到本机某处，下面用 `<data-workflow>` 表示它的路径。然后在**目标仓库根**执行。
+
+macOS / Linux：
+
 ```bash
 cd <目标仓库根>
-bash ~/skills/data-workflow/scripts/install.sh                       # 默认：技能进 $HOME，项目只加 4 个命令
-bash ~/skills/data-workflow/scripts/install.sh --project --with-hooks  # 副本进仓库 + Cursor 门禁
-bash ~/skills/data-workflow/scripts/install.sh --unlink              # 撤掉本脚本写过的东西
+bash <data-workflow>/scripts/install.sh                       # 默认：技能进 $HOME，项目只加 4 个命令
+bash <data-workflow>/scripts/install.sh --project --with-hooks  # 副本进仓库 + Cursor 门禁
+bash <data-workflow>/scripts/install.sh --unlink              # 撤掉本脚本写过的东西
 ```
+
+Windows（PowerShell 或 cmd）。**不要直接敲 `bash`**：PATH 上的 `bash` 常常是还没安装发行版的 WSL，跑起来只会弹出 Linux 安装提示，不会执行本脚本。用下面这个入口，它会调用 Git for Windows 自带的 Git Bash（请先安装 [Git for Windows](https://git-scm.com/download/win)）：
+
+```bat
+cd <目标仓库根>
+<data-workflow>\scripts\install.cmd                       # 默认：技能进用户主目录，项目只加 4 个命令
+<data-workflow>\scripts\install.cmd --project --with-hooks  # 副本进仓库 + Cursor 门禁
+<data-workflow>\scripts\install.cmd --unlink              # 撤掉本脚本写过的东西
+```
+
+本仓库如果就在桌面，把 `<data-workflow>` 换成实际路径即可，例如 `C:\Users\你\Desktop\data-workflow\scripts\install.cmd`。
 
 技能能力在三种模式里都是完整的，差别只在门禁。为什么不能「副本被忽略、却提交 hooks.json」，以及各种落点往仓库里写什么，在 [`docs/install.md`](docs/install.md)。
 

@@ -13,6 +13,11 @@
 #   install.sh <target_dir>    # 显式指定目标根
 #   install.sh --unlink [...]  # 撤掉本脚本写过的东西，不动其他东西
 #
+# Windows：不要直接敲 bash（PATH 上常常是未安装发行版的 WSL）。
+# 在目标仓库根执行同目录的 install.cmd（或 install.ps1），参数相同：
+#   <data-workflow>\scripts\install.cmd
+#   <data-workflow>\scripts\install.cmd --project --with-hooks
+#
 # 三种落点，能力不同，别混着理解：
 #   默认（$HOME）      技能 100%，无强制门禁。项目 diff 只有 4 个命令文件。
 #   --project          技能 100%，副本进项目。要提交才有效，升级时 diff 是整包。
@@ -38,7 +43,7 @@ for a in "$@"; do
     --project) project=1 ;;
     --with-hooks) with_hooks=1 ;;
     --unlink) unlink=1 ;;
-    --help|-h) sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --help|-h) sed -n '2,26p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) target="$a" ;;
   esac
 done
