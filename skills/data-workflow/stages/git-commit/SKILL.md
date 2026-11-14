@@ -1,40 +1,13 @@
 # Git 分支、提交与 MR 规范
 
-> data-service 实例的分支规范（feature 九步链的阶段）。装进别的项目时，按该项目的分支与 MR 约定，不套用这里的版本节奏。
+通用规则（Conventional Commits、描述、提交前核对）。**分支命名与版本节奏**在声明了 `stack: go` 时读 `../../profiles/go-kratos/profile.md` 的「分支与版本节奏」；未声明 / 无 Go profile 时，跟目标仓库自己的分支与 MR 约定，**不要**发明 data-service 的四位版本号方案。
 
 ## 新建分支
 
-从最新的目标分支（默认 `main` 或对应 `release/x.y.z.0`）切出，分支名格式：
+从最新的目标分支切出。命名格式：
 
-```text
-<前缀>/<版本号>/<功能>
-release/<版本号>
-
-# 示例（以当前版本 26.10.1.0 为例）
-feature/26.10.1.0/episode-qc-visibility
-fix/26.10.1.0/task-dispatch-retry
-hotfix/26.9.4.0/batch-approve-gap-lock
-release/26.10.1.0
-```
-
-- 版本号为四位：`主版本.次版本.修订号.迭代号`，如 `26.10.1.0`，不带 `v` 前缀
-- 版本号必须与当前开发中的 release 分支对应，新功能跟随下一个版本号
-- hotfix 使用线上正在运行的版本号
-- 功能描述用小写英文单词，中划线分隔，不超过 4 个词
-
-## 分支前缀
-
-| 前缀 | 用途 |
-| --- | --- |
-| `feature` | 新功能开发 |
-| `fix` | 缺陷修复（跟随版本节奏） |
-| `hotfix` | 线上紧急修复（对应 hotfix 版本号） |
-| `release` | 版本发布分支（仅版本号，不带功能） |
-
-```bash
-git fetch origin
-git checkout -b feature/26.10.1.0/episode-qc-visibility origin/main
-```
+- **Go / data-service 实例**：见 profile「分支与版本节奏」（`feature/<四位版本>/<功能>` 等）。
+- **其他仓库**：按该仓成文约定（README / CONTRIBUTING / 现有分支形态）；没有成文约定就与用户确认前缀，不套用 `26.10.1.0` 示例。
 
 ## Commit 信息格式
 
@@ -75,7 +48,7 @@ git checkout -b feature/26.10.1.0/episode-qc-visibility origin/main
 
 ## Scope
 
-可选。用于标明改动范围，优先使用仓库模块名，如 `api`、`service`、`biz`、`data`、`conf`、`wire`。
+可选。用于标明改动范围，优先使用仓库模块名。Go 实例的常用 scope 见 profile。
 
 ## 破坏性变更
 
@@ -91,6 +64,10 @@ BREAKING CHANGE: /v1/users 接口已被删除。
 
 提交信息中禁止出现任何 AI 署名、co-author 标签或 generated-by footer。
 
+## 提交前核对（工作树与证据）
+
+提交前用 `git status` / `git diff` 确认：要提交的就是这次运行该交的范围；质量门禁报告（若走过）里没有未消化的 ✗；`UNVERIFIED` 项已向用户说明。没有证据就不要写「已验证」。
+
 ## 文档审计门（commit 之前，必过）
 
 代码改完不等于交付完。提交前拿 `git diff` 逐项核对下面这张表，**每项只能填「已同步」或「不需要」+ 一句依据**；填不出依据就是「缺失」。
@@ -105,7 +82,7 @@ BREAKING CHANGE: /v1/users 接口已被删除。
 | `specs/<feature>/rollback.md` | 回滚步骤与真实 commit / 迁移号对得上？ |
 | 仓库 `README.md` | 新增能力、新增命令、新增配置项要不要露出？ |
 | 仓库 `CONTEXT.md` | 新增或改名的领域术语要不要登记？（改术语走全局技能 `domain-modeling`） |
-| `api/**` 生成物 | 改了 proto 是否已重新生成（`make api` / `make api-one PROTO=...`），生成物与 proto 同一次提交？ |
+| 契约生成物 | 改了契约是否已按该仓入口重新生成，生成物与源文件同一次提交？（Go 实例见 profile「文档审计补充」） |
 
 不过门的处理，只有两条路，**没有第三条**：
 
@@ -118,11 +95,12 @@ BREAKING CHANGE: /v1/users 接口已被删除。
 
 审计结论写进 commit body 或 MR 描述的「测试情况 / 关联设计方案」字段，不要只留在会话里。
 
-## 提交 MR（glab CLI）
+## 提交 MR
 
-使用 `glab` 创建或编辑 MR，描述必须使用以下模板：
+使用该仓库惯用的 CLI（GitLab 上常见 `glab`；GitHub 上常见 `gh`）创建或编辑 MR/PR。描述必须使用模板。
 
 ```bash
+# GitLab 示例
 glab mr create --title "<type>(<scope>): <描述>" --description-file <描述文件>
 glab mr update <mr-id> --description-file <描述文件>
 ```
@@ -169,12 +147,13 @@ glab mr update <mr-id> --description-file <描述文件>
 4. 没有文档、Jira、设计方案或自测文档时，该字段写「无」。有链接时写成 `[名称](URL)`。不编造链接。
 5. 「自测结论」写「通过」或「不通过」，并在该节用一句话说明测了什么。
 6. 无 SQL 变更时，「SQL 性能评估」下三项都写「无」。有 SQL 变更时填预检截图、只读节点试跑耗时、查询数据量。
-7. 用户只要文案、尚未确认时，不执行 `git commit`、`glab mr create`。确认后再提交。
-8. MR 描述更新后用 `glab mr update` 同步。
+7. 用户只要文案、尚未确认时，不执行 `git commit`、开 MR。确认后再提交。
+8. MR 描述更新后用对应 CLI 同步。
 
 ## 常见错法
 
 - **用户还没确认就 commit / 开 MR。** 只要文案阶段就先停，确认后再提交。
 - **自测结论写「通过」但没说什么测了。** 那一节要用一句话说明测了什么。
 - **无 SQL 变更时那三项留空。** 要显式写「无」。
-- **MR 改了描述却忘了同步。** 用 `glab mr update`。
+- **MR 改了描述却忘了同步。** 用对应 CLI 更新。
+- **非 Go 仓库照抄 `feature/26.10.1.0/...`。** 跟该仓自己的分支约定。

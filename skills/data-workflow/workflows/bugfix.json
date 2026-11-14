@@ -76,6 +76,7 @@
       "id": 4,
       "name": "改动审核（三轴）",
       "reads": [
+        "references/diff-scope.md",
         "specs/<feature>/diff.patch"
       ],
       "artifacts": [
@@ -92,6 +93,10 @@
     {
       "id": 5,
       "name": "质量与接口门",
+      "reads": [
+        "references/diff-scope.md",
+        "profiles/go-kratos/profile.md"
+      ],
       "artifacts": [
         "specs/<feature>/quality.md",
         "specs/<feature>/interface-test.md"
@@ -105,6 +110,9 @@
     {
       "id": 6,
       "name": "知识回写与提交",
+      "reads": [
+        "profiles/go-kratos/profile.md"
+      ],
       "artifacts": [
         "$CARDS/YYYY-MM-DD-<症状>.md（带 verified_commit 与 watches）",
         "specs/<feature>/change-note.md",

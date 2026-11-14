@@ -53,6 +53,10 @@
     {
       "id": 4,
       "name": "必过门（不可跳过）",
+      "reads": [
+        "references/diff-scope.md",
+        "profiles/go-kratos/profile.md"
+      ],
       "artifacts": [
         "specs/<feature>/quality.md",
         "specs/<feature>/interface-test.md"
@@ -67,6 +71,9 @@
     {
       "id": 5,
       "name": "提交与记账",
+      "reads": [
+        "profiles/go-kratos/profile.md"
+      ],
       "artifacts": [
         "specs/<feature>/change-note.md",
         "commit"

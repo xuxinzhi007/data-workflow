@@ -9,6 +9,7 @@
       "id": 1,
       "name": "固定 diff 与指纹",
       "reads": [
+        "references/diff-scope.md",
         "git diff <base>..HEAD"
       ],
       "artifacts": [
@@ -23,6 +24,7 @@
       "id": 2,
       "name": "三轴并行审核",
       "reads": [
+        "references/diff-scope.md",
         "<artifacts_root>/diff.patch",
         "<artifacts_root>/spec.md（若有）",
         "$PLUGIN_ROOT/stages/change-review/references/standards-spec.md"

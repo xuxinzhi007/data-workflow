@@ -9,6 +9,7 @@
       "id": 1,
       "name": "需求与负债评估",
       "reads": [
+        "stages/requirement-analysis/references/debt-gate.md",
         "$KNOW/<相关域>/（一次一个域文件）",
         "$REPO 当前 checkout"
       ],
@@ -105,6 +106,7 @@
       "id": 5,
       "name": "改动审核（三轴）",
       "reads": [
+        "references/diff-scope.md",
         "specs/<feature>/diff.patch",
         "specs/<feature>/spec.md",
         "specs/<feature>/plan.md"
@@ -127,6 +129,8 @@
       "id": 6,
       "name": "质量与接口门",
       "reads": [
+        "references/diff-scope.md",
+        "profiles/go-kratos/profile.md",
         "$REPO"
       ],
       "artifacts": [
@@ -144,6 +148,7 @@
       "id": 7,
       "name": "文档审计与提交",
       "reads": [
+        "profiles/go-kratos/profile.md",
         "specs/<feature>/*",
         "git diff --name-only <base>..HEAD"
       ],
